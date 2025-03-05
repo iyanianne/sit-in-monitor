@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie-edge">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="icon" type="image/x-icon" href="../static/favicon/ccslogo.png">
+  <title>SIT IN MONITORING</title>
+</head>
+<body>
+
+  <style>
+
+    body {
+      font-family: 'Inter';
+    }
+
+    .div {
+      background-color: #1e7898;
+      color: white;
+    }
+
+    .sub-div {
+      display: flex;
+      justify-content: left; 
+      align-items: left;
+      padding: 7px;
+      color: white;
+      position: absolute;
+      bottom: 0px;
+      width: 100%;
+    }
+
+    .btn {
+      background-color: #1e7898;
+      color: white;
+      padding: 5px 0;
+      border: none;
+      background: none;
+      margin-left: 5px;
+      font-size: 20px;
+    }
+
+    .btn p {
+      font-size: 15px;
+    }
+
+    .a {
+      color: white;
+    }
+
+    .row {
+      display: flex;
+    }
+
+    .column {
+      float: left;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      margin-left: 10px;
+      border-radius: 7px;
+      height: 550px;
+    }
+
+    .container::after, .row::after {
+      content: "";
+      clear: both;
+      padding: 8px;
+      display: table;
+    }
+
+    .col-head {
+      height: 60px;
+      text-align: center;
+      font-weight: bolder;
+      border-top-left-radius: 7px;
+      border-top-right-radius: 7px;
+      background-color: #1e7898;
+      color: white;
+      padding: 8px;
+      align-content: center;
+    }
+
+    .avatar {
+      text-align: center;
+      margin: 24px 0 12px 0;
+    }
+
+    .container {
+      font-weight: bold;
+      padding-left: 7px;
+    }
+
+    .prof-info {
+      box-sizing: content-box;
+      margin: 2px;
+      padding-left: 10px 0;
+      height: 423px;
+    }
+
+    img {
+      justify-content: center;
+      height: 100px;
+      width: 100px;
+      clip-path: circle(50%);
+    }
+
+    .an-info {
+      box-sizing: content-box;
+      margin: 2px;
+      padding: 5px 0;
+      overflow-y: scroll;
+      height: 423px;
+    }
+
+    .lab-info {
+      box-sizing: content-box;
+      position: absolute;
+      margin: 2px;
+      padding: 5px 0;
+      overflow-y: scroll;
+      height: 460px;
+    }
+  </style>
+
+  <!-- Sidebar -->
+  <div class="w3-sidebar w3-bar-block" style="background-color:#1e7898; display: none; width: 200px;" id="mySidebar">
+    <button onclick="w3_close()" class="btn w3-bar-item"> 
+      <p> &times; </p> </button>
+      <div class="a">
+        <a href="/dashboard" class="w3-bar-item w3-button"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+        <a href="/information" class="w3-bar-item w3-button"><i class="fas fa-user"></i> Profile</a>
+        <a href="/edit" class="w3-bar-item w3-button"><i class="fas fa-edit"></i> Edit</a>
+        <a href="/announcement" class="w3-bar-item w3-button"><i class="fas fa-bullhorn"></i> Announcement</a>
+        <a href="/sit_in" class="w3-bar-item w3-button"><i class="fas fa-book"></i> Sit-in Rules</a>
+        <a href="/labrules" class="w3-bar-item w3-button"><i class="fas fa-book-open"></i> Lab Rules and Regulations</a>
+        <a href="/sessions" class="w3-bar-item w3-button"><i class="fas fa-clock"></i> Sessions</a>
+        <a href="/history" class="w3-bar-item w3-button"><i class="fas fa-history"></i> History</a>
+        <a href="/reservations" class="w3-bar-item w3-button"><i class="fas fa-calendar-check"></i> Reservation</a>
+    </div>
+
+    <div class="sub-div">
+      <p><a href="/logout" class="w3-bar-item w3-button"><i class="fas fa-sign-out-alt"></i> Logout</a></p>
+    </div>
+</div>
+
+<!-- Page Content -->
+<div style="background-color: #1e7898">
+  <button class="btn" style="background-color: #1e7898;" onclick="w3_open()">☰ Dashboard </button>
+  <div class="w3-container" style="color: white;">
+    <h5 style="font-family: 'Inter';"> Welcome, {{ username.fname }} !</h5>
+  </div>
+</div>
+
+<!-- Profile Container -->
+<div class="row">
+  <div class="column" style="width: 300px;">
+    <div>
+      <div class="col-head"> Student Information </div>
+        <div class="prof-info">
+        <div class="w3-center">
+          <label for="current_avatar"></label>
+          {% if username.avatar_filename %}
+              <img src="{{ url_for('static', filename='images/uploads/' + username.avatar_filename) }}" alt="Current Avatar">
+          {% else %}
+              <img src="{{ url_for('static', filename='images/uploads/default_avatar.png') }}" alt="Default Avatar">
+          {% endif %}
+        </div>
+        <hr>
+        <p><b> Name: </b> {{ username.fname }} {{ username.mname }} {{ username.lastname }} </p>
+        <p><b> Course: </b> {{ username.course }}</p>
+        <p><b> Year: </b> {{ username.yrlvl }}</p>
+        <p><b> E-mail: </b> {{ username.email}}</p>
+        <p><b> Session: </b> </p>
+      </div>
+    </div>
+  </div>
+
+<!-- Announcement Container -->
+  <div class="column" style="width: 550px">
+    <div class="col-head"> Announcement </div>
+      <div class="container" style="text-align: center;">
+        <p> CCS Admin </p>
+          <div class="an-info">
+            <div>
+              
+            </div>
+          </div>
+      </div>
+  </div>
+
+  <!-- Laboratory Rules Container -->
+  <div class="column" style="width: 550px">
+    <div class="col-head"> Laboratory Rules and Regulations </div>
+      <div class="container">
+        <div class="lab-info" style="font-weight: lighter; width: 538px;">
+              <p style="font-weight: bolder; text-align: center;"> UNIVERSITY OF CEBU - MAIN CAMPUS </p>
+              <p style="font-weight: bold; text-align: center;"> College of Information and Computer Studies </p>
+              <p><b>LABORATORY RULES AND REGULATIONS<b></p>
+                <p>To avoid embarrassment and maintain camaraderie with your friends and superiors at our laboratories, please observe the following:</p>
+                <p>1. Maintain silence, proper decorum, and discipline inside the laboratory. Mobile phones, walkmans and other personal pieces of equipment must be switched off.</p>
+                <p>2. Games are not allowed inside the lab. This includes computer-related games, card games and other games that may disturb the operation of the lab.</p>
+                <p>3. Surfing the Internet is allowed only with the permission of the instructor. Downloading and installing of software are strictly prohibited.</p>
+                <p>4. Getting access to other websites not related to the course (especially pornographic and illicit sites) is strictly prohibited.</p>
+                <p>5. Deleting computer files and changing the set-up of the computer is a major offense.</p>
+                <p>6. Observe computer time usage carefully. A fifteen-minute allowance is given for each use. Otherwise, the unit will be given to those who wish to "sit-in". </p>
+                <p>7. Observe proper decorum while inside the laboratory.</p>
+                  <ul>
+                    <li>Do not get inside the lab unless the instructor is present.</li>
+                    <li>All bags, knapsacks, and the likes must be deposited at the counter.</li>
+                    <li>Follow the seating arrangement of your instructor.</li>
+                    <li>At the end of class, all software programs must be closed.</li>
+                    <li>Return all chairs to their proper places after using.</li>
+                  </ul>
+                <p>8. Chewing gum, eating, drinking, smoking, and other forms of vandalism are prohibited inside the lab.
+                <p>9. Anyone causing a continual disturbance will be asked to leave the lab. Acts or gestures offensive to the members of the community, including public display of physical intimacy, are not tolerated.
+                <p>10. Persons exhibiting hostile or threatening behavior such as yelling, swearing, or disregarding requests made by lab personnel will be asked to leave the lab.
+                <p>11. For serious offense, the lab personnel may call the Civil Security Office (CSU) for assistance.
+                <p>12. Any technical problem or difficulty must be addressed to the laboratory supervisor, student assistant or instructor immediately.
+                  <br>
+                  <br>
+              <p><b>DISCIPLINARY ACTION</b></p>
+
+                <p>First Offense - The Head or the Dean or OIC recommends to the Guidance Center for a suspension from classes for each offender.</p>
+                <p>Second and Subsequent Offenses - A recommendation for a heavier sanction will be endorsed to the Guidance Center.</p>
+          </div>
+      </div>
+  </div>
+
+</div>
+
+<script>
+function w3_open() {
+  document.getElementById("mySidebar").style.display = "block";
+}
+
+function w3_close() {
+  document.getElementById("mySidebar").style.display = "none";
+}
+</script>
+     
+</body>
+</html> 

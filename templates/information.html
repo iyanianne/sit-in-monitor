@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie-edge">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="icon" type="image/x-icon" href="../static/favicon/ccslogo.png">
+  <title>SIT IN MONITORING</title>
+</head>
+<body>
+
+  <style>
+
+    body {
+      font-family: 'Inter';
+    }
+
+    .div {
+      background-color: #1e7898;
+      color: white;
+    }
+
+    img {
+      height: 150px;
+      width: 150px;
+      clip-path: circle(50%);
+    }
+
+    .sub-div {
+      display: flex;
+      justify-content: left; 
+      align-items: left;
+      padding: 7px;
+      color: white;
+      position: absolute;
+      bottom: 0px;
+      width: 100%;
+    }
+
+    .btn {
+      background-color: #1e7898;
+      color: white;
+      padding: 5px 0;
+      border: none;
+      background: none;
+      margin-left: 5px;
+      font-size: 20px;
+    }
+
+    .btn p {
+      font-size: 15px;
+    }
+
+    .ud {
+      width: 100%;
+      text-decoration: none;
+      background-color: #1e7898;
+      color: white;
+      padding: 6px 20px;
+      margin: 8px 0;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .a {
+      color: white;
+    }
+
+    .column {
+      float: left;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      margin-left: 10px;
+      border-radius: 7px;
+      height: 550px;
+    }
+
+    .col-head {
+      height: 60px;
+      text-align: center;
+      font-weight: bolder;
+      border-top-left-radius: 7px;
+      border-top-right-radius: 7px;
+      background-color: #1e7898;
+      color: white;
+      padding: 10px;
+      margin: 10px;
+      align-content: center;
+    }
+
+    .container {
+      font-family: 'Inter';
+      align-items: center;
+      min-height: 100vh;
+      width: 60%;
+      margin-top: 10px;
+      margin-bottom: 10px;
+      padding-left: 100px;
+      position: relative;
+    }
+
+    img {
+      height: 150px;
+      width: 150px;
+      clip-path: circle(50%);
+    }
+
+    button[type=submit] {
+      font-family: "Inter";
+      width: 50%;
+      background-color: #1e7898;
+      color: white;
+      padding: 10px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      justify-content: center;
+    } 
+    </style>
+
+  <!-- Sidebar -->
+  <div class="w3-sidebar w3-bar-block" style="background-color:#1e7898; display: none; width: 26%;" id="mySidebar">
+    <button onclick="w3_close()" class="btn w3-bar-item"> 
+      <p> &times; </p> </button>
+      <div class="a">
+        <a href="/dashboard" class="w3-bar-item w3-button"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+        <a href="/information" class="w3-bar-item w3-button"><i class="fas fa-user"></i> Profile</a>
+        <a href="/edit" class="w3-bar-item w3-button"><i class="fas fa-edit"></i> Edit</a>
+        <a href="/announcement" class="w3-bar-item w3-button"><i class="fas fa-bullhorn"></i> Announcement</a>
+        <a href="/sit-in" class="w3-bar-item w3-button"><i class="fas fa-book"></i> Sit-in Rules</a>
+        <a href="/lab-rules" class="w3-bar-item w3-button"><i class="fas fa-book-open"></i> Lab Rules and Regulations</a>
+        <a href="/sessions" class="w3-bar-item w3-button"><i class="fas fa-clock"></i> Sessions</a>
+        <a href="/history" class="w3-bar-item w3-button"><i class="fas fa-history"></i> History</a>
+        <a href="/reservations" class="w3-bar-item w3-button"><i class="fas fa-calendar-check"></i> Reservation</a>
+    </div>
+
+    <div class="sub-div">
+      <p><a href="/logout" class="w3-bar-item w3-button"><i class="fas fa-sign-out-alt"></i> Logout</a></p>
+    </div>
+</div>
+
+<!-- Page Content -->
+<div style="background-color: #1e7898">
+  <button class="btn" style="background-color: #1e7898;" onclick="w3_open()">☰ PROFILE </button>
+  <div class="w3-container" style="color: white;">
+    <h5 style="font-family: 'Inter';"> Information </h5>
+  </div>
+</div>
+
+<!-- Profile Container -->
+<div class="col-head"> Student Information </div>
+    <div class="container">     
+      <label for="current_avatar"></label>
+      {% if username.avatar_filename %}
+          <img src="{{ url_for('static', filename='images/uploads/' + username.avatar_filename) }}" alt="Current Avatar">
+      {% else %}
+          <img src="{{ url_for('static', filename='images/uploads/default_avatar.png') }}" alt="Default Avatar">
+      {% endif %}
+      <br>
+      <br>
+      <p><b> Name: </b> {{ username.fname }} {{ username.mname }} {{ username.lastname }} </p>
+      <p><b> Course: </b> {{ username.course }}</p>
+      <p><b> Year: </b> {{ username.yrlvl }}</p>
+      <p><b> E-mail: </b> {{ username.email}}</p>
+      <p><b> Session: </b> </p>
+      <br>
+      <a href="/edit" class="ud">Update Profile</a>
+    </div>
+</div>
+
+<script>
+function w3_open() {
+  document.getElementById("mySidebar").style.display = "block";
+}
+
+function w3_close() {
+  document.getElementById("mySidebar").style.display = "none";
+}
+</script>
+     
+</body>
+</html> 

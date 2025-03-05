@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <link rel="icon" type="image/x-icon" href="../static/favicon/ccslogo.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        body {
+            font-family: 'Inter';
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            width: 100%;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            height: 100%;
+            width: 100%;
+            background-image: url('../static/images/bg-image.jpg'); /* Update this path as necessary */
+            background-position: center;
+            background-size: cover;
+            z-index: -1; /* Ensure the background is behind other content */
+        }
+
+        .login-wrapper {
+            width: 400px;
+            padding: 30px;
+            border: 1px solid rgba(255,255,255,0.5);
+            border-radius: 8px;
+            text-align: center;
+            -webkit-backdrop-filter: blur(8px);
+            backdrop-filter: blur(8px);
+        }
+        
+        .login-form {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .login-form h2 {
+            font-size: 2rem;
+            color: #fff;
+            margin-bottom: 20px;
+        }
+
+        input[type=text], select, input[type=number], input[type=password] {
+            width: 100%;
+            padding: 8px 18px;
+            margin: 8px 0;
+            background: transparent;
+            outline: none;
+            display: inline-block;
+            border: 1px 0 white;
+            border-radius: 4px;
+            color: white;
+        }
+
+        ::placeholder {
+            color: white;
+        }
+
+        button[type=submit] {
+            width: 100%;
+            background-color: #1e7898;
+            color: white;
+            padding: 6px 20px;
+            margin: 8px 0;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button[type=submit]:hover {
+            background-color: #1e7898;
+            padding: 6px 20px;
+            margin: 8px 0;
+            border: none;
+            border-radius: 4px;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4); /* Background with transparency */
+            padding-top: 60px;
+        }
+
+        .modal-content {
+            background-color: #aaa;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            width: 65%;
+            max-width: 600px;
+            border-radius: 7px;
+        }
+
+        .modal-content h3 {
+            font-family: 'Inter';
+            text-align: center;        
+        }
+
+        .close {
+            color: black;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .course-year {
+            background-color: #aaa;
+        }
+
+        .course-year option {
+            background-color: #aaa;
+        }
+        /* Flash message styling */
+        .flash {
+            padding: 12px 20px;
+            margin: 0 auto 20px;
+            border-radius: 5px;
+            font-weight: 500;
+            width: 90%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 1;
+            transition: opacity 0.5s ease;
+        }
+
+        .flash.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .flash.danger {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        /* Add icons to flash messages */
+        .flash::before {
+            font-family: "Font Awesome 5 Free";
+            font-weight: 900;
+            margin-right: 10px;
+        }
+
+        .flash.success::before {
+            content: "\f00c"; /* Checkmark icon */
+            color: #3d9451;
+        }
+
+        .flash.danger::before {
+            content: "\f071"; /* Warning icon */
+            color: #b32f3c;
+        }
+
+        .login-wrapper h2 {
+            color: #1e7898;
+            font-weight: 550;
+        }
+        .p {
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-wrapper">
+        <!-- Login Form Section -->
+        <img src="{{ url_for('static', filename='images/ccslogo.png') }}" alt="logo" style="align-content: center;" width="100px" height="100px">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash {{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        <form action="{{ url_for('login') }}" method="POST" class="w3-container" id="loginForm">
+
+            <!-- ID Number Field -->
+            <input type="number" name="idno" id="idno" class="w3-input" placeholder="ID Number" required>
+            <br>
+            <!-- Password Field -->
+            <input type="password" name="password" id="password" class="w3-input" placeholder="Password" required>
+
+            <!-- Buttons -->
+            <button type="submit"> Login </button>
+            <br>
+            <br>
+        </form>
+        <p class="p"> Don't have an account? <a href="#" id="openModal" style="color:#1e7898"> Register here </a> </p>
+    </div>
+
+    <!-- Register Modal -->
+    <div id="registerModal" class="modal">
+        <div class="modal-content w3-container">
+            <span class="close">&times;</span>
+            <h3>Register</h3>
+            <form action="{{ url_for('register') }}" method="POST">
+                <!-- ID Number -->
+                <div class="form-group id-number">
+                    <label for="idno">ID Number</label>
+                    <input type="text" id="idno" name="idno" required oninput="updateUsername()">
+                </div>
+
+                <!-- Name Fields -->
+                <div class="form-group name-fields">
+                    <div>
+                        <label for="lastname">Last Name</label>
+                        <input type="text" id="lastname" name="lastname" required>
+                    </div>
+                    <div>
+                        <label for="fname">First Name</label>
+                        <input type="text" id="fname" name="fname" required>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="mname">Middle Name</label>
+                    <input type="text" id="mname" name="mname">
+                </div>
+
+                <!-- Course and Year Level -->
+                    <div class="course-year">
+                        <label for="course">Course</label>
+                        <select id="course" name="course" required style="color: black ;">
+                            <option value="IT">Information Technology</option>
+                            <option value="CS">Computer Science</option>
+                        </select>
+                    </div>
+                    <div class="course-year">
+                        <label for="yrlvl">Year Level</label>
+                        <select id="yrlvl" name="yrlvl" required style="color: black ;">
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                        </select>
+                    </div>
+
+                <!-- Account Details -->
+                <div class="form-group account-field">
+                    <label for="email">Email</label>
+                    <input type="text" id="email" name="email" required>
+                </div>
+
+                <div class="form-group account-field">
+                    <label for="username">Username</label>
+                    <input type="text" id="usernameReg" name="username">
+                </div>
+
+                <div class="form-group account-field">
+                    <label for="password">Password</label>
+                    <div class="password-field">
+                        <input type="password" id="passwordReg" name="password" required>
+                        <i class="fas fa-eye-slash toggle-password"></i>
+                    </div>
+                </div>
+
+                <button type="submit">Register</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        
+        // Example functions for password visibility toggle (optional)
+        function myFunction() {
+            var x = document.getElementById("passwordReg");
+            if (x.type === "password") {
+                x.type = "text";
+            } else {
+                x.type = "password";
+            }
+        }
+  // Password toggle functionality
+  document.querySelectorAll('.toggle-password').forEach(toggle => {
+            toggle.addEventListener('click', function() {
+                const passwordInput = this.previousElementSibling;
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                this.classList.toggle('fa-eye');
+                this.classList.toggle('fa-eye-slash');
+            });
+        });
+
+        const modal = document.getElementById("registerModal");
+        document.getElementById("openModal").onclick = function() {
+            modal.style.display = "block";
+        };
+        document.querySelector(".close").onclick = function() {
+            modal.style.display = "none";
+        };
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                modal.style.display = "none";
+            }
+        };
+
+        function updateUsername() {
+            let idnoInput = document.getElementById("idno");
+            let usernameInput = document.getElementById("usernameReg");
+
+            if (!usernameInput.dataset.userEdited) {
+                usernameInput.value = idnoInput.value;
+            }
+        }
+
+        document.getElementById("usernameReg").addEventListener("input", function() {
+            this.dataset.userEdited = true;
+        });
+        
+        function validateYearLevel() {
+            let yearInput = document.getElementById("yrlvl");
+            let errorText = document.getElementById("yearLevelError");
+
+            if (yearInput.value < 1 || yearInput.value > 4) {
+                errorText.style.display = "block";
+                yearInput.value = "";
+            } else {
+                errorText.style.display = "none";
+            }
+        }
+
+        // Flash message auto-hide
+        document.addEventListener('DOMContentLoaded', function() {
+            const flashMessages = document.querySelectorAll('.flash');
+            flashMessages.forEach(function(message) {
+                setTimeout(function() {
+                    message.style.opacity = '0';
+                    setTimeout(function() {
+                        message.style.display = 'none';
+                    }, 500);
+                }, 3000); // Message will stay for 3 seconds
+            });
+        });
+    </script>
+</body>
+</html>

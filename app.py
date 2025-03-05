@@ -177,10 +177,15 @@ def edit():
         flash('Please log in to continue.', "info")    
         return redirect(url_for('login'))  # Redirect to login page instead of rendering edit.html  # Redirect to login page instead of rendering edit.html
 
-# Login route
+# Lab Rules route
 @app.route('/labrules')
 def labrules():
     return render_template('labrules.html')
+    
+# Sit-in Rules route
+@app.route('/sit-in')
+def sit_in():
+    return render_template('sit-in.html')
     
 # Logout route
 @app.route("/logout")

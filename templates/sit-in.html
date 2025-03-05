@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie-edge">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="icon" type="image/x-icon" href="../static/favicon/ccslogo.png">
+    <title>Laboratory Rules</title>
+    <style>
+        body {
+            font-family: 'Inter';
+        }
+    
+        .container {
+            font-family: 'Inter';
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            width: 60%;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            padding-left: 100px;
+            position: relative;
+        }
+
+        img {
+            height: 150px;
+            width: 150px;
+            clip-path: circle(50%);
+        }
+
+        .div {
+            background-color: #1e7898;
+            color: white;
+        }
+
+        .sub-div {
+            display: flex;
+            justify-content: left; 
+            align-items: left;
+            padding: 7px;
+            color: white;
+            position: absolute;
+            bottom: 0px;
+            width: 100%;
+        }
+
+        .btn {
+            background-color: #1e7898;
+            color: white;
+            padding: 5px 0;
+            border: none;
+            background: none;
+            margin-left: 5px;
+            font-size: 20px;
+        }
+
+        .btn p {
+            font-size: 15px;
+        }
+
+        .a {
+            color: white;
+        }
+
+        .column {
+            float: left;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            margin-left: 10px;
+            border-radius: 7px;
+            height: 550px;
+            width: 50;
+        }
+
+        .container::after, .row::after {
+            content: "";
+            clear: both;
+            padding: 8px;
+            display: table;
+        }
+
+        .col-head {
+            margin: auto;
+            margin-top: 10px;
+            height: 75%;
+            width: 80%;
+            text-align: center;
+            font-weight: bolder;
+            border-top-left-radius: 7px;
+            border-top-right-radius: 7px;
+            background-color: #1e7898;
+            color: white;
+            padding: 20px;
+            align-content: center;
+        }
+
+        .sit-in-info {
+            margin: auto;
+            box-sizing: content-box;
+            padding: 10px 0;
+            width: 79%;
+            height: 75%;
+            border: 1px solid #ccc;
+            border-bottom-left-radius: 7px;
+            border-bottom-right-radius: 7px;
+        }
+
+        .sit-in-info p {
+            font-weight: lighter;
+        }
+
+        .container::after {
+            content: "";
+            clear: both;
+            padding: 8px;
+            display: table;
+        }
+
+        
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="w3-sidebar w3-bar-block" style="background-color:#1e7898; display: none; width: 25%;" id="mySidebar">
+        <button onclick="w3_close()" class="btn w3-bar-item"> 
+        <p> &times; </p> </button>
+        <div class="a">
+            <a href="/dashboard" class="w3-bar-item w3-button"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <a href="/information" class="w3-bar-item w3-button"><i class="fas fa-user"></i> Profile</a>
+            <a href="/edit" class="w3-bar-item w3-button"><i class="fas fa-edit"></i> Edit</a>
+            <a href="/announcement" class="w3-bar-item w3-button"><i class="fas fa-bullhorn"></i> Announcement</a>
+            <a href="/sit-in" class="w3-bar-item w3-button"><i class="fas fa-book"></i> Sit-in Rules</a>
+            <a href="/labrules" class="w3-bar-item w3-button"><i class="fas fa-book-open"></i> Lab Rules and Regulations</a>
+            <a href="/sessions" class="w3-bar-item w3-button"><i class="fas fa-clock"></i> Sessions</a>
+            <a href="/history" class="w3-bar-item w3-button"><i class="fas fa-history"></i> History</a>
+            <a href="/reservations" class="w3-bar-item w3-button"><i class="fas fa-calendar-check"></i> Reservation</a>
+        </div>
+        <div class="sub-div">
+        <p><a href="/logout" class="w3-bar-item w3-button"><i class="fas fa-sign-out-alt"></i> Logout</a></p>
+        </div>
+    </div>
+    
+    <!-- Page Content -->
+    <div style="background-color: #1e7898">
+        <button class="btn" style="background-color: #1e7898;" onclick="w3_open()">☰ Sit in Rules </button>
+        <div class="w3-container" style="color: white;">
+        <h5 style="font-family: 'Inter';"> Laboratory Rules and Regulations <br> </h5>
+        </div>
+    </div>
+
+<!-- Laboratory Rules Container -->
+<div class="col-head"> UNIVERSITY OF CEBU - MAIN CAMPUS </div>
+    <div class="sit-in-info" style="padding-left: 5px;">
+        <p style="text-align: center; font-weight: bold;"> College of Information and Computer Studies </p>
+        <p><b>LABORATORY SIT-IN RULES AND PROTOCOLS<b></p>
+        <p>1. Sit in will be allowed effectively Midterm period and the only exception is Prelim period.</p>
+        <p>2. sit in will only be allowed 15 minutes after the class entered the laboratory and with the permission of the instructor who will be conducting the class once for no classes or vacant hours. Once the instructor is absent, the Laboratory supervisor will decide the students to sit in.</p>
+        <p>3. Approach any of the laboratory in-charge (Working Scholar of Laboratory Supevisor) and not the instructor who who conducted the class before getting in.</p>
+        <p>4. Students (sit-inners) should submit their ID to any of the laboratory in-charge and tell the in-charge what activities they are going to do.</p>
+        <p>5. Students (sit-inners) must observe silence while working in their activities to  avoid class distraction. Only those who need to sit-in are allowed to stay in the laboratory.</p>
+        <p>6. Once the class is over, sit-inners must have their files, closed all the applications, log off the computer, arrange the chair properly and claim their ID back from the laboratory in-charge before leaving.</p>
+        <br>
+        <p>We expect that you follow the above-mentioned rules.</p>
+    </div>
+</div>
+
+<script>
+    function w3_open() {
+        document.getElementById("mySidebar").style.display = "block";
+    }
+    
+    function w3_close() {
+        document.getElementById("mySidebar").style.display = "none";
+    }
+</script>
+</body>

@@ -49,14 +49,20 @@ def index():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        username = request.form["idno"]
+        username = request.form["idno, username"]
         password = request.form["password"]
 
         with sqlite3.connect("sitinmonitor.db") as conn:
             cursor = conn.cursor()
+            # check student
             cursor.execute("SELECT idno, fname, lastname, mname, course, yrlvl, email FROM USERS WHERE username=? AND password=?", 
                          (username, password))
             user = cursor.fetchone()
+
+            # check admin
+            cursor.execute("SELECT username FROM ADMIN WHERE username=? AND password=?", 
+                         (username, password))
+            admin = cursor.fetchone()
             
         if user:
             # Store user info in session
@@ -69,6 +75,13 @@ def login():
             session['email'] = user[6]  # Email
             flash('Login successful!', 'success')
             return redirect(url_for('dashboard'))
+        
+        elif admin: 
+            # Store user info in session
+            session['username'] = admin[0]  # admin username
+            flash('Admin Login successful!', 'success')
+            return redirect(url_for('admin_dashboard'))
+        
         else:
             flash('Invalid username or password!', 'danger')
             return redirect(url_for('index'))
@@ -186,6 +199,32 @@ def labrules():
 @app.route('/sit-in')
 def sit_in():
     return render_template('sit-in.html')
+    
+
+# ADMIN ROUTES
+# Dashboard route
+@app.route('/admin_dashboard', methods=['GET'])
+def admin_dashboard():
+    if "username" in session:  # Check for the correct session key
+        with sqlite3.connect("sitinmonitor.db") as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT username FROM USERS WHERE username = ?", (session["username"],))
+            admin = cursor.fetchone()
+        
+        if admin:
+            username = {
+                "username": admin[0]
+            }
+            return render_template("admin_dashboard.html", username=username)
+        
+        else:
+                # If the user is not an admin, redirect or show an error
+                flash("You do not have permission to access this page.", "danger")
+                return redirect(url_for('dashboard'))  # Redirect to a regular user dashboard or home page
+                
+    else:
+        flash("You do not have permission to access this page.", "info")
+        return redirect(url_for('index'))
     
 # Logout route
 @app.route("/logout")

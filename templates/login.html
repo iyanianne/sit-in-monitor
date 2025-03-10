@@ -214,8 +214,8 @@
         {% endwith %}
         <form action="{{ url_for('login') }}" method="POST" class="w3-container" id="loginForm">
 
-            <!-- ID Number Field -->
-            <input type="number" name="idno" id="idno" class="w3-input" placeholder="ID Number" required>
+            <!-- IDNO or Username Field -->
+            <input type="text" name="idno, username" id="idno, username" class="w3-input" placeholder="ID Number or Username" required>
             <br>
             <!-- Password Field -->
             <input type="password" name="password" id="password" class="w3-input" placeholder="Password" required>

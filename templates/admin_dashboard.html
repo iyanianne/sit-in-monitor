@@ -11,45 +11,45 @@
   <title>SIT IN MONITORING</title>
 </head>
 <body>
-
   <style>
-
     body {
+      margin: 0;
       font-family: 'Inter';
     }
-
-    .div {
-      background-color: #1e7898;
-      color: white;
-    }
-
-    .sub-div {
-      display: flex;
-      justify-content: left; 
-      align-items: left;
-      padding: 7px;
-      color: white;
-      position: absolute;
-      bottom: 0px;
-      width: 100%;
-    }
-
-    .btn {
-      background-color: #1e7898;
-      color: white;
+    
+    .topnav {
+      overflow: hidden;
+      background-color: #85807f;
       padding: 5px 0;
-      border: none;
-      background: none;
-      margin-left: 5px;
-      font-size: 20px;
     }
-
-    .btn p {
+    
+    .topnav a {
+      float: right;
+      transition: 0.3s;
+      color: #f2f2f2;
+      text-align: center;
+      padding: 6px 10px;
+      text-decoration: none;
       font-size: 15px;
     }
-
-    .a {
+    
+    .topnav a:hover {
+      background-color: #ccc;
+      color:rgb(75, 72, 71);
+    }
+    
+    .topnav a.active {
+      background-color:rgb(33, 92, 114);
       color: white;
+    }
+
+    .head {
+      float: left;
+      color: #f2f2f2;
+      text-align: center;
+      padding: 6px 10px;
+      text-decoration: none;
+      font-size: 20px;
     }
 
     .row {
@@ -73,174 +73,69 @@
     }
 
     .col-head {
-      height: 60px;
-      text-align: center;
-      font-weight: bolder;
-      border-top-left-radius: 7px;
-      border-top-right-radius: 7px;
-      background-color: #1e7898;
+      height: 40px;
+      border-radius: 4px;
+      font-size: 15px;
+      padding-left: 4px;
+      display: flex;
+      align-items: center;
       color: white;
+      background-color: #85807f;
+    }
+    
+    .col-head i {
+      margin-right: 8px; 
+    }
+
+    input[type=text], select, input[type=number] {
       padding: 8px;
-      align-content: center;
+      margin: 8px;
+      background: transparent;
+      outline: none;
+      display: inline-block;
+      border-radius: 4px;
+      color: white;
     }
 
-    .avatar {
-      text-align: center;
-      margin: 24px 0 12px 0;
+    .column p {
+      padding-left: 5px;
+      color: rgb(68, 65, 64);
     }
+    </style>
 
-    .container {
-      padding-left: 7px;
-    }
-
-    .prof-info {
-      box-sizing: content-box;
-      margin: 2px;
-      padding-left: 15px 0;
-      height: 423px;
-    }
-
-    img {
-      justify-content: center;
-      height: 100px;
-      width: 100px;
-      clip-path: circle(50%);
-    }
-
-    .an-info {
-      box-sizing: content-box;
-      margin: 2px;
-      padding: 5px 0;
-      overflow-y: scroll;
-      height: 423px;
-    }
-
-    .lab-info {
-      box-sizing: content-box;
-      position: absolute;
-      margin: 2px;
-      padding: 5px 0;
-      overflow-y: scroll;
-      width: 33.5%;
-      height: 460px;
-      font-weight: lighter;
-    }
-  </style>
-
-  <!-- Sidebar -->
-  <div class="w3-sidebar w3-bar-block" style="background-color:#1e7898; display: none; width: 200px;" id="mySidebar">
-    <button onclick="w3_close()" class="btn w3-bar-item"> 
-      <p> &times; </p> </button>
-      <div class="a">
-        <a href="/dashboard" class="w3-bar-item w3-button"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
-        <a href="/information" class="w3-bar-item w3-button"><i class="fas fa-user"></i> Profile</a>
-        <a href="/edit" class="w3-bar-item w3-button"><i class="fas fa-edit"></i> Edit</a>
-        <a href="/announcement" class="w3-bar-item w3-button"><i class="fas fa-bullhorn"></i> Announcement</a>
-        <a href="/sit-in" class="w3-bar-item w3-button"><i class="fas fa-book"></i> Sit-in Rules</a>
-        <a href="/labrules" class="w3-bar-item w3-button"><i class="fas fa-book-open"></i> Lab Rules and Regulations</a>
-        <a href="/sessions" class="w3-bar-item w3-button"><i class="fas fa-clock"></i> Sessions</a>
-        <a href="/history" class="w3-bar-item w3-button"><i class="fas fa-history"></i> History</a>
-        <a href="/reservations" class="w3-bar-item w3-button"><i class="fas fa-calendar-check"></i> Reservation</a>
+<body>
+    <div class="topnav">
+      <div class="head"> 
+        College of Computer Studies Admin 
+      </div>
+      <a href="#ad_logout">Logout</a>
+      <a href="#ad_reserve">Reservation</a>
+      <a href="#ad_feedback">Feedback Reports</a>
+      <a href="#ad_reports">Sit-in Reports</a>
+      <a href="#ad_records">Sit-in Records</a>
+      <a href="#ad_students">Students</a>
+      <a href="#ad_dashboard">Home</a>
     </div>
-
-    <div class="sub-div">
-      <p><a href="/logout" class="w3-bar-item w3-button"><i class="fas fa-sign-out-alt"></i> Logout</a></p>
-    </div>
-</div>
-
-<!-- Page Content -->
-<div style="background-color: #1e7898">
-  <button class="btn" style="background-color: #1e7898;" onclick="w3_open()">☰ Admin Dashboard </button>
-  <div class="w3-container" style="color: white;">
-    <h5 style="font-family: 'Inter';"> Welcome, {{ username.fname }} !</h5>
-  </div>
-</div>
-
-<!-- Profile Container -->
-<div class="row">
-  <div class="column" style="width: 300px;">
-    <div>
-      <div class="col-head"> Student Information </div>
-        <div class="prof-info">
-          <div class="w3-center w3-padding-left">
-            <label for="current_avatar"></label>
-            {% if username.avatar_filename %}
-                <img src="{{ url_for('static', filename='images/uploads/' + username.avatar_filename) }}" alt="Current Avatar">
-            {% else %}
-                <img src="{{ url_for('static', filename='images/uploads/default_avatar.png') }}" alt="Default Avatar">
-            {% endif %}
-          </div>
-        <hr>
-        <p><b> Name: </b> {{ username.fname }} {{ username.mname }} {{ username.lastname }} </p>
-        <p><b> Course: </b> {{ username.course }}</p>
-        <p><b> Year: </b> {{ username.yrlvl }}</p>
-        <p><b> E-mail: </b> {{ username.email}}</p>
-        <p><b> Session: </b> </p>
+    
+<div>
+  <input type="text" id="search" placeholder="Search Students">
+  <div class="row">
+    <div class="column" style="width: 45%;">
+      <div class="col-head">
+        <i class="fa fa-chart-bar"></i> Statistics
+      </div>
+      <div class="p">
+        <p> <b>Students Registered:</b> </p>
+        <p> <b>Currently Sit-in:</b> </p>
+        <p> <b>Total Sit-in:</b> </p>
       </div>
     </div>
-  </div>
-
-<!-- Announcement Container -->
-  <div class="column" style="width: 550px">
-    <div class="col-head"> Announcement </div>
-      <div class="container" style="text-align: center;">
-        <p> CCS Admin </p>
-          <div class="an-info">
-            <div>
-              
-            </div>
-          </div>
+  
+  <!-- Announcement Container -->
+    <div class="column" style="width: 45%">
+      <div class="col-head">
+        <i class="fa fa-bullhorn"></i> Announcements
       </div>
-  </div>
-
-  <!-- Laboratory Rules Container -->
-  <div class="column" style="width: 34%">
-    <div class="col-head"> Laboratory Rules and Regulations </div>
-      <div class="container">
-        <div class="lab-info">
-          <p style="font-weight: bold; text-align: center;"> UNIVERSITY OF CEBU - MAIN CAMPUS </p>
-          <p style="font-weight: bold; text-align: center;"> College of Information and Computer Studies </p>
-            <p>To avoid embarrassment and maintain camaraderie with your friends and superiors at our laboratories, please observe the following:</p>
-            <p>1. Maintain silence, proper decorum, and discipline inside the laboratory. Mobile phones, walkmans and other personal pieces of equipment must be switched off.</p>
-            <p>2. Games are not allowed inside the lab. This includes computer-related games, card games and other games that may disturb the operation of the lab.</p>
-            <p>3. Surfing the Internet is allowed only with the permission of the instructor. Downloading and installing of software are strictly prohibited.</p>
-            <p>4. Getting access to other websites not related to the course (especially pornographic and illicit sites) is strictly prohibited.</p>
-            <p>5. Deleting computer files and changing the set-up of the computer is a major offense.</p>
-            <p>6. Observe computer time usage carefully. A fifteen-minute allowance is given for each use. Otherwise, the unit will be given to those who wish to "sit-in". </p>
-            <p>7. Observe proper decorum while inside the laboratory.</p>
-              <ul>
-                <li>Do not get inside the lab unless the instructor is present.</li>
-                <li>All bags, knapsacks, and the likes must be deposited at the counter.</li>
-                <li>Follow the seating arrangement of your instructor.</li>
-                <li>At the end of class, all software programs must be closed.</li>
-                <li>Return all chairs to their proper places after using.</li>
-              </ul>
-            <p>8. Chewing gum, eating, drinking, smoking, and other forms of vandalism are prohibited inside the lab.
-            <p>9. Anyone causing a continual disturbance will be asked to leave the lab. Acts or gestures offensive to the members of the community, including public display of physical intimacy, are not tolerated.
-            <p>10. Persons exhibiting hostile or threatening behavior such as yelling, swearing, or disregarding requests made by lab personnel will be asked to leave the lab.
-            <p>11. For serious offense, the lab personnel may call the Civil Security Office (CSU) for assistance.
-            <p>12. Any technical problem or difficulty must be addressed to the laboratory supervisor, student assistant or instructor immediately.
-              <br>
-              <br>
-            <p style="font-weight: bold;">DISCIPLINARY ACTION</p>
-
-            <p><u>First Offense </u> - The Head or the Dean or OIC recommends to the Guidance Center for a suspension from classes for each offender.</p>
-            <p><u>Second and Subsequent Offenses</u> - A recommendation for a heavier sanction will be endorsed to the Guidance Center.</p>
-          </div>
-      </div>
-  </div>
-
-</div>
-
-<script>
-function w3_open() {
-  document.getElementById("mySidebar").style.display = "block";
-}
-
-function w3_close() {
-  document.getElementById("mySidebar").style.display = "none";
-}
-</script>
-     
+    </div>
 </body>
 </html> 

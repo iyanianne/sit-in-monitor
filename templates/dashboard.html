@@ -19,7 +19,7 @@
     }
 
     .div {
-      background-color: #1e7898;
+      background-color: #85807f;
       color: white;
     }
 
@@ -35,7 +35,7 @@
     }
 
     .btn {
-      background-color: #1e7898;
+      background-color: #85807f;
       color: white;
       padding: 5px 0;
       border: none;
@@ -50,6 +50,10 @@
 
     .a {
       color: white;
+    }
+
+    mySidebar a:hover {
+      left: 0;
     }
 
     .row {
@@ -78,7 +82,7 @@
       font-weight: bolder;
       border-top-left-radius: 7px;
       border-top-right-radius: 7px;
-      background-color: #1e7898;
+      background-color: #85807f;
       color: white;
       padding: 8px;
       align-content: center;
@@ -128,7 +132,7 @@
   </style>
 
   <!-- Sidebar -->
-  <div class="w3-sidebar w3-bar-block" style="background-color:#1e7898; display: none; width: 200px;" id="mySidebar">
+  <div class="w3-sidebar w3-bar-block" style="background-color:#85807f; display: none; width: 200px;" id="mySidebar">
     <button onclick="w3_close()" class="btn w3-bar-item"> 
       <p> &times; </p> </button>
       <div class="a">
@@ -149,8 +153,8 @@
 </div>
 
 <!-- Page Content -->
-<div style="background-color: #1e7898">
-  <button class="btn" style="background-color: #1e7898;" onclick="w3_open()">☰ Dashboard </button>
+<div style="background-color: #85807f">
+  <button class="btn" style="background-color: #85807f;" onclick="w3_open()">☰ Dashboard </button>
   <div class="w3-container" style="color: white;">
     <h5 style="font-family: 'Inter';"> Welcome, {{ username.fname }} !</h5>
   </div>

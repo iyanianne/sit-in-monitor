@@ -1,25 +1,40 @@
 import sqlite3
 
-conn = sqlite3.connect('sitinmonitor.db')
+def add_user(idno, lastname, fname, mname, course, yrlvl, email, username, password):
+    with sqlite3.connect("sitinmonitor.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO USERS (idno, lastname, fname, mname, course, yrlvl, email, username, password) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                       (idno, lastname, fname, mname, course, yrlvl, email, username, password))
+        conn.commit()
 
-cursor = conn.cursor()
-cursor.execute('''
-               CREATE TABLE USERS (
-                idno TEXT PRIMARY KEY,
-                lastname TEXT, 
-                fname TEXT, 
-                mname TEXT, 
-                course TEXT, 
-                yrlvl TEXT, 
-                email TEXT, 
-                username TEXT, 
-                password TEXT)
-               ''')
+def get_user_by_username_and_password(username, password):
+    with sqlite3.connect("sitinmonitor.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM USERS WHERE username=? AND password=?", (username, password))
+        return cursor.fetchone()
 
-cursor.execute('''
-               CREATE TABLE ADMIN
-                username TEXT primary key,
-                password TEXT
-               ''')
+def get_admin_by_username_and_password(username, password):
+    with sqlite3.connect("sitinmonitor.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM ADMIN WHERE username=? AND password=?", (username, password))
+        return cursor.fetchone()
 
-conn.commit()
+def get_user_by_id(idno):
+    with sqlite3.connect("sitinmonitor.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM USERS WHERE idno=?", (idno,))
+        return cursor.fetchone()
+
+def update_user(idno, lastname, fname, mname, course, yrlvl, email):
+    with sqlite3.connect("sitinmonitor.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE USERS SET lastname = ?, fname = ?, mname = ?, course = ?, yrlvl = ?, email = ? WHERE idno = ?
+        """, (lastname, fname, mname, course, yrlvl, email, idno))
+        conn.commit()
+
+def update_user_avatar(idno, avatar_filename):
+    with sqlite3.connect("sitinmonitor.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE USERS SET avatar_filename = ? WHERE idno = ?", (avatar_filename, idno))
+        conn.commit()

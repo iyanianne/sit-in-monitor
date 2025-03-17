@@ -2,18 +2,12 @@ from flask import Flask, render_template, request, redirect, session, flash, url
 import sqlite3  
 import os
 from werkzeug.utils import secure_filename
+import dbhelper
 
 app = Flask(__name__)
 app.secret_key = "database1234!"
 app.config['UPLOAD_FOLDER'] = 'static/images/uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
-
-def init_db():
-    with sqlite3.connect("sitinmonitor.db") as conn:
-        cursor = conn.cursor()
-        # You might want to create the USERS table here if it doesn't exist
-        # cursor.execute('''CREATE TABLE IF NOT EXISTS USERS (idno TEXT PRIMARY KEY, lastname TEXT, fname TEXT, mname TEXT, course TEXT, yrlvl TEXT, email TEXT, username TEXT, password TEXT)''')
-        conn.commit()
 
 # Register route
 @app.route("/register", methods=["GET", "POST"])
@@ -29,15 +23,12 @@ def register():
         username = request.form["username"] if request.form['username'] else idno
         password = request.form["password"]
 
-        with sqlite3.connect("sitinmonitor.db") as conn:
-            cursor = conn.cursor()
-            try:
-                cursor.execute("INSERT INTO USERS (idno, lastname, fname, mname, course, yrlvl, email, username, password) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                               (idno, lastname, fname, mname, course, yrlvl, email, username, password))
-                conn.commit()
-                flash('Registration Successful! You can now log in.', 'success')
-            except sqlite3.IntegrityError:
-                flash('IDNO or Username already exists!', 'danger')
+        try:
+            # Call the function from dbhelper to add user
+            dbhelper.add_user(idno, lastname, fname, mname, course, yrlvl, email, username, password)
+            flash('Registration Successful! You can now log in.', 'success')
+        except sqlite3.IntegrityError:
+            flash('IDNO or Username already exists!', 'danger')
 
         return render_template("login.html")
 
@@ -52,17 +43,9 @@ def login():
         username = request.form["idno, username"]
         password = request.form["password"]
 
-        with sqlite3.connect("sitinmonitor.db") as conn:
-            cursor = conn.cursor()
-            # check student
-            cursor.execute("SELECT idno, fname, lastname, mname, course, yrlvl, email FROM USERS WHERE username=? AND password=?", 
-                         (username, password))
-            user = cursor.fetchone()
-
-            # check admin
-            cursor.execute("SELECT username FROM ADMIN WHERE username=? AND password=?", 
-                         (username, password))
-            admin = cursor.fetchone()
+        # fetch user info from dbhelper
+        user = dbhelper.get_user_by_username_and_password(username, password)
+        admin = dbhelper.get_admin_by_username_and_password(username, password)
             
         if user:
             # Store user info in session
@@ -92,10 +75,8 @@ def login():
 @app.route('/dashboard', methods=['GET'])
 def dashboard():
     if "idno" in session:  # Check for the correct session key
-        with sqlite3.connect("sitinmonitor.db") as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT idno, fname, lastname, mname, course, yrlvl, email, avatar_filename FROM USERS WHERE idno = ?", (session["idno"],))
-            user = cursor.fetchone()
+        #  fetch user info from dbhelper
+        user = dbhelper.get_user_by_id(session["idno"])
         
         if user:
             username = {
@@ -106,7 +87,7 @@ def dashboard():
                 "course": user[4],
                 "yrlvl": user[5],
                 "email": user[6],
-                "avatar_filename": user[7]  # Add avatar filename to the dictionary
+                "avatar_filename": user[7]  # Add avatar filename
             }
             return render_template("dashboard.html", username=username)
     else:
@@ -118,10 +99,7 @@ def dashboard():
 def information():
     if "idno" in session:  # Check for the correct session key
         # Retrieve user information from the database
-        with sqlite3.connect("sitinmonitor.db") as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT idno, fname, lastname, mname, course, yrlvl, email, avatar_filename FROM USERS WHERE idno = ?", (session["idno"],))
-            user = cursor.fetchone()
+        user = dbhelper.get_user_by_id(session["idno"])
         
         if user:
             username = {
@@ -147,45 +125,35 @@ def information():
 def edit():
     if "idno" in session:  # Check for the correct session key
         idno = session["idno"]  # Use the IDNO for display
-        with sqlite3.connect("sitinmonitor.db") as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT idno, lastname, fname, mname, course, yrlvl, email, avatar_filename FROM USERS WHERE idno = ?", (idno,))
-            student = cursor.fetchone()
+        student = dbhelper.get_user_by_id(idno)
         
-            if request.method == "POST":
-                # Handle avatar upload
-                avatar = request.files.get('avatar')
-                if avatar:
-                    avatar_filename = secure_filename(avatar.filename)
-                    avatar.save(os.path.join(app.config['UPLOAD_FOLDER'], avatar_filename))
-                    # Update the avatar filename in the database
-                    cursor.execute("UPDATE USERS SET avatar_filename = ? WHERE idno = ?", (avatar_filename, idno))
-                    conn.commit()  # Commit the changes to the database
+        if request.method == "POST":
+            avatar = request.files.get('avatar')
+            if avatar:
+                avatar_filename = secure_filename(avatar.filename)
+                avatar.save(os.path.join(app.config['UPLOAD_FOLDER'], avatar_filename))
+                # Update the avatar filename in the database
+                dbhelper.update_user_avatar(idno, avatar_filename)
 
-                # Handle other user details
-                lastname = request.form.get('lastname')
-                fname = request.form.get('fname')
-                mname = request.form.get('mname')
-                course = request.form.get('course')
-                yrlvl = request.form.get('yrlvl')
-                email = request.form.get('email')
+            # Handle other user details
+            lastname = request.form.get('lastname')
+            fname = request.form.get('fname')
+            mname = request.form.get('mname')
+            course = request.form.get('course')
+            yrlvl = request.form.get('yrlvl')
+            email = request.form.get('email')
 
-                # Update the user details in the database
-                cursor.execute("""
-                    UPDATE USERS 
-                    SET lastname = ?, fname = ?, mname = ?, course = ?, yrlvl = ?, email = ? 
-                    WHERE idno = ?
-                """, (lastname, fname, mname, course, yrlvl, email, idno))
-                
-                conn.commit()  # Commit the changes to the database
-                flash("User  details updated successfully.", "success")
-                return redirect(url_for('dashboard'))  # Redirect to the dashboard or another page
+            # Update the user details in the database
+            dbhelper.update_user(idno, lastname, fname, mname, course, yrlvl, email)
             
-            if student:
-                return render_template('edit.html', student=student)
-            else:
-                flash("User  not found.", "danger")
-                return redirect(url_for('dashboard'))
+            flash("User  details updated successfully.", "success")
+            return redirect(url_for('dashboard'))  # Redirect to the dashboard or another page
+        
+        if student:
+            return render_template('edit.html', student=student)
+        else:
+            flash("User  not found.", "danger")
+            return redirect(url_for('dashboard'))
     else: 
         flash('Please log in to continue.', "info")    
         return redirect(url_for('login'))  # Redirect to login page instead of rendering edit.html  # Redirect to login page instead of rendering edit.html
@@ -202,23 +170,30 @@ def sit_in():
     
 
 # ADMIN ROUTES
-# Dashboard route
-@app.route('/admin_dashboard', methods=['GET'])
+# Admin Dashboard route
+@app.route('/admin_dashboard', methods=['GET', 'POST'])
 def admin_dashboard():
     if "username" in session:  # Check for the correct session key
-        with sqlite3.connect("sitinmonitor.db") as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT username FROM ADMIN WHERE username = ?", (session["username"],))
-            user = cursor.fetchone()
-        
-        if user:
-            username = {
-                "username": user[0],
-            }
-            return render_template("admin_dashboard.html", username=username)
+        password = request.form.get('password')  # Will return None if password is not in the form
+
+        if password:  # Ensure the password is provided before proceeding
+            admin = dbhelper.get_admin_by_username_and_password(session['username'], password)
+
+            if admin:
+                username = {
+                    "username": admin[0],
+                }
+                return render_template("admin_dashboard.html", username=username)
+            else:
+                flash("Invalid admin credentials.", "danger")
+                return redirect(url_for("index"))
+        else:
+                flash("Password is required.", "danger")
+                return redirect(url_for("admin_dashboard"))  # Redirect back to the dashboard if password is missing
     else:
         flash("Please log in to continue.", "info")
-        return redirect(url_for('index'))
+        return redirect(url_for('login'))
+        
     
 # Logout route
 @app.route("/logout")
@@ -226,8 +201,7 @@ def logout():
     session.pop("idno", None)  # Use the correct session key
     session.pop("fname", None)  # Clear the first name as well
     flash("Successfully logged out!", "info")
-    return redirect(url_for('index'))  # Redirect to the login page
+    return redirect(url_for('index'))
 
 if __name__ == "__main__":
-    init_db()
     app.run(debug=True)

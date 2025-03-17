@@ -196,6 +196,7 @@ def admin_dashboard():
 # Logout route
 @app.route("/logout")
 def logout():
+    session.pop("username", None)
     session.pop("idno", None)  # Use the correct session key
     session.pop("fname", None)  # Clear the first name as well
     flash("Successfully logged out!", "info")

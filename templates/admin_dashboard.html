@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <link rel="icon" type="image/x-icon" href="../static/favicon/ccslogo.png">
   <title>SIT IN MONITORING</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <style>
@@ -102,7 +103,7 @@
       padding-left: 5px;
       color: rgb(68, 65, 64);
     }
-    </style>
+  </style>
 
 <body>
     <div class="topnav">
@@ -118,25 +119,70 @@
       <a href="#ad_dashboard">Home</a>
     </div>
     
-<div>
-  <input type="text" id="search" placeholder="Search Students">
-  <div class="row">
-    <div class="column" style="width: 45%;">
-      <div class="col-head">
-        <i class="fa fa-chart-bar"></i> Statistics
+  <div>
+    <input type="text" id="search" placeholder="Search Students">
+    <div class="row">
+      <div class="column" style="width: 45%;">
+        <div class="col-head">
+          <i class="fa fa-chart-bar"></i> Statistics
+        </div>
+        <div class="p">
+          <p> <b>Students Registered:</b> </p>
+          <p> <b>Currently Sit-in:</b> </p>
+          <p> <b>Total Sit-in:</b> </p>
+        </div>
+        <!-- Chart container -->
+        <canvas id="sitInChart" width="400" height="200"></canvas>
       </div>
-      <div class="p">
-        <p> <b>Students Registered:</b> </p>
-        <p> <b>Currently Sit-in:</b> </p>
-        <p> <b>Total Sit-in:</b> </p>
+    
+      <!-- Announcement Container -->
+      <div class="column" style="width: 45%">
+        <div class="col-head">
+          <i class="fa fa-bullhorn"></i> Announcements
+        </div>
       </div>
     </div>
-  
-  <!-- Announcement Container -->
-    <div class="column" style="width: 45%">
-      <div class="col-head">
-        <i class="fa fa-bullhorn"></i> Announcements
-      </div>
-    </div>
+  </div>
+
+  <script>
+    // Example data for the chart
+    const data = {
+      labels: ['Students Registered', 'Currently Sit-in', 'Total Sit-in'], // X-axis labels
+      datasets: [{
+        label: 'Sit-in Statistics',
+        data: [100, 40, 60], // Example data points for registered, sit-in, and total
+        backgroundColor: [
+          'rgba(54, 162, 235, 0.2)', // Blue
+          'rgba(255, 99, 132, 0.2)', // Red
+          'rgba(75, 192, 192, 0.2)'  // Green
+        ],
+        borderColor: [
+          'rgba(92, 64, 51)', // Blue
+          'rgba(255, 99, 132, 1)', // Red
+          'rgba(75, 192, 192, 1)'  // Green
+        ],
+        borderWidth: 1
+      }]
+    };
+
+    // Chart configuration
+    const config = {
+      type: 'bar', // Type of chart (bar, line, pie, etc.)
+      data: data,
+      options: {
+        scales: {
+          y: {
+            beginAtZero: true // Start the y-axis from zero
+          }
+        }
+      }
+    };
+
+    // Create the chart
+    const sitInChart = new Chart(
+      document.getElementById('sitInChart'),
+      config
+    );
+  </script>
 </body>
-</html> 
+</html>

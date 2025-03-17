@@ -173,28 +173,26 @@ def sit_in():
 # Admin Dashboard route
 @app.route('/admin_dashboard', methods=['GET', 'POST'])
 def admin_dashboard():
-    if "username" in session:  # Check for the correct session key
-        password = request.form.get('password')  # Will return None if password is not in the form
+    if "username" not in session:
+        flash("Please log in to continue.", "info")
+        return redirect(url_for('login'))
 
-        if password:  # Ensure the password is provided before proceeding
+    if request.method == 'POST':
+        password = request.form.get('password')
+        if password:
             admin = dbhelper.get_admin_by_username_and_password(session['username'], password)
-
             if admin:
-                username = {
-                    "username": admin[0],
-                }
+                username = {"username": admin[0]}
                 return render_template("admin_dashboard.html", username=username)
             else:
                 flash("Invalid admin credentials.", "danger")
                 return redirect(url_for("index"))
         else:
-                flash("Password is required.", "danger")
-                return redirect(url_for("admin_dashboard"))  # Redirect back to the dashboard if password is missing
-    else:
-        flash("Please log in to continue.", "info")
-        return redirect(url_for('login'))
-        
-    
+            flash("Password is required.", "danger")
+            return redirect(url_for("admin_dashboard"))
+
+    return render_template("admin_dashboard.html")  # Handle the GET request
+
 # Logout route
 @app.route("/logout")
 def logout():

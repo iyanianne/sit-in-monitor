@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, session, flash, url_for
+from flask import Flask, render_template, request, redirect, session, flash, url_for, jsonify
 import sqlite3  
 import os
 from werkzeug.utils import secure_filename
@@ -40,11 +40,12 @@ def index():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        username = request.form["idno, username"]
-        password = request.form["password"]
+        idno = request.form.get("idno")
+        username = request.form.get("username")
+        password = request.form.get("password")
 
         # fetch user info from dbhelper
-        user = dbhelper.get_user_by_username_and_password(username, password)
+        user = dbhelper.get_user_by_idno_or_username_and_password(idno, username, password)
         admin = dbhelper.get_admin_by_username_and_password(username, password)
             
         if user:
@@ -61,9 +62,9 @@ def login():
         
         elif admin: 
             # Store user info in session
-            session['username'] = admin[0]  # admin username
-            flash('Admin Login successful!', 'success')
-            return redirect(url_for('admin_dashboard'))
+           session['username'] = admin[0]  # admin username
+           flash('Admin Login successful!', 'success')
+           return redirect(url_for('admin_dashboard'))
         
         else:
             flash('Invalid username or password!', 'danger')
@@ -76,7 +77,7 @@ def login():
 def dashboard():
     if "idno" in session:  # Check for the correct session key
         #  fetch user info from dbhelper
-        user = dbhelper.get_user_by_id(session["idno"])
+        user = dbhelper.get_user_by_id(session["idno, username, password"])
         
         if user:
             username = {
@@ -89,10 +90,13 @@ def dashboard():
                 "email": user[6],
                 "avatar_filename": user[7]  # Add avatar filename
             }
-            return render_template("dashboard.html", username=username)
+            return render_template("dashboard.html", username=username, announcements=announcements_list)
     else:
         flash("Please log in to continue.", "info")
-        return redirect(url_for('index'))
+        return redirect(url_for('login'))
+    
+    flash("Please log in to continue.", "info")  # If no session, ask to log in
+    return redirect(url_for('index'))
     
 # Information Route
 @app.route('/information', methods=['GET'])
@@ -115,10 +119,10 @@ def information():
             return render_template("information.html", username=username)
         else:
             flash("User  not found.", "danger")
-            return redirect(url_for('index'))
+            return redirect(url_for('login'))
     else:
         flash("Please log in to continue.", "info")
-        return redirect(url_for('index'))
+        return redirect(url_for('login'))
     
 #Edit Student
 @app.route("/edit", methods=["GET", "POST"])
@@ -171,6 +175,8 @@ def sit_in():
 
 # ADMIN ROUTES
 # Admin Dashboard route
+announcements_list = []
+
 @app.route('/admin_dashboard', methods=['GET', 'POST'])
 def admin_dashboard():
     if "username" not in session:
@@ -191,12 +197,65 @@ def admin_dashboard():
             flash("Password is required.", "danger")
             return redirect(url_for("admin_dashboard"))
 
-    return render_template("admin_dashboard.html")  # Handle the GET request
+    students_registered = dbhelper.count_registered_students()
+    currently_sit_in = session.get("currently_sit_in", 0) 
+    total_sit_in = session.get("total_sit_in", 0)
+    
+    return render_template("admin_dashboard.html", 
+                           announcements=announcements_list,
+                           students_registered=students_registered,
+                           currently_sit_in=currently_sit_in,
+                           total_sit_in=total_sit_in)  # Handle the GET request
 
+# Announcement route
+@app.route('/add_announcement', methods=['POST'])
+def add_announcement():
+    if "username" not in session:
+        return redirect(url_for('login'))
+    
+    title = request.form.get('title')
+    content = request.form.get('content')
+    
+    if title and content:
+        announcements_list.append({"title": title, "content": content})
+
+    return redirect(url_for('ad_dashboard'))
+
+# Admin Students List Route
+selected_data = {}
+
+@app.route('/ad_students')
+def ad_students():
+    if "username" not in session:
+        flash("Please log in to continue.", "info")
+        return redirect(url_for('login'))
+
+    student = dbhelper.get_all_students()
+    if student:
+        student = student [0]
+
+    return render_template('ad_students.html', student=student)
+
+@app.route('/sitinform/<int:idno>', methods=['GET'])
+def sitinform(idno):
+    student = dbhelper.get_user_by_id(idno)
+
+    if student:
+        student = {
+            "idno": student[0],
+            "name": student[1],
+            "purpose": student[2],
+            "laboratory": student[3],
+            "sessions": student[4]
+        }
+        return jsonify(student)
+    return jsonify({"error": "Student not found."}), 404
+    
 # Logout route
 @app.route("/logout")
 def logout():
     session.pop("username", None)
+    flash("Successfully logged out!", "info")
     session.pop("idno", None)  # Use the correct session key
     session.pop("fname", None)  # Clear the first name as well
     flash("Successfully logged out!", "info")

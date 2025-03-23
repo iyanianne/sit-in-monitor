@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie-edge">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="icon" type="image/x-icon" href="../static/favicon/ccslogo.png">
+  <title>SIT IN MONITORING</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Inter';
+    }
+    
+    .topnav {
+      overflow: hidden;
+      background-color: #3f3636;
+      padding: 5px 0;
+    }
+    
+    .topnav a {
+      float: right;
+      transition: 0.3s;
+      color: #f2f2f2;
+      text-align: center;
+      padding: 6px 10px;
+      text-decoration: none;
+      font-size: 15px;
+    }
+    
+    .topnav a:hover {
+      background-color: #a09191;
+      border-radius: 4px;
+      color:rgb(75, 72, 71);
+    }
+    
+    .topnav a.active {
+      background-color:rgb(33, 92, 114);
+      color: white;
+    }
+
+    .head {
+      float: left;
+      color: #f2f2f2;
+      text-align: center;
+      padding: 6px 10px;
+      text-decoration: none;
+      font-size: 20px;
+    }
+
+    input[type=text], select, input[type=number] {
+      padding: 8px;
+      margin-left: 20px;
+      margin-top: 8px;
+      background: transparent;
+      border: 1px solid #ccc;
+      outline: none;
+      display: inline-block;
+      border-radius: 4px;
+      color: rgb(59, 48, 28);
+    }
+
+    .table {
+        align-items: center;
+    }
+    
+    table {
+        display: flex;
+        text-align: center;
+        margin: auto;
+        border-radius: 4px;
+        width: 85%;
+        border: rgb(59, 48, 28);
+        border-collapse: collapse;
+    }
+
+    th {
+        background-color: #3f3636;
+        color: white;
+        font-weight: bold;
+        text-align: left;
+        padding: 8px;
+    }
+
+    th a.sort-by { 
+        padding-right: 18px;
+        position: relative;
+    }
+
+    a.sort-by:before,
+    a.sort-by:after {
+        border: 4px solid transparent;
+        content: "";
+        display: block;
+        height: 0;
+        right: 5px;
+        top: 50%;
+        position: absolute;
+        width: 0;
+    }
+
+    th a {
+        text-decoration: none;
+    }
+
+    a.sort-by:before {
+        border-bottom-color: #666;
+        margin-top: -9px;
+    }
+    
+    a.sort-by:after {
+        border-top-color: #666;
+        margin-top: 1px;
+    }
+
+    button {
+        color: white;
+        padding: 8px 20px;
+        margin: 8px 0;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        width: 100%;
+    }
+
+    /* Modal Styles */
+    .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4); /* Background with transparency */
+            padding-top: 60px;
+        }
+
+        .modal-content {
+            color: white;
+            background-color: #5f4b2e;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            width: 65%;
+            max-width: 600px;
+            border-radius: 7px;
+        }
+
+        .modal-content input[type=text] {
+            color: white;
+        }
+
+        .modal-content h3 {
+            font-family: 'Inter';
+            text-align: center;        
+        }
+
+        .close {
+            color: black;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        select {
+            color: white;
+        }
+
+        select option {
+            color: #3f3636;
+        }
+
+        .confirm {
+            width: 80px;
+            background-color: #4CAF50; 
+            color: white;
+            border: none; 
+            padding: 5px 10px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+        }
+
+        .reject {
+            width: 80px;
+            background-color: #f44336; 
+            color: white; 
+            border: none; 
+            padding: 5px 10px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+        }
+
+        .confirm:hover {
+            background-color: #45a049; 
+        }
+
+        .reject:hover {
+            background-color: #d32f2f; 
+        }
+
+    .add a {
+        background-color: #3f3636;
+        color: white;
+        padding: 8px 20px;
+        margin: 8px 0;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-align: center;
+        text-decoration: none;
+    }
+  </style>
+
+<body>
+    <div class="topnav">
+      <div class="head"> 
+        Students List 
+      </div>
+      <p><a href="/logout" class="w3-bar-item w3-button"> Logout</a></p>
+      <a href="/ad_reserve">Reservation</a>
+      <a href="/ad_feedback">Feedback Reports</a>
+      <a href="/ad_reports">Sit-in Reports</a>
+      <a href="/ad_records">Sit-in Records</a>
+      <a href="/ad_students">Students</a>
+      <a href="/admin_dashboard">Home</a>
+    </div>
+    
+<div class="add">
+    <input type="text" id="search" placeholder="Search Students">
+    <a href="#" id="openModal"> Add Student </a>
+</div>
+<br>
+<div class="table">
+    <table>
+        <tr>
+            <th><a href="#" class="sort-by"> ID Number </a></th>
+            <th> Name </th>
+            <th> Purpose </th>
+            <th> Laboratory </th>
+            <th> Login </th>
+            <th> Sign out </th>
+            <th> Date </th>
+        </tr>
+    </tr>
+    {% if students %}
+        {% for student in students %}
+        <tr>
+            <td>{{ student.idno }}</td>
+            <td>{{ student.name }}</td>
+            <td>{{ student.purpose }}</td>
+            <td>{{ student.laboratory }}</td>
+            <td>{{ student.sessions }}</td>
+        </tr>
+        {% endfor %}
+    {% else %}
+        <tr>
+            <td colspan="7">No students found.</td>
+        </tr>
+    {% endif %}
+    </table>
+</div>
+<!-- Student Modal -->
+<div id="studentModal" class="modal">
+    <div class="modal-content w3-container">
+        <span class="close">&times;</span>
+        <h3>Sit In Form</h3>
+        <table>
+            <form action="{{ url_for('sitinform', idno=student.idno) }}">
+
+                <!-- ID Number -->
+                <div class="form-group idno-field">
+                    <label for="idno">ID Number</label> &nbsp; &nbsp; &nbsp; &nbsp; &emsp; &emsp;
+                    <input type="text" id="idno" name="idno" required>
+                </div>
+
+                <!-- Name Field -->
+                <div class="form-group name-field">
+                    <label for="lastname">Student Name</label> &emsp; &emsp; &nbsp;
+                    <input type="text" id="name" name="name" required>
+                </div>
+
+                <!-- Purpose and Laboratory Options -->
+                <div class="purpose">
+                    <label for="purpose">Purpose</label>
+                    &emsp; &emsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+                    <select id="purpose" name="purpose" required>
+                        <option value="python">Python</option>
+                        <option value="php">PHP</option>
+                        <option value="c#">C#</option>
+                        <option value="c++">C++</option>
+                        <option value="java">Java</option>
+                    </select>
+                </div>
+                <div class="lab">
+                    <label for="lab">Laboratory</label>
+                    &emsp;&emsp;&emsp;&nbsp;&nbsp;&nbsp; &nbsp;
+                    <select id="lab" name="lab" required>
+                        <option value="524">524</option>
+                        <option value="526">526</option>
+                        <option value="528">528</option>
+                        <option value="530">530</option>
+                        <option value="542">542</option>
+                        <option value="544">544</option>
+                    </select>
+                </div>
+
+                <!-- Session Field -->
+                <div class="form-group session-fields">
+                    <label for="session">Remaining Sessions</label>
+                    &nbsp;
+                    <input type="text" id="session" name="session" required>
+                </div>
+
+                <!-- Confirm and Reject Buttons -->
+                    <button type="submit" class="confirm">Confirm</button>
+                    &nbsp;
+                    <button type="submit" class="reject">Reject</button>
+            </form>
+        </table>
+    </div>
+</div>
+</body>
+
+<script>
+    function fetchStudentData(idno) {
+    $.ajax({
+        url: '/sitinform/' + idno,
+        method: 'GET',
+        success: function(data) {
+            if (data.error) {
+                alert(data.error);
+            } else {
+                $('#studentId').val(data.idno);
+                $('#studentName').val(data.name);
+                $('#studentPurpose').val(data.purpose);
+                $('#studentLab').val(data.lab);
+                $('#remainingSessions').val(data.session);
+            }
+        },
+        error: function(error) {
+            console.log("Error fetching data: ", error);
+        }
+    });
+}
+
+const modal = document.getElementById("studentModal");
+    document.getElementById("openModal").onclick = function() {
+        modal.style.display = "block";
+    };
+    document.querySelector(".close").onclick = function() {
+        modal.style.display = "none";
+    };
+    window.onclick = function(event) {
+        if (event.target === modal) {
+            modal.style.display = "none";
+        }
+    };
+</script>
+</html>

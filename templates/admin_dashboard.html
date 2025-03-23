@@ -35,7 +35,7 @@
     }
     
     .topnav a:hover {
-      background-color: #ccc;
+      background-color: #a09191;
       border-radius: 4px;
       color:rgb(75, 72, 71);
     }
@@ -94,13 +94,56 @@
       margin: 8px;
       background: transparent;
       outline: none;
+      border: 1px solid #ccc;
       display: inline-block;
       border-radius: 4px;
-      color: white;
+      color: rgb(59, 48, 28);
     }
 
     .column p {
       padding-left: 5px;
+      color: rgb(68, 65, 64);
+    }
+
+    .announcement {
+      margin-bottom: 10px; 
+      padding: 8px; 
+      outline: none;
+      border: 1px solid #ccc;
+      background-color: #f9f9f9; 
+      border-radius: 4px;
+    }
+
+    .textarea {
+      width: 100%; 
+      padding: 8px;
+      display: inline-block;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin: 8px;
+    }
+
+    button {
+      background-color: #3f3636; 
+      display: right;
+      align-content: right;
+      color: white; 
+      padding: 8px; 
+      border: none; 
+      border-radius: 5px;
+    }
+
+    button:hover {
+      background-color: #a09191;
+    }
+
+    .announcement h4 {
+      margin: 0;
+      color: rgb(68, 65, 64);
+    }
+
+    .announcement p {
+      margin: 0;
       color: rgb(68, 65, 64);
     }
   </style>
@@ -111,16 +154,15 @@
         College of Computer Studies Admin 
       </div>
       <p><a href="/logout" class="w3-bar-item w3-button"> Logout</a></p>
-      <a href="#ad_reserve">Reservation</a>
-      <a href="#ad_feedback">Feedback Reports</a>
-      <a href="#ad_reports">Sit-in Reports</a>
-      <a href="#ad_records">Sit-in Records</a>
-      <a href="#ad_students">Students</a>
-      <a href="#ad_dashboard">Home</a>
+      <a href="/ad_reserve">Reservation</a>
+      <a href="/ad_feedback">Feedback Reports</a>
+      <a href="/ad_reports">Sit-in Reports</a>
+      <a href="/ad_records">Sit-in Records</a>
+      <a href="/ad_students">Students</a>
+      <a href="/admin_dashboard">Home</a>
     </div>
     
   <div>
-    <input type="text" id="search" placeholder="Search Students">
     <div class="row">
       <div class="column" style="width: 45%;">
         <div class="col-head">
@@ -140,49 +182,102 @@
         <div class="col-head">
           <i class="fa fa-bullhorn"></i> Announcements
         </div>
-      </div>
+
+        <!-- Announcement form -->
+        <form action="/admin_dashboard" method="POST" style="margin: 10px;">
+          <input type="text" name="title" placeholder="Announcement Title" required>
+          <textarea name="content" placeholder="Write announcement here..." required></textarea>
+          <br>
+          <button type="submit">Submit</button>
+        </form>
+        
+        <!-- Display announcements -->
+        <div style="padding: 10px; margin: 10px;">
+          <h3> <b> Posted Announcements </b></h3>
+            <div>
+              {% if announcements %}
+                {% for announcement in announcements %}
+                  <div class="announcement">
+                    <h4>{{ announcement.title }}</h4>
+                    <p>{{ announcement.content }}</p>
+                  </div>
+                {% endfor %}
+              {% else %}
+                <p>No announcements available.</p>
+              {% endif %}
+            </div>      
+        </div>
     </div>
   </div>
 
   <script>
     // Chart data
     const data = {
-      labels: ['Students Registered', 'Currently Sit-in', 'Total Sit-in'], 
-      datasets: [{
-        label: 'Sit-in Statistics',
-        data: [100, 40, 60], 
-        backgroundColor: [
-          'rgba(150, 121, 105, 0.2)', 
-          'rgba(110, 38, 14, 0.2)', 
-          'rgba(139, 69, 19, 0.2)'  
-        ],
-        borderColor: [
-          'rgba(150, 121, 105, 1)', 
-          'rgba(110, 38, 14, 1)', 
-          'rgba(139, 69, 19, 1)'  
-        ],
-        borderWidth: 1
-      }]
-    };
+  datasets: [
+    {
+      label: 'Java',
+      data: [100, 40, 60], 
+      backgroundColor: 'rgba(70, 49, 19, 0.2)',
+      borderColor: 'rgba(70, 49, 19, 1)',
+      borderWidth: 1
+    },
+    {
+      label: 'PHP',
+      data: [166, 142, 91], 
+      backgroundColor: 'rgba(147, 124, 92, 0.2)',
+      borderColor: 'rgba(147, 124, 92, 1)',
+      borderWidth: 1
+    },
+    {
+      label: 'C#',
+      data: [120, 80, 55], 
+      backgroundColor: 'rgba(175, 143, 97, 0.2)',
+      borderColor: 'rgba(175, 143, 97, 1)',
+      borderWidth: 1
+    },
+    {
+      label: 'C++',
+      data: [90, 60, 45], 
+      backgroundColor: 'rgba(176, 124, 91, 0.2)',
+      borderColor: 'rgba(176, 124, 91, 1)',
+      borderWidth: 1
+    },
+    {
+      label: 'Python',
+      data: [130, 110, 95], 
+      backgroundColor: 'rgba(129, 56, 9, 0.2)',
+      borderColor: 'rgba(129, 56, 9, 1)',
+      borderWidth: 1
+    }
+  ]
+};
 
-    // Chart configuration
-    const config = {
-      type: 'bar', 
-      data: data,
-      options: {
-        scales: {
-          y: {
-            beginAtZero: true
-          }
-        }
+// Chart configuration
+const config = {
+  type: 'bar', 
+  data: data,
+  options: {
+    responsive: true,
+    plugins: {
+      legend: {
+        display: true, 
+        position: 'top'
       }
-    };
+    },
+    scales: {
+      y: {
+        beginAtZero: true
+      }
+    }
+  }
+};
 
-    // Create the chart
-    const sitInChart = new Chart(
-      document.getElementById('sitInChart'),
-      config
-    );
+// Create the chart
+const sitInChart = new Chart(
+  document.getElementById('sitInChart'),
+  config
+);
+
   </script>
 </body>
 </html>

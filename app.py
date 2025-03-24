@@ -9,6 +9,13 @@ app.secret_key = "database1234!"
 app.config['UPLOAD_FOLDER'] = 'static/images/uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
+# Initialize global variables
+announcements_list = []  # Initialize this to an empty list
+
+# Define a function to check if user is logged in
+def is_user_logged_in():
+    return "idno" in session
+
 # Register route
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -40,59 +47,145 @@ def index():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        idno = request.form.get("idno")
-        username = request.form.get("username")
+        username = request.form.get("username")  # Get username from form
         password = request.form.get("password")
 
+        print(f"Login attempt - Username: {username}")  # Debug log
+
         # fetch user info from dbhelper
-        user = dbhelper.get_user_by_idno_or_username_and_password(idno, username, password)
+        user = dbhelper.get_user_by_idno_or_username_and_password(username, username, password)  # Pass username for both idno and username fields
         admin = dbhelper.get_admin_by_username_and_password(username, password)
             
         if user:
-            # Store user info in session
-            session['idno'] = user[0]  # IDNO
-            session['fname'] = user[1]  # First name
-            session['lastname'] = user[2]  # Last name
-            session['mname'] = user[3]  # Middle name
-            session['course'] = user[4]  # Course
-            session['yrlvl'] = user[5]  # Year level
-            session['email'] = user[6]  # Email
-            flash('Login successful!', 'success')
-            return redirect(url_for('dashboard'))
+            print(f"User found - Raw data: {user}")  # Debug log
+            
+            # Print column positions for debugging
+            print("COLUMN POSITIONS:")
+            for i, value in enumerate(user):
+                print(f"Index {i}: {value}")
+            
+            # Store user info in session - with proper debugging
+            session.clear()  # Clear any existing session
+            
+            # Database schema:
+            # 0:id, 1:idno, 2:lastname, 3:fname, 4:mname, 5:course, 6:yrlvl, 7:email, 8:username, 9:password, etc.
+            try:
+                # Set session values properly according to the schema
+                session['id'] = user[0]
+                session['idno'] = user[1]
+                session['lastname'] = user[2]
+                session['fname'] = user[3]
+                session['mname'] = user[4]
+                session['course'] = user[5]
+                session['yrlvl'] = user[6]
+                session['email'] = user[7]
+                session['username'] = user[8]
+                
+                # Avatar filename is at index 11
+                if len(user) > 11:
+                    session['avatar_filename'] = user[11]
+                
+                session.modified = True  # Ensure session is saved
+                print(f"Session after login: {dict(session)}")  # Debug log
+                
+                # Try debugging the redirect
+                print(f"Redirecting to: /dashboard")
+                flash('Login successful!', 'success')
+                
+                # Use regular redirect
+                return redirect('/dashboard')
+            except Exception as e:
+                print(f"Error setting session: {str(e)}")
+                flash(f"Login error: {str(e)}", "danger")
+                return redirect('/')
         
         elif admin: 
+            print(f"Admin found: {admin}")  # Debug log
             # Store user info in session
-           session['username'] = admin[0]  # admin username
-           flash('Admin Login successful!', 'success')
-           return redirect(url_for('admin_dashboard'))
+            session.clear()  # Clear any existing session
+            session['username'] = admin[0]  # admin username
+            session.modified = True  # Ensure session is saved
+            flash('Admin Login successful!', 'success')
+            return redirect('/admin_dashboard')
         
         else:
+            print("No user or admin found")  # Debug log
             flash('Invalid username or password!', 'danger')
-            return redirect(url_for('index'))
+            return redirect('/')
 
     return render_template("login.html")
 
 # Dashboard route
 @app.route('/dashboard', methods=['GET'])
 def dashboard():
-    if "idno" in session:  # Check for the correct session key
-        #  fetch user info from dbhelper
-        user = dbhelper.get_user_by_id(session["idno, username, password"])
-        
-        if user:
-            username = {
-                "idno": user[0],
-                "fname": user[1],
-                "lastname": user[2],
-                "mname": user[3],
-                "course": user[4],
-                "yrlvl": user[5],
-                "email": user[6],
-                "avatar_filename": user[7]  # Add avatar filename
-            }
-            return render_template("dashboard.html", username=username, announcements=announcements_list)
-    else:
-        flash("Please log in to continue.", "info")
+    try:
+        print(f"Dashboard route - Raw session data: {dict(session)}")  # Debug log
+        if "idno" in session:  # Check for the correct session key
+            try:
+                # Print each individual session value for debugging
+                print(f"SESSION VALUES:")
+                print(f"ID: {session.get('id')}")
+                print(f"IDNO: {session.get('idno')}")
+                print(f"First Name: {session.get('fname')}")
+                print(f"Last Name: {session.get('lastname')}")
+                print(f"Middle Name: {session.get('mname')}")
+                print(f"Course: {session.get('course')}")
+                print(f"Year Level: {session.get('yrlvl')}")
+                print(f"Email: {session.get('email')}")
+                print(f"Username: {session.get('username')}")
+                print(f"Avatar: {session.get('avatar_filename')}")
+                
+                #  fetch user info from dbhelper
+                user = dbhelper.get_user_by_id(session["idno"])  # Get user by ID
+                print(f"User from database: {user}")  # Debug log
+                
+                if user:
+                    # Create username dictionary directly from database values
+                    username = {
+                        "id": user["id"],
+                        "idno": user["idno"],
+                        "lastname": user["lastname"],
+                        "fname": user["fname"],
+                        "mname": user["mname"],
+                        "course": user["course"],
+                        "yrlvl": user["yrlvl"],
+                        "email": user["email"],
+                        "username": user["username"],
+                        "avatar_filename": user.get("avatar_filename", None)
+                    }
+                    print(f"Username dict from database: {username}")  # Debug the constructed dictionary
+                    return render_template("dashboard.html", username=username, announcements=announcements_list)
+                else:
+                    # If user is not found in database, create username dictionary from session
+                    print("User not found in database but session exists")
+                    username = {
+                        "id": session.get("id", ""),
+                        "idno": session.get("idno", ""),
+                        "lastname": session.get("lastname", ""),
+                        "fname": session.get("fname", ""),
+                        "mname": session.get("mname", ""),
+                        "course": session.get("course", ""),
+                        "yrlvl": session.get("yrlvl", ""),
+                        "email": session.get("email", ""),
+                        "username": session.get("username", ""),
+                        "avatar_filename": session.get("avatar_filename", None)
+                    }
+                    print(f"Username dict from session: {username}")  # Debug the constructed dictionary
+                    return render_template("dashboard.html", username=username, announcements=announcements_list)
+            except Exception as e:
+                print(f"Error in dashboard route when getting user: {str(e)}")
+                flash(f"An error occurred when retrieving user data: {str(e)}", "danger")
+                # Clear the session and redirect to login
+                session.clear()
+                return redirect(url_for('login'))
+        else:
+            print("No idno in session")  # Debug log
+            flash("Please log in to continue.", "info")
+            return redirect(url_for('login'))
+    except Exception as e:
+        print(f"Unexpected error in dashboard route: {str(e)}")
+        flash("An unexpected error occurred. Please try again.", "danger")
+        session.clear()  # Clear session on error
         return redirect(url_for('login'))
     
     flash("Please log in to continue.", "info")  # If no session, ask to log in
@@ -107,18 +200,20 @@ def information():
         
         if user:
             username = {
-                "idno": user[0],
-                "fname": user[1],
-                "lastname": user[2],
-                "mname": user[3],
-                "course": user[4],
-                "yrlvl": user[5],
-                "email": user[6],
-                "avatar_filename": user[7]  # Add avatar filename to the dictionary
+                "id": user["id"],
+                "idno": user["idno"],
+                "lastname": user["lastname"],
+                "fname": user["fname"],
+                "mname": user["mname"],
+                "course": user["course"],
+                "yrlvl": user["yrlvl"],
+                "email": user["email"],
+                "username": user["username"],
+                "avatar_filename": user.get("avatar_filename", None)
             }
             return render_template("information.html", username=username)
         else:
-            flash("User  not found.", "danger")
+            flash("User not found.", "danger")
             return redirect(url_for('login'))
     else:
         flash("Please log in to continue.", "info")
@@ -175,8 +270,6 @@ def sit_in():
 
 # ADMIN ROUTES
 # Admin Dashboard route
-announcements_list = []
-
 @app.route('/admin_dashboard', methods=['GET', 'POST'])
 def admin_dashboard():
     if "username" not in session:
@@ -260,6 +353,51 @@ def logout():
     session.pop("fname", None)  # Clear the first name as well
     flash("Successfully logged out!", "info")
     return redirect(url_for('index'))
+
+# Debug route to check session
+@app.route('/debug-session')
+def debug_session():
+    if "idno" in session:
+        session_data = dict(session)
+        idno = session.get('idno')
+        
+        html = "<h2>Session Data</h2>"
+        html += f"<pre>{session_data}</pre>"
+        
+        html += "<h2>Individual Session Values</h2>"
+        html += f"<p><b>ID:</b> {session.get('id')}</p>"
+        html += f"<p><b>IDNO:</b> {session.get('idno')}</p>"
+        html += f"<p><b>First Name:</b> {session.get('fname')}</p>"
+        html += f"<p><b>Last Name:</b> {session.get('lastname')}</p>"
+        html += f"<p><b>Middle Name:</b> {session.get('mname')}</p>"
+        html += f"<p><b>Course:</b> {session.get('course')}</p>"
+        html += f"<p><b>Year Level:</b> {session.get('yrlvl')}</p>"
+        html += f"<p><b>Email:</b> {session.get('email')}</p>"
+        html += f"<p><b>Username:</b> {session.get('username')}</p>"
+        html += f"<p><b>Avatar Filename:</b> {session.get('avatar_filename')}</p>"
+        
+        html += "<h2>User Data from Database</h2>"
+        user = dbhelper.get_user_by_id(idno)
+        if user:
+            html += f"<pre>{user}</pre>"
+            
+            html += "<h2>Database Fields</h2>"
+            html += f"<p><b>ID:</b> {user.get('id')}</p>"
+            html += f"<p><b>IDNO:</b> {user.get('idno')}</p>"
+            html += f"<p><b>First Name:</b> {user.get('fname')}</p>"
+            html += f"<p><b>Last Name:</b> {user.get('lastname')}</p>"
+            html += f"<p><b>Middle Name:</b> {user.get('mname')}</p>"
+            html += f"<p><b>Course:</b> {user.get('course')}</p>"
+            html += f"<p><b>Year Level:</b> {user.get('yrlvl')}</p>"
+            html += f"<p><b>Email:</b> {user.get('email')}</p>"
+            html += f"<p><b>Username:</b> {user.get('username')}</p>"
+            html += f"<p><b>Avatar Filename:</b> {user.get('avatar_filename')}</p>"
+        else:
+            html += "<p>User not found in database</p>"
+            
+        return html
+    else:
+        return "No session data found"
 
 if __name__ == "__main__":
     app.run(debug=True)

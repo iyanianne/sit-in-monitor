@@ -171,10 +171,11 @@
             {% if username.avatar_filename %}
                 <img src="{{ url_for('static', filename='images/uploads/' + username.avatar_filename) }}" alt="Current Avatar">
             {% else %}
-                <img src="{{ url_for('static', filename='images/uploads/default_avatar.png') }}" alt="Default Avatar">
+                <img src="{{ url_for('static', filename='images/uploads/man.png') }}" alt="Default Avatar">
             {% endif %}
           </div>
         <hr>
+        <p><b> ID Number: </b> {{ username.idno}}</p>
         <p><b> Name: </b> {{ username.fname }} {{ username.mname }} {{ username.lastname }} </p>
         <p><b> Course: </b> {{ username.course }}</p>
         <p><b> Year: </b> {{ username.yrlvl }}</p>
@@ -185,7 +186,7 @@
   </div>
 
 <!-- Announcement Container -->
-<div class="column" style="width: 45%; overflow-y: auto; padding: 10px;">
+<div class="column" style="width: 45%; overflow-y: auto;">
   <div class="col-head">
     <i class="fa fa-bullhorn"></i> Announcements
   </div>

@@ -10,7 +10,8 @@ def add_user(idno, lastname, fname, mname, course, yrlvl, email, username, passw
 def get_user_by_idno_or_username_and_password(idno, username, password):
     with sqlite3.connect("sitinmonitor.db") as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM USERS WHERE idno=? OR username=? AND password=?", (idno, username, password))
+        cursor.execute("SELECT * FROM USERS WHERE (idno=? AND password=?) OR (username=? AND password=?)", 
+                      (idno, password, username, password))
         return cursor.fetchone()
 
 def get_admin_by_username_and_password(username, password):
@@ -26,14 +27,16 @@ def get_user_by_id(idno):
         row = cursor.fetchone()
         if row:
             return {
-                "idno": row[0],
-                "lastname": row[1],
-                "fname": row[2],
-                "mname": row[3],
-                "course": row[4],
-                "yrlvl": row[5],
-                "email": row[6],
-                "avatar_filename": row[7]
+                "id": row[0],
+                "idno": row[1],
+                "lastname": row[2],
+                "fname": row[3],
+                "mname": row[4],
+                "course": row[5],
+                "yrlvl": row[6],
+                "email": row[7],
+                "username": row[8],
+                "avatar_filename": row[11] if len(row) > 11 else None
             }
         return None
 

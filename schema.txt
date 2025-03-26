@@ -1,0 +1,39 @@
+sqlite> .schema
+CREATE TABLE USERS (
+            idno TEXT PRIMARY KEY,
+            lastname TEXT NOT NULL,
+            fname TEXT NOT NULL,
+            mname TEXT,
+            course TEXT NOT NULL,
+            yrlvl TEXT NOT NULL,
+            email TEXT NOT NULL,
+            password TEXT NOT NULL,
+            avatar_filename TEXT,
+            remaining_sessions INTEGER DEFAULT 0,
+            total_sessions INTEGER DEFAULT 0
+        , username TEXT NULL);
+CREATE TABLE SIT_IN_HISTORY (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            idno TEXT NOT NULL,
+            date DATE NOT NULL,
+            time_in TIME NOT NULL,
+            time_out TIME NOT NULL,
+            purpose TEXT NOT NULL,
+            laboratory TEXT NOT NULL,
+            FOREIGN KEY (idno) REFERENCES USERS(idno)
+        );
+CREATE TABLE sqlite_sequence(name,seq);
+CREATE INDEX idx_sit_in_history_idno ON SIT_IN_HISTORY(idno);
+CREATE INDEX idx_sit_in_history_date ON SIT_IN_HISTORY(date);
+CREATE TABLE ADMIN (
+username TEXT PRIMARY KEY,
+password TEXT NOT NULL
+);
+CREATE TABLE SESSIONS (
+idno TEXT NOT NULL,
+session_date DATE NOT NULL,
+session_time TIME NOT NULL,
+purpose TEXT NOT NULL,
+laboratory TEXT NOT NULL,
+FOREIGN KEY (idno) REFERENCES USERS(idno)
+); 

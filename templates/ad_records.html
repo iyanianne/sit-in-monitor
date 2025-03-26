@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie-edge">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" type="image/x-icon" href="../static/favicon/ccslogo.png">
+  <title>Sit-in Records</title>
+  
+  <!-- DataTables CSS -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/datetime/1.5.1/css/dataTables.dateTime.min.css">
+  
+  <!-- Include jQuery and DataTables JS -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.colVis.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+  <script src="https://cdn.datatables.net/datetime/1.5.1/js/dataTables.dateTime.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background-color: #f5f5f5;
+    }
+    
+    .topnav {
+      overflow: hidden;
+      background-color: #3f3636;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .topnav a {
+      color: #f2f2f2;
+      text-align: center;
+      padding: 8px 16px;
+      text-decoration: none;
+      font-size: 14px;
+      border-radius: 4px;
+      transition: 0.3s;
+    }
+    
+    .topnav a:hover {
+      background-color: #a09191;
+      color: #3f3636;
+    }
+    
+    .topnav a.active {
+      background-color: #4a5c5e;
+      color: white;
+    }
+
+    .head {
+      color: #f2f2f2;
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .dashboard-container {
+      padding: 20px;
+    }
+
+    .date-filter-container {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      background: white;
+      padding: 15px 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin: 20px 0;
+      flex-wrap: wrap;
+    }
+
+    .date-filter-label {
+      font-weight: 500;
+      color: #3f3636;
+    }
+
+    .date-input {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    
+    .select-filter {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      min-width: 150px;
+    }
+
+    .filter-button {
+      background-color: #4a5c5e;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: 0.3s;
+    }
+
+    .filter-button:hover {
+      background-color: #5a6c6e;
+    }
+
+    .table-container {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin: 20px 0;
+      overflow: hidden;
+      padding-bottom: 20px;
+    }
+    
+    .table-header {
+      height: 50px;
+      border-radius: 8px 8px 0 0;
+      font-size: 16px;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: white;
+      background-color: #3f3636;
+    }
+    
+    .export-buttons {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .export-button {
+      background-color: #4a5c5e;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .export-button:hover {
+      background-color: #5a6c6e;
+    }
+    
+    #recordsTable {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 0;
+    }
+
+    #recordsTable th, #recordsTable td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+
+    #recordsTable th {
+      background-color: #3f3636;
+      color: white;
+      font-weight: 500;
+      text-transform: uppercase;
+      font-size: 14px;
+      letter-spacing: 0.5px;
+    }
+
+    #recordsTable td {
+      color: #333;
+      font-size: 14px;
+    }
+
+    #recordsTable tr:hover {
+      background-color: #f8f9fa;
+    }
+
+    #recordsTable tr:last-child td {
+      border-bottom: none;
+    }
+    
+    .dataTables_wrapper .dataTables_length, 
+    .dataTables_wrapper .dataTables_filter, 
+    .dataTables_wrapper .dataTables_info, 
+    .dataTables_wrapper .dataTables_processing, 
+    .dataTables_wrapper .dataTables_paginate {
+      color: #333;
+      margin: 15px;
+    }
+    
+    .dataTables_wrapper .dataTables_length select, 
+    .dataTables_wrapper .dataTables_filter input {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 5px 10px;
+      margin-left: 5px;
+    }
+    
+    .dataTables_wrapper .dataTables_paginate .paginate_button {
+      border-radius: 4px;
+      padding: 5px 10px;
+    }
+    
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+      background: #4a5c5e;
+      color: white !important;
+      border: 1px solid #4a5c5e;
+    }
+
+    .flash-message {
+      padding: 10px 20px;
+      margin: 10px 0;
+      border-radius: 4px;
+      color: white;
+    }
+
+    .flash-success {
+      background-color: #4CAF50;
+    }
+
+    .flash-danger {
+      background-color: #f44336;
+    }
+
+    .flash-info {
+      background-color: #2196F3;
+    }
+
+    .filter-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 20px;
+      padding: 15px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .filter-section-title {
+      width: 100%;
+      margin-bottom: 10px;
+      font-size: 18px;
+      font-weight: 600;
+      color: #3f3636;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      min-width: 200px;
+    }
+    
+    .filter-group label {
+      font-weight: 600;
+      margin-bottom: 5px;
+      color: #495057;
+    }
+    
+    .date-inputs {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .date-inputs input {
+      padding: 8px;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      width: 140px;
+    }
+    
+    .select-filter {
+      padding: 8px;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      background: white;
+    }
+    
+    .clear-filter-btn {
+      align-self: flex-end;
+      padding: 8px 15px;
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 24px;
+    }
+    
+    .clear-filter-btn:hover {
+      background: #c82333;
+    }
+    
+    .btn-export {
+      margin-right: 5px;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .filter-container {
+        flex-direction: column;
+      }
+      
+      .filter-group {
+        width: 100%;
+      }
+    }
+  </style>
+
+  <div class="topnav">
+    <div class="head"> 
+      College of Computer Studies Admin 
+    </div>
+    <div class="nav-links">
+      <a href="/admin_dashboard"><i class="fas fa-home"></i> Home</a>
+      <a href="/ad_students"><i class="fas fa-users"></i> Students</a>
+      <a href="/ad_sit-in"><i class="fas fa-chart-bar"></i> Current Sit-in</a>
+      <a href="/ad_records" class="active"><i class="fas fa-clipboard-list"></i> Sit-in Records</a>
+      <a href="/ad_reports"><i class="fas fa-chart-bar"></i> Sit-in Reports</a>
+      <a href="/ad_feedback"><i class="fas fa-comments"></i> Feedback Reports</a>
+      <a href="/ad_reserve"><i class="fas fa-calendar-check"></i> Reservation</a>
+      <a href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </div>
+  </div>
+    
+  <div class="dashboard-container">
+    <!-- Filter Controls Section -->
+    <div class="filter-container">
+      <div class="filter-section-title">
+        <i class="fas fa-filter"></i> Filter Records
+      </div>
+      <div class="filter-group">
+        <label>Date Range:</label>
+        <div class="date-inputs">
+          <input type="date" id="min" name="min" placeholder="From">
+          <input type="date" id="max" name="max" placeholder="To">
+        </div>
+      </div>
+      
+      <div class="filter-group">
+        <label>Purpose:</label>
+        <select id="purpose-filter" class="select-filter">
+          <option value="">All Purposes</option>
+          <!-- Options will be populated dynamically -->
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label>Laboratory:</label>
+        <select id="lab-filter" class="select-filter">
+          <option value="">All Laboratories</option>
+          <!-- Options will be populated dynamically -->
+        </select>
+      </div>
+      
+      <button id="clearFilters" class="clear-filter-btn">
+        <i class="fas fa-times"></i> Clear Filters
+      </button>
+    </div>
+    
+    <div class="table-container">
+      <div class="table-header">
+        <div><i class="fas fa-clipboard-list"></i> Sit-in Records</div>
+      </div>
+      <table id="recordsTable" class="display nowrap" style="width:100%">
+        <thead>
+          <tr>
+            <th>ID Number</th>
+            <th>Name</th>
+            <th>Course</th>
+            <th>Year</th>
+            <th>Date</th>
+            <th>Time In</th>
+            <th>Time Out</th>
+            <th>Purpose</th>
+            <th>Laboratory</th>
+            <th>Duration</th>
+            <th>Remaining</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% if records %}
+          {% for record in records %}
+          <tr>
+            <td>{{ record.idno }}</td>
+            <td>{{ record.name }}</td>
+            <td>{{ record.course }}</td>
+            <td>{{ record.year_level }}</td>
+            <td>{{ record.date }}</td>
+            <td>{{ record.time_in }}</td>
+            <td>{{ record.time_out }}</td>
+            <td>{{ record.purpose }}</td>
+            <td>{{ record.laboratory }}</td>
+            <td>{{ record.duration }}</td>
+            <td>{{ record.remaining_sessions }}/{{ record.total_sessions }}</td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="8" style="text-align: center">No sit-in records available.</td>
+          </tr>
+        {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    $(document).ready(function() {
+        // Custom filtering function for date range
+        $.fn.dataTable.ext.search.push(
+            function(settings, data, dataIndex) {
+                let min = moment($('#min').val(), 'YYYY-MM-DD');
+                let max = moment($('#max').val(), 'YYYY-MM-DD');
+                let date = moment(data[4], 'MMM DD, YYYY'); // 5th column is date (index 4)
+                
+                let purposeFilter = $('#purpose-filter').val();
+                let purposeValue = data[7]; // 8th column is purpose (index 7)
+                
+                let labFilter = $('#lab-filter').val();
+                let labValue = data[8]; // 9th column is laboratory (index 8)
+                
+                // Check date range
+                let dateValid = true;
+                if (min.isValid() && max.isValid()) {
+                    dateValid = (date.isSameOrAfter(min, 'day') && date.isSameOrBefore(max, 'day'));
+                } else if (min.isValid()) {
+                    dateValid = date.isSameOrAfter(min, 'day');
+                } else if (max.isValid()) {
+                    dateValid = date.isSameOrBefore(max, 'day');
+                }
+                
+                // Check purpose filter
+                let purposeValid = true;
+                if (purposeFilter) {
+                    purposeValid = (purposeValue === purposeFilter);
+                }
+                
+                // Check laboratory filter
+                let labValid = true;
+                if (labFilter) {
+                    labValid = (labValue === labFilter);
+                }
+                
+                return dateValid && purposeValid && labValid;
+            }
+        );
+
+        // Initialize the DataTable
+        var table = $('#recordsTable').DataTable({
+            dom: 'Bfrtip',
+            buttons: [
+                {
+                    extend: 'csvHtml5',
+                    text: '<i class="fas fa-file-csv"></i> CSV',
+                    titleAttr: 'Export as CSV',
+                    className: 'btn btn-primary mr-1',
+                    exportOptions: {
+                        columns: ':visible'
+                    },
+                    filename: function() {
+                        let title = 'Sit-in Records';
+                        const min = $('#min').val();
+                        const max = $('#max').val();
+                        const purpose = $('#purpose-filter').val();
+                        const lab = $('#lab-filter').val();
+                        
+                        if (min || max) {
+                            title += ' - Date Range';
+                            if (min) title += ' From ' + min;
+                            if (max) title += ' To ' + max;
+                        }
+                        
+                        if (purpose) {
+                            title += ' - Purpose ' + purpose;
+                        }
+                        
+                        if (lab) {
+                            title += ' - Lab ' + lab;
+                        }
+                        
+                        return title;
+                    }
+                },
+                {
+                    extend: 'excelHtml5',
+                    text: '<i class="fas fa-file-excel"></i> Excel',
+                    titleAttr: 'Export as Excel',
+                    className: 'btn btn-success mr-1',
+                    exportOptions: {
+                        columns: ':visible'
+                    },
+                    filename: function() {
+                        let title = 'Sit-in Records';
+                        const min = $('#min').val();
+                        const max = $('#max').val();
+                        const purpose = $('#purpose-filter').val();
+                        const lab = $('#lab-filter').val();
+                        
+                        if (min || max) {
+                            title += ' - Date Range';
+                            if (min) title += ' From ' + min;
+                            if (max) title += ' To ' + max;
+                        }
+                        
+                        if (purpose) {
+                            title += ' - Purpose ' + purpose;
+                        }
+                        
+                        if (lab) {
+                            title += ' - Lab ' + lab;
+                        }
+                        
+                        return title;
+                    }
+                },
+                {
+                    extend: 'pdfHtml5',
+                    text: '<i class="fas fa-file-pdf"></i> PDF',
+                    titleAttr: 'Export as PDF',
+                    className: 'btn btn-danger mr-1',
+                    exportOptions: {
+                        columns: ':visible'
+                    },
+                    filename: function() {
+                        let title = 'Sit-in Records';
+                        const min = $('#min').val();
+                        const max = $('#max').val();
+                        const purpose = $('#purpose-filter').val();
+                        const lab = $('#lab-filter').val();
+                        
+                        if (min || max) {
+                            title += ' - Date Range';
+                            if (min) title += ' From ' + min;
+                            if (max) title += ' To ' + max;
+                        }
+                        
+                        if (purpose) {
+                            title += ' - Purpose ' + purpose;
+                        }
+                        
+                        if (lab) {
+                            title += ' - Lab ' + lab;
+                        }
+                        
+                        return title;
+                    },
+                    customize: function(doc) {
+                        // Set background color and font
+                        doc.styles.tableHeader.fillColor = '#3f3636';
+                        doc.styles.tableHeader.color = '#fff';
+                        doc.styles.tableBodyEven.fillColor = '#f8f9fa';
+                        doc.styles.tableBodyOdd.fillColor = '#fff';
+                        
+                        // Add title
+                        doc.content[0].text = 'Sit-in Records Report';
+                        doc.content[0].alignment = 'center';
+                        doc.content[0].fontSize = 18;
+                        doc.content[0].margin = [0, 0, 0, 20];
+                        
+                        // Add date generated
+                        doc.content.splice(1, 0, {
+                            text: 'Generated on: ' + moment().format('MMMM D, YYYY, h:mm A'),
+                            alignment: 'center',
+                            margin: [0, 0, 0, 20]
+                        });
+                        
+                        // Add date range if specified
+                        const minDateValue = $('#min').val();
+                        const maxDateValue = $('#max').val();
+                        const purposeValue = $('#purpose-filter').val();
+                        const labValue = $('#lab-filter').val();
+                        
+                        let filterInfos = [];
+                        
+                        // Add date range
+                        if (minDateValue || maxDateValue) {
+                            let dateRangeText = 'Date Range: ';
+                            if (minDateValue) dateRangeText += 'From ' + minDateValue;
+                            if (minDateValue && maxDateValue) dateRangeText += ' ';
+                            if (maxDateValue) dateRangeText += 'To ' + maxDateValue;
+                            filterInfos.push(dateRangeText);
+                        }
+                        
+                        // Add purpose filter
+                        if (purposeValue) {
+                            filterInfos.push('Purpose: ' + purposeValue);
+                        }
+                        
+                        // Add lab filter
+                        if (labValue) {
+                            filterInfos.push('Laboratory: ' + labValue);
+                        }
+                        
+                        // Add filter information to PDF
+                        if (filterInfos.length > 0) {
+                            doc.content.splice(3, 0, {
+                                text: filterInfos.join(' | '),
+                                style: 'subheader',
+                                alignment: 'center',
+                                margin: [0, 0, 0, 20]
+                            });
+                        }
+                    }
+                },
+                {
+                    extend: 'print',
+                    text: '<i class="fas fa-print"></i> Print',
+                    titleAttr: 'Print Records',
+                    className: 'btn btn-info mr-1',
+                    exportOptions: {
+                        columns: ':visible'
+                    },
+                    customize: function(win) {
+                        // Add custom styling to the print view
+                        $(win.document.body).css('font-family', "'Inter', sans-serif");
+                        $(win.document.body).find('table')
+                            .addClass('compact')
+                            .css('font-size', '14px')
+                            .css('border-collapse', 'collapse');
+                            
+                        $(win.document.body).find('h1')
+                            .css('text-align', 'center')
+                            .css('font-size', '24px')
+                            .css('margin-bottom', '20px');
+                            
+                        $(win.document.body).find('thead tr th')
+                            .css('background-color', '#3f3636')
+                            .css('color', 'white')
+                            .css('padding', '8px 15px');
+                            
+                        $(win.document.body).find('tbody tr td')
+                            .css('border-bottom', '1px solid #ddd')
+                            .css('padding', '8px 15px');
+                            
+                        $(win.document.body).find('tbody tr:nth-child(even)')
+                            .css('background-color', '#f8f9fa');
+                            
+                        // Add date range information if specified
+                        const minDateValue = $('#min').val();
+                        const maxDateValue = $('#max').val();
+                        const purposeValue = $('#purpose-filter').val();
+                        const labValue = $('#lab-filter').val();
+                            
+                        let filterInfo = '';
+                            
+                        // Date range
+                        if (minDateValue || maxDateValue) {
+                            filterInfo += '<div style="text-align:center; margin-bottom:10px;"><strong>Date Range:</strong> ';
+                            if (minDateValue) filterInfo += 'From ' + minDateValue;
+                            if (minDateValue && maxDateValue) filterInfo += ' ';
+                            if (maxDateValue) filterInfo += 'To ' + maxDateValue;
+                            filterInfo += '</div>';
+                        }
+                            
+                        // Purpose
+                        if (purposeValue) {
+                            filterInfo += '<div style="text-align:center; margin-bottom:10px;"><strong>Purpose:</strong> ' + purposeValue + '</div>';
+                        }
+                            
+                        // Laboratory
+                        if (labValue) {
+                            filterInfo += '<div style="text-align:center; margin-bottom:10px;"><strong>Laboratory:</strong> ' + labValue + '</div>';
+                        }
+                            
+                        if (filterInfo) {
+                            $(win.document.body).find('h1').after(filterInfo);
+                        }
+                    }
+                }
+            ]
+        });
+        
+        // Add an event handler to redraw the table when date range changes
+        $('#min, #max, #purpose-filter, #lab-filter').on('change', function() {
+            table.draw();
+        });
+        
+        // Create dropdown options for purpose and laboratory filters
+        function populateFilterDropdowns() {
+            // Get unique purpose values
+            let purposes = [];
+            table.column(7).data().unique().sort().each(function(value) {
+                if (value) purposes.push(value);
+            });
+            
+            // Populate purpose dropdown
+            let purposeFilter = $('#purpose-filter');
+            purposeFilter.empty().append('<option value="">All Purposes</option>');
+            purposes.forEach(function(purpose) {
+                purposeFilter.append('<option value="' + purpose + '">' + purpose + '</option>');
+            });
+            
+            // Get unique laboratory values
+            let labs = [];
+            table.column(8).data().unique().sort().each(function(value) {
+                if (value) labs.push(value);
+            });
+            
+            // Populate laboratory dropdown
+            let labFilter = $('#lab-filter');
+            labFilter.empty().append('<option value="">All Laboratories</option>');
+            labs.forEach(function(lab) {
+                labFilter.append('<option value="' + lab + '">' + lab + '</option>');
+            });
+        }
+        
+        // Call the function after table initialization
+        populateFilterDropdowns();
+        
+        // Clear all filters
+        $('#clearFilters').on('click', function() {
+            $('#min, #max').val('');
+            $('#purpose-filter, #lab-filter').val('');
+            table.draw();
+        });
+    });
+  </script>
+</body>
+</html>

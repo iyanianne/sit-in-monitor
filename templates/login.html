@@ -4,14 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="icon" type="image/x-icon" href="../static/favicon/ccslogo.png">
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
         }
 
         input::-webkit-outer-spin-button,
@@ -21,188 +23,298 @@
         }
 
         body {
-            font-family: 'Inter';
             display: flex;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
             width: 100%;
             position: relative;
+            background-color: #f5f5f5;
         }
 
         body::before {
             content: '';
-            position: absolute;
+            position: fixed;
+            top: 0;
+            left: 0;
             height: 100%;
             width: 100%;
-            background-image: url('../static/images/bg-image.jpg'); /* Update this path as necessary */
+            background-image: url('../static/images/bg-image.jpg');
             background-position: center;
             background-size: cover;
-            z-index: -1; /* Ensure the background is behind other content */
+            filter: brightness(0.7);
+            z-index: -1;
         }
 
         .login-wrapper {
             width: 400px;
-            padding: 30px;
-            border: 1px solid rgba(255,255,255,0.5);
-            border-radius: 8px;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 16px;
             text-align: center;
-            -webkit-backdrop-filter: blur(8px);
-            backdrop-filter: blur(8px);
+            backdrop-filter: blur(12px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .login-wrapper img {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 15px;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
         }
         
         .login-form {
             display: flex;
             flex-direction: column;
+            gap: 15px;
         }
 
         .login-form h2 {
-            font-size: 2rem;
+            font-size: 28px;
             color: #fff;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
+            font-weight: 600;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
         }
 
-        input[type=text], select, input[type=number], input[type=password] {
+        .input-group {
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        .input-group i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 18px;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        input[type="number"],
+        input[type="email"],
+        select {
             width: 100%;
-            padding: 8px 18px;
-            margin: 8px 0;
-            background: transparent;
-            outline: none;
-            display: inline-block;
-            border: 1px 0 white;
-            border-radius: 4px;
+            padding: 12px 20px 12px 45px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
             color: white;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.4);
+            outline: none;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
         }
 
         ::placeholder {
-            color: white;
+            color: rgba(255, 255, 255, 0.7);
         }
 
-        button[type=submit] {
+        button[type="submit"] {
             width: 100%;
             background-color: #1e7898;
             color: white;
-            padding: 6px 20px;
-            margin: 8px 0;
+            padding: 12px 20px;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
-        button[type=submit]:hover {
-            background-color: #1e7898;
-            padding: 6px 20px;
-            margin: 8px 0;
-            border: none;
-            border-radius: 4px;
+        button[type="submit"]:hover {
+            background-color: #1a6883;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
         }
 
-        /* Modal Styles */
         .modal {
             display: none;
             position: fixed;
-            z-index: 1;
+            z-index: 1000;
             left: 0;
             top: 0;
             width: 100%;
             height: 100%;
-            overflow: auto;
-            background-color: rgba(0, 0, 0, 0.4); /* Background with transparency */
-            padding-top: 60px;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
         }
 
         .modal-content {
-            background-color: #aaa;
-            margin: 5% auto;
-            padding: 20px;
-            border: 1px solid #ccc;
-            width: 65%;
+            background-color: #fff;
+            margin: 2% auto;
+            padding: 30px;
+            width: 90%;
             max-width: 600px;
-            border-radius: 7px;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            position: relative;
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
         .modal-content h3 {
-            font-family: 'Inter';
-            text-align: center;        
+            color: #333;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            text-align: center;
         }
 
         .close {
-            color: black;
-            float: right;
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            color: #666;
             font-size: 28px;
-            font-weight: bold;
-        }
-
-        .close:hover,
-        .close:focus {
-            color: black;
-            text-decoration: none;
-            cursor: pointer;
-        }
-
-        .course-year {
-            background-color: #aaa;
-        }
-
-        .course-year option {
-            background-color: #aaa;
-        }
-        /* Flash message styling */
-        .flash {
-            padding: 12px 20px;
-            margin: 0 auto 20px;
-            border-radius: 5px;
             font-weight: 500;
-            width: 90%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .close:hover {
+            color: #333;
+            transform: rotate(90deg);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            color: #333;
+            background: #fff;
+            font-size: 14px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: #1e7898;
+            box-shadow: 0 0 0 2px rgba(30, 120, 152, 0.1);
+        }
+
+        .name-fields {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+        }
+
+        .flash {
+            padding: 12px 15px;
+            margin: 0 auto 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            width: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
             opacity: 1;
             transition: opacity 0.5s ease;
+            font-size: 14px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
         .flash.success {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+            background-color: rgba(40, 167, 69, 0.9);
+            color: white;
+            border: 1px solid rgba(40, 167, 69, 0.2);
         }
 
         .flash.danger {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+            background-color: rgba(220, 53, 69, 0.9);
+            color: white;
+            border: 1px solid rgba(220, 53, 69, 0.2);
         }
 
-        /* Add icons to flash messages */
+        .flash.info {
+            background-color: rgba(23, 162, 184, 0.9);
+            color: white;
+            border: 1px solid rgba(23, 162, 184, 0.2);
+        }
+
         .flash::before {
-            font-family: "Font Awesome 5 Free";
+            font-family: "Font Awesome 6 Free";
             font-weight: 900;
             margin-right: 10px;
         }
 
         .flash.success::before {
-            content: "\f00c"; /* Checkmark icon */
-            color: #3d9451;
+            content: "\f00c";
         }
 
         .flash.danger::before {
-            content: "\f071"; /* Warning icon */
-            color: #b32f3c;
+            content: "\f071";
         }
 
-        .login-wrapper h2 {
-            color: #1e7898;
-            font-weight: 550;
+        .flash.info::before {
+            content: "\f05a";
         }
-        .p {
+
+        .register-link {
+            margin-top: 20px;
             color: white;
+            font-size: 15px;
+        }
+
+        .register-link a {
+            color: #1e7898;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .register-link a:hover {
+            color: #1a6883;
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .login-wrapper {
+                width: 90%;
+                padding: 30px 20px;
+            }
+
+            .modal-content {
+                width: 95%;
+                margin: 10% auto;
+                padding: 20px;
+            }
+
+            .name-fields {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
     <div class="login-wrapper">
-        <!-- Login Form Section -->
-        <img src="{{ url_for('static', filename='images/ccslogo.png') }}" alt="logo" style="align-content: center;" width="100px" height="100px">
+        <img src="{{ url_for('static', filename='images/ccslogo.png') }}" alt="logo">
+        <h2 style="font-family: 'Inter', sans-serif; font-weight: 600; color: white;">CCS Sit-In Monitor</h2>
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -212,166 +324,145 @@
                 {% endfor %}
             {% endif %}
         {% endwith %}
-        <form action="{{ url_for('login') }}" method="POST" class="w3-container" id="loginForm">
+        
+        <form action="{{ url_for('login') }}" method="POST" class="login-form">
+            <div class="input-group">
+                <i class="fas fa-user"></i>
+                <input type="text" name="username" id="username" placeholder="ID Number or Username" required>
+            </div>
+            
+            <div class="input-group">
+                <i class="fas fa-lock"></i>
+                <input type="password" name="password" id="password" placeholder="Password" required>
+            </div>
 
-            <!-- IDNO or Username Field -->
-            <input type="text" name="username" id="username" class="w3-input" placeholder="ID Number or Username" required>
-            <br>
-            <!-- Password Field -->
-            <input type="password" name="password" id="password" class="w3-input" placeholder="Password" required>
-
-            <!-- Buttons -->
-            <button type="submit"> Login </button>
-            <br>
-            <br>
+            <button type="submit">Login</button>
         </form>
-        <p class="p"> Don't have an account? <a href="#" id="openModal" style="color:#1e7898"> Register here </a> </p>
+        
+        <div class="register-link">
+            Don't have an account? <a href="#" id="openModal">Register here</a>
+        </div>
     </div>
 
     <!-- Register Modal -->
     <div id="registerModal" class="modal">
-        <div class="modal-content w3-container">
+        <div class="modal-content">
             <span class="close">&times;</span>
-            <h3>Register</h3>
+            <h3>Register for Sit-in Monitoring</h3>
             <form action="{{ url_for('register') }}" method="POST">
-                <!-- ID Number -->
-                <div class="form-group id-number">
-                    <label for="idno">ID Number</label>
-                    <input type="text" id="idno" name="idno" required oninput="updateUsername()">
+                <div class="form-group">
+                    <label for="reg_idno">ID Number</label>
+                    <input type="text" id="reg_idno" name="idno" required oninput="updateUsername()">
                 </div>
 
-                <!-- Name Fields -->
-                <div class="form-group name-fields">
-                    <div>
+                <div class="name-fields">
+                    <div class="form-group">
                         <label for="lastname">Last Name</label>
                         <input type="text" id="lastname" name="lastname" required>
                     </div>
-                    <div>
+                    <div class="form-group">
                         <label for="fname">First Name</label>
                         <input type="text" id="fname" name="fname" required>
                     </div>
+                    <div class="form-group">
+                        <label for="mname">Middle Name</label>
+                        <input type="text" id="mname" name="mname">
+                    </div>
                 </div>
 
-                <div>
-                    <label for="mname">Middle Name</label>
-                    <input type="text" id="mname" name="mname">
-                </div>
-
-                <!-- Course and Year Level -->
-                    <div class="course-year">
+                <div class="name-fields">
+                    <div class="form-group">
                         <label for="course">Course</label>
-                        <select id="course" name="course" required style="color: black ;">
-                            <option value="IT">Information Technology</option>
-                            <option value="CS">Computer Science</option>
+                        <select id="course" name="course" required>
+                            <option value="">Select Course</option>
+                            <option value="BSIT">BSIT</option>
+                            <option value="BSCS">BSCS</option>
                         </select>
                     </div>
-                    <div class="course-year">
+                    <div class="form-group">
                         <label for="yrlvl">Year Level</label>
-                        <select id="yrlvl" name="yrlvl" required style="color: black ;">
-                            <option value="1">1</option>
-                            <option value="2">2</option>
-                            <option value="3">3</option>
-                            <option value="4">4</option>
+                        <select id="yrlvl" name="yrlvl" required>
+                            <option value="">Select Year Level</option>
+                            <option value="1st Year">1st Year</option>
+                            <option value="2nd Year">2nd Year</option>
+                            <option value="3rd Year">3rd Year</option>
+                            <option value="4th Year">4th Year</option>
                         </select>
                     </div>
+                </div>
 
-                <!-- Account Details -->
-                <div class="form-group account-field">
+                <div class="form-group">
                     <label for="email">Email</label>
-                    <input type="text" id="email" name="email" required>
+                    <input type="email" id="email" name="email" required>
                 </div>
 
-                <div class="form-group account-field">
-                    <label for="username">Username</label>
-                    <input type="text" id="usernameReg" name="username">
+                <div class="form-group">
+                    <label for="reg_username">Username</label>
+                    <input type="text" id="reg_username" name="username" placeholder="Leave blank to use ID number">
                 </div>
 
-                <div class="form-group account-field">
-                    <label for="password">Password</label>
-                    <div class="password-field">
-                        <input type="password" id="passwordReg" name="password" required>
-                        <i class="fas fa-eye-slash toggle-password"></i>
-                    </div>
+                <div class="form-group">
+                    <label for="reg_password">Password</label>
+                    <input type="password" id="reg_password" name="password" required>
                 </div>
 
-                <button type="submit">Register</button>
+                <button type="submit" style="margin-top: 10px;">Register</button>
             </form>
         </div>
     </div>
 
-    <!-- Scripts -->
     <script>
-        
-        // Example functions for password visibility toggle (optional)
-        function myFunction() {
-            var x = document.getElementById("passwordReg");
-            if (x.type === "password") {
-                x.type = "text";
-            } else {
-                x.type = "password";
-            }
-        }
-  // Password toggle functionality
-  document.querySelectorAll('.toggle-password').forEach(toggle => {
-            toggle.addEventListener('click', function() {
-                const passwordInput = this.previousElementSibling;
-                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-                passwordInput.setAttribute('type', type);
-                this.classList.toggle('fa-eye');
-                this.classList.toggle('fa-eye-slash');
-            });
-        });
+        // Get the modal
+        var modal = document.getElementById("registerModal");
 
-        const modal = document.getElementById("registerModal");
-        document.getElementById("openModal").onclick = function() {
+        // Get the button that opens the modal
+        var btn = document.getElementById("openModal");
+
+        // Get the <span> element that closes the modal
+        var span = document.getElementsByClassName("close")[0];
+
+        // When the user clicks the button, open the modal 
+        btn.onclick = function() {
             modal.style.display = "block";
-        };
-        document.querySelector(".close").onclick = function() {
+        }
+
+        // When the user clicks on <span> (x), close the modal
+        span.onclick = function() {
             modal.style.display = "none";
-        };
+        }
+
+        // When the user clicks anywhere outside of the modal, close it
         window.onclick = function(event) {
-            if (event.target === modal) {
+            if (event.target == modal) {
                 modal.style.display = "none";
             }
-        };
+        }
 
+        // Function to update username field with ID number
         function updateUsername() {
-            let idnoInput = document.getElementById("idno");
-            let usernameInput = document.getElementById("usernameReg");
-
-            if (!usernameInput.dataset.userEdited) {
-                usernameInput.value = idnoInput.value;
-            }
+            var idno = document.getElementById("reg_idno").value;
+            var username = document.getElementById("reg_username");
+            username.placeholder = idno;
         }
 
-        document.getElementById("usernameReg").addEventListener("input", function() {
-            this.dataset.userEdited = true;
-        });
-        
-        function validateYearLevel() {
-            let yearInput = document.getElementById("yrlvl");
-            let errorText = document.getElementById("yearLevelError");
-
-            if (yearInput.value < 1 || yearInput.value > 4) {
-                errorText.style.display = "block";
-                yearInput.value = "";
-            } else {
-                errorText.style.display = "none";
-            }
-        }
-
-        // Flash message auto-hide
-        document.addEventListener('DOMContentLoaded', function() {
-            const flashMessages = document.querySelectorAll('.flash');
-            flashMessages.forEach(function(message) {
-                setTimeout(function() {
-                    message.style.opacity = '0';
+        // Auto-hide flash messages after 5 seconds
+        setTimeout(function() {
+            var flashMessages = document.getElementsByClassName('flash');
+            for(var i = 0; i < flashMessages.length; i++) {
+                (function(index) {
                     setTimeout(function() {
-                        message.style.display = 'none';
-                    }, 500);
-                }, 3000); // Message will stay for 3 seconds
-            });
-        });
+                        if (flashMessages[index]) {
+                            flashMessages[index].style.opacity = '0';
+                            setTimeout(function() {
+                                if (flashMessages[index]) {
+                                    flashMessages[index].style.display = 'none';
+                                }
+                            }, 500);
+                        }
+                    }, 5000);
+                })(i);
+            }
+        }, 0);
     </script>
 </body>
 </html>

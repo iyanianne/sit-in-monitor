@@ -13,9 +13,11 @@
 <body>
 
   <style>
-
     body {
       font-family: 'Inter';
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
     }
 
     .div {
@@ -25,234 +27,566 @@
 
     .sub-div {
       display: flex;
-      justify-content: left; 
-      align-items: left;
-      padding: 7px;
+      justify-content: center;
+      align-items: center;
+      padding: 15px;
       color: white;
-      position: absolute;
-      bottom: 0px;
+      position: sticky;
+      bottom: 0;
       width: 100%;
+      background-color: rgba(0, 0, 0, 0.1);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .sub-div a {
+      display: flex;
+      align-items: center;
+      padding: 10px 20px;
+      border-radius: 6px;
+      transition: all 0.3s ease;
+    }
+
+    .sub-div a:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .sub-div i {
+      margin-right: 10px;
+      font-size: 16px;
     }
 
     .btn {
-      background-color: #85807f;
+      background-color: transparent;
       color: white;
-      padding: 5px 0;
+      padding: 10px 15px;
       border: none;
-      background: none;
       margin-left: 5px;
       font-size: 20px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border-radius: 6px;
+    }
+
+    .btn:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+      transform: scale(1.05);
     }
 
     .btn p {
-      font-size: 15px;
+      font-size: 20px;
+      margin: 0;
+      line-height: 1;
     }
 
     .a {
       color: white;
     }
 
-    mySidebar a:hover {
+    .w3-sidebar {
+      background-color: #85807f !important;
+      box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+      height: 100vh;
+      position: fixed;
       left: 0;
+      top: 0;
+      overflow-y: auto;
+      transition: all 0.3s ease;
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+      transform: translateX(0);
+    }
+
+    .w3-sidebar::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .w3-sidebar::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .w3-sidebar::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+    }
+
+    .w3-sidebar::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .w3-sidebar a {
+      padding: 15px 20px;
+      text-decoration: none;
+      font-size: 14px;
+      color: white;
+      display: flex;
+      align-items: center;
+      transition: all 0.3s ease;
+      border-left: 3px solid transparent;
+      margin: 4px 0;
+      border-radius: 0 8px 8px 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .w3-sidebar a:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+      border-left: 3px solid #fff;
+      padding-left: 25px;
+      transform: translateX(5px);
+    }
+
+    .w3-sidebar a i {
+      margin-right: 15px;
+      width: 20px;
+      text-align: center;
+      font-size: 16px;
+      transition: all 0.3s ease;
+    }
+
+    .w3-sidebar a:hover i {
+      transform: scale(1.1);
+    }
+
+    .w3-sidebar a.active {
+      background-color: rgba(255, 255, 255, 0.15);
+      border-left: 3px solid #fff;
+      font-weight: 500;
     }
 
     .row {
       display: flex;
+      gap: 20px;
+      padding: 20px;
     }
 
     .column {
       float: left;
-      margin-top: 5px;
-      border: 1px solid #ccc;
-      margin-left: 10px;
-      border-radius: 7px;
-      height: 550px;
+      margin-top: 15px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      height: 580px;
+      background-color: #fff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      transition: all 0.3s ease;
     }
 
-    .container::after, .row::after {
-      content: "";
-      clear: both;
-      padding: 8px;
-      display: table;
+    .column:hover {
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
 
     .col-head {
       height: 60px;
       text-align: center;
-      font-weight: bolder;
+      font-weight: bold;
       border-top-left-radius: 7px;
       border-top-right-radius: 7px;
       background-color: #85807f;
       color: white;
-      padding: 8px;
-      align-content: center;
+      padding: 15px;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
-    .avatar {
-      text-align: center;
-      margin: 24px 0 12px 0;
-    }
-
-    .container {
-      padding-left: 7px;
+    .col-head i {
+      margin-right: 8px;
     }
 
     .prof-info {
-      box-sizing: content-box;
-      margin: 2px;
-      padding-left: 15px 0;
+      box-sizing: border-box;
+      margin: 10px;
+      padding: 15px;
       height: 423px;
+      background-color: #f9f9f9;
+      border-radius: 5px;
     }
 
-    img {
-      justify-content: center;
-      height: 100px;
+    .prof-info p {
+      margin: 12px 0;
+      color: #333;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .prof-info b {
+      color: #555;
       width: 100px;
-      clip-path: circle(50%);
+      display: inline-block;
+    }
+
+    .avatar-container {
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    .avatar-container img {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      object-fit: cover;
+      border: 3px solid #fff;
     }
 
     .an-info {
-      box-sizing: content-box;
-      margin: 2px;
-      padding: 5px 0;
-      overflow-y: scroll;
-      height: 423px;
+      box-sizing: border-box;
+      margin: 15px;
+      padding: 15px;
+      overflow-y: auto;
+      height: 480px;
+      background-color: #f9f9f9;
+      border-radius: 5px;
+    }
+
+    .announcement-card {
+      background-color: #fff;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      transition: all 0.3s ease;
+    }
+
+    .announcement-card:hover {
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .announcement-card h4 {
+      margin: 0 0 10px 0;
+      color: #2c2c2c;
+      font-size: 16px;
+    }
+
+    .announcement-card p {
+      margin: 0;
+      color: #666;
+      font-size: 14px;
+      line-height: 1.5;
     }
 
     .lab-info {
-      box-sizing: content-box;
-      position: absolute;
-      margin: 2px;
-      padding: 5px 0;
-      overflow-y: scroll;
-      width: 33.5%;
-      height: 460px;
-      font-weight: lighter;
+      box-sizing: border-box;
+      margin: 15px;
+      padding: 20px;
+      overflow-y: auto;
+      height: 480px;
+      background-color: #f9f9f9;
+      border-radius: 5px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .lab-info p {
+      margin: 12px 0;
+      color: #333;
+    }
+
+    .lab-info ul {
+      margin: 10px 0 10px 20px;
+      padding-left: 15px;
+    }
+
+    .lab-info li {
+      margin: 8px 0;
+      color: #333;
+    }
+
+    .lab-info .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .lab-info .header p {
+      margin: 5px 0;
+      font-weight: bold;
+      color: #2c2c2c;
+    }
+
+    .lab-info .rule {
+      padding: 12px 0;
+      border-bottom: 1px solid #eee;
+    }
+
+    .lab-info .disciplinary {
+      margin-top: 25px;
+      padding: 15px;
+      background-color: #fff;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .lab-info .disciplinary p {
+      margin: 10px 0;
+    }
+
+    .lab-info .disciplinary-title {
+      font-weight: bold;
+      color: #2c2c2c;
+      margin-bottom: 15px !important;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #85807f;
+    }
+
+    /* Top Navigation Bar */
+    .top-nav {
+      background-color: #85807f;
+      padding: 15px 25px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      position: fixed;
+      top: 0;
+      right: 0;
+      left: 200px;
+      z-index: 900;
+      transition: left 0.3s ease;
+    }
+
+    .welcome-text {
+      color: white;
+      font-size: 16px;
+      margin: 0;
+    }
+
+    /* Add padding to main content to prevent overlap with sidebar */
+    .main-content {
+      margin-left: 200px;
+      transition: margin-left 0.3s ease;
+    }
+
+    /* When sidebar is closed, adjust main content margin */
+    .main-content.sidebar-closed {
+      margin-left: 0;
+    }
+
+    /* Update top-nav to work with fixed sidebar */
+    .top-nav {
+      background-color: #85807f;
+      padding: 15px 25px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      position: fixed;
+      top: 0;
+      right: 0;
+      left: 200px;
+      z-index: 900;
+      transition: left 0.3s ease;
+    }
+
+    /* When sidebar is closed, adjust top-nav position */
+    .top-nav.sidebar-closed {
+      left: 0;
+    }
+
+    /* Update sidebar animation */
+    @keyframes slideIn {
+      from {
+        transform: translateX(-100%);
+      }
+      to {
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes slideOut {
+      from {
+        transform: translateX(0);
+      }
+      to {
+        transform: translateX(-100%);
+      }
+    }
+
+    .w3-sidebar[style*="display: block"] {
+      animation: slideIn 0.3s ease forwards;
+    }
+
+    .w3-sidebar[style*="display: none"] {
+      animation: slideOut 0.3s ease forwards;
+    }
+
+    /* Adjust your existing styles to work with fixed sidebar */
+    .row {
+      margin-top: 80px;
+      margin-left: 220px;
+      margin-right: 20px;
+      transition: margin-left 0.3s ease;
+    }
+
+    .row.sidebar-closed {
+      margin-left: 20px;
     }
   </style>
 
   <!-- Sidebar -->
-  <div class="w3-sidebar w3-bar-block" style="background-color:#85807f; display: none; width: 200px;" id="mySidebar">
+  <div class="w3-sidebar w3-bar-block" style="display: block; width: 200px;" id="mySidebar">
     <button onclick="w3_close()" class="btn w3-bar-item"> 
-      <p> &times; </p> </button>
-      <div class="a">
-        <a href="/dashboard" class="w3-bar-item w3-button"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
-        <a href="/information" class="w3-bar-item w3-button"><i class="fas fa-user"></i> Profile</a>
-        <a href="/edit" class="w3-bar-item w3-button"><i class="fas fa-edit"></i> Edit</a>
-        <a href="/announcement" class="w3-bar-item w3-button"><i class="fas fa-bullhorn"></i> Announcement</a>
-        <a href="/sit-in" class="w3-bar-item w3-button"><i class="fas fa-book"></i> Sit-in Rules</a>
-        <a href="/labrules" class="w3-bar-item w3-button"><i class="fas fa-book-open"></i> Lab Rules and Regulations</a>
-        <a href="/sessions" class="w3-bar-item w3-button"><i class="fas fa-clock"></i> Sessions</a>
-        <a href="/history" class="w3-bar-item w3-button"><i class="fas fa-history"></i> History</a>
-        <a href="/reservations" class="w3-bar-item w3-button"><i class="fas fa-calendar-check"></i> Reservation</a>
+      <p>&times;</p> 
+    </button>
+    <div class="a">
+      <a href="/dashboard" class="w3-bar-item w3-button active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+      <a href="/information" class="w3-bar-item w3-button"><i class="fas fa-user"></i> Profile</a>
+      <a href="/edit" class="w3-bar-item w3-button"><i class="fas fa-edit"></i> Edit</a>
+      <a href="/announcement" class="w3-bar-item w3-button"><i class="fas fa-bullhorn"></i> Announcement</a>
+      <a href="/sit-in" class="w3-bar-item w3-button"><i class="fas fa-book"></i> Sit-in Rules</a>
+      <a href="/labrules" class="w3-bar-item w3-button"><i class="fas fa-book-open"></i> Lab Rules</a>
+      <a href="/sessions" class="w3-bar-item w3-button"><i class="fas fa-clock"></i> Sessions</a>
+      <a href="/history" class="w3-bar-item w3-button"><i class="fas fa-history"></i> History</a>
+      <a href="/reservations" class="w3-bar-item w3-button"><i class="fas fa-calendar-check"></i> Reservation</a>
     </div>
 
     <div class="sub-div">
-      <p><a href="/logout" class="w3-bar-item w3-button"><i class="fas fa-sign-out-alt"></i> Logout</a></p>
+      <a href="/logout" class="w3-bar-item w3-button"><i class="fas fa-sign-out-alt"></i> Logout</a>
     </div>
-</div>
-
-<!-- Page Content -->
-<div style="background-color: #85807f">
-  <button class="btn" style="background-color: #85807f;" onclick="w3_open()">☰ Dashboard </button>
-  <div class="w3-container" style="color: white;">
-    <h5 style="font-family: 'Inter';"> Welcome, {{ username.fname }} !</h5>
   </div>
-</div>
 
-<!-- Profile Container -->
-<div class="row">
-  <div class="column" style="width: 300px;">
-    <div>
-      <div class="col-head"> Student Information </div>
-        <div class="prof-info">
-          <div class="w3-center w3-padding-left">
-            <label for="current_avatar"></label>
-            {% if username.avatar_filename %}
-                <img src="{{ url_for('static', filename='images/uploads/' + username.avatar_filename) }}" alt="Current Avatar">
-            {% else %}
-                <img src="{{ url_for('static', filename='images/uploads/default_avatar.png') }}" alt="Default Avatar">
-            {% endif %}
+  <!-- Main Content -->
+  <div class="main-content" id="mainContent">
+    <!-- Page Content -->
+    <div class="top-nav" id="topNav">
+      <button class="btn" onclick="w3_open()">☰ Dashboard</button>
+      <h5 class="welcome-text">Welcome, {{ username.fname }}!</h5>
+    </div>
+
+    <!-- Profile Container -->
+    <div class="row" id="mainRow">
+      <div class="column" style="width: 300px;">
+        <div>
+          <div class="col-head">
+            <i class="fas fa-user-circle"></i>
+            Student Information
           </div>
-        <hr>
-        <p><b> Name: </b> {{ username.fname }} {{ username.mname }} {{ username.lastname }} </p>
-        <p><b> Course: </b> {{ username.course }}</p>
-        <p><b> Year: </b> {{ username.yrlvl }}</p>
-        <p><b> E-mail: </b> {{ username.email}}</p>
-        <p><b> Session: </b> </p>
-      </div>
-    </div>
-  </div>
-
-<!-- Announcement Container -->
-<div class="column" style="width: 45%; overflow-y: auto; padding: 10px;">
-  <div class="col-head">
-    <i class="fa fa-bullhorn"></i> Announcements
-  </div>
-  
-  <div style="padding: 10px;">
-    {% if announcements %}
-      {% for announcement in announcements %}
-        <div style="margin-bottom: 10px; padding: 8px; background-color: #f9f9f9; border-radius: 5px;">
-          <h4 style="margin: 5px 0; color: #3f3636;">{{ announcement.title }}</h4>
-          <p style="margin: 5px 0; color: rgb(68, 65, 64);">{{ announcement.content }}</p>
+          <div class="prof-info">
+            <div class="avatar-container">
+              <label for="current_avatar"></label>
+              {% if username.avatar_filename %}
+            <img src="{{ url_for('static', filename='images/uploads/' + username.avatar_filename) }}" alt="Current Avatar">
+        {% else %}
+            <img src="{{ url_for('static', filename='images/uploads/man.png') }}" alt="Default Avatar">
+        {% endif %}
+            </div>
+            <hr style="border-top: 1px solid #ddd; margin: 15px 0;">
+            <p><b>ID Number:</b> {{ username.idno }}</p>
+            <p><b>Name:</b> {{ username.fname }} {{ username.mname }} {{ username.lastname }}</p>
+            <p><b>Course:</b> {{ username.course }}</p>
+            <p><b>Year:</b> {{ username.yrlvl }}</p>
+            <p><b>E-mail:</b> {{ username.email }}</p>
+            <p><b>Session:</b> {% if username.current_session %}Active{% else %}None{% endif %}</p>
+          </div>
         </div>
-      {% endfor %}
-    {% else %}
-      <p>No announcements available.</p>
-    {% endif %}
-  </div>
-</div>
+      </div>
 
+      <!-- Announcement Container -->
+      <div class="column" style="width: 45%;">
+        <div class="col-head">
+          <i class="fas fa-bullhorn"></i> Announcements
+        </div>
+        
+        <div class="an-info">
+          {% if announcements %}
+            {% for announcement in announcements %}
+              {% for announcement in announcements|sort(attribute='date', reverse=true) %}
+                <div class="announcement-card">
+                  <h4>{{ announcement.title }}</h4>
+                  <p>{{ announcement.content }}</p>
+                </div>
+              {% endfor %}
+            {% endfor %}
+          {% else %}
+            <p>No announcements available.</p>
+          {% endif %}
+        </div>
+      </div>
 
-  <!-- Laboratory Rules Container -->
-  <div class="column" style="width: 34%">
-    <div class="col-head"> Laboratory Rules and Regulations </div>
-      <div class="container">
+      <!-- Laboratory Rules Container -->
+      <div class="column" style="width: 34%">
+        <div class="col-head">
+          <i class="fas fa-book-open"></i>
+          Laboratory Rules
+        </div>
         <div class="lab-info">
-          <p style="font-weight: bold; text-align: center;"> UNIVERSITY OF CEBU - MAIN CAMPUS </p>
-          <p style="font-weight: bold; text-align: center;"> College of Information and Computer Studies </p>
-            <p>To avoid embarrassment and maintain camaraderie with your friends and superiors at our laboratories, please observe the following:</p>
+          <div class="header">
+            <p>UNIVERSITY OF CEBU - MAIN CAMPUS</p>
+            <p>College of Information and Computer Studies</p>
+          </div>
+          
+          <p>To avoid embarrassment and maintain camaraderie with your friends and superiors at our laboratories, please observe the following:</p>
+          
+          <div class="rule">
             <p>1. Maintain silence, proper decorum, and discipline inside the laboratory. Mobile phones, walkmans and other personal pieces of equipment must be switched off.</p>
+          </div>
+          <div class="rule">
             <p>2. Games are not allowed inside the lab. This includes computer-related games, card games and other games that may disturb the operation of the lab.</p>
+          </div>
+          <div class="rule">
             <p>3. Surfing the Internet is allowed only with the permission of the instructor. Downloading and installing of software are strictly prohibited.</p>
+          </div>
+          <div class="rule">
             <p>4. Getting access to other websites not related to the course (especially pornographic and illicit sites) is strictly prohibited.</p>
+          </div>
+          <div class="rule">
             <p>5. Deleting computer files and changing the set-up of the computer is a major offense.</p>
-            <p>6. Observe computer time usage carefully. A fifteen-minute allowance is given for each use. Otherwise, the unit will be given to those who wish to "sit-in". </p>
-            <p>7. Observe proper decorum while inside the laboratory.</p>
-              <ul>
-                <li>Do not get inside the lab unless the instructor is present.</li>
-                <li>All bags, knapsacks, and the likes must be deposited at the counter.</li>
-                <li>Follow the seating arrangement of your instructor.</li>
-                <li>At the end of class, all software programs must be closed.</li>
-                <li>Return all chairs to their proper places after using.</li>
-              </ul>
-            <p>8. Chewing gum, eating, drinking, smoking, and other forms of vandalism are prohibited inside the lab.
-            <p>9. Anyone causing a continual disturbance will be asked to leave the lab. Acts or gestures offensive to the members of the community, including public display of physical intimacy, are not tolerated.
-            <p>10. Persons exhibiting hostile or threatening behavior such as yelling, swearing, or disregarding requests made by lab personnel will be asked to leave the lab.
-            <p>11. For serious offense, the lab personnel may call the Civil Security Office (CSU) for assistance.
-            <p>12. Any technical problem or difficulty must be addressed to the laboratory supervisor, student assistant or instructor immediately.
-              <br>
-              <br>
-            <p style="font-weight: bold;">DISCIPLINARY ACTION</p>
+          </div>
+          <div class="rule">
+            <p>6. Observe computer time usage carefully. A fifteen-minute allowance is given for each use. Otherwise, the unit will be given to those who wish to "sit-in".</p>
+          </div>
+          <div class="rule">
+            <p>7. Observe proper decorum while inside the laboratory:</p>
+            <ul>
+              <li>Do not get inside the lab unless the instructor is present.</li>
+              <li>All bags, knapsacks, and the likes must be deposited at the counter.</li>
+              <li>Follow the seating arrangement of your instructor.</li>
+              <li>At the end of class, all software programs must be closed.</li>
+              <li>Return all chairs to their proper places after using.</li>
+            </ul>
+          </div>
+          <div class="rule">
+            <p>8. Chewing gum, eating, drinking, smoking, and other forms of vandalism are prohibited inside the lab.</p>
+          </div>
+          <div class="rule">
+            <p>9. Anyone causing a continual disturbance will be asked to leave the lab. Acts or gestures offensive to the members of the community, including public display of physical intimacy, are not tolerated.</p>
+          </div>
+          <div class="rule">
+            <p>10. Persons exhibiting hostile or threatening behavior such as yelling, swearing, or disregarding requests made by lab personnel will be asked to leave the lab.</p>
+          </div>
+          <div class="rule">
+            <p>11. For serious offense, the lab personnel may call the Civil Security Office (CSU) for assistance.</p>
+          </div>
+          <div class="rule">
+            <p>12. Any technical problem or difficulty must be addressed to the laboratory supervisor, student assistant or instructor immediately.</p>
+          </div>
 
-            <p><u>First Offense </u> - The Head or the Dean or OIC recommends to the Guidance Center for a suspension from classes for each offender.</p>
+          <div class="disciplinary">
+            <p class="disciplinary-title">DISCIPLINARY ACTION</p>
+            <p><u>First Offense</u> - The Head or the Dean or OIC recommends to the Guidance Center for a suspension from classes for each offender.</p>
             <p><u>Second and Subsequent Offenses</u> - A recommendation for a heavier sanction will be endorsed to the Guidance Center.</p>
           </div>
+        </div>
       </div>
+    </div>
   </div>
 
-</div>
+  <script>
+    function w3_open() {
+      document.getElementById("mySidebar").style.display = "block";
+      document.getElementById("mainContent").classList.remove("sidebar-closed");
+      document.getElementById("topNav").classList.remove("sidebar-closed");
+      document.getElementById("mainRow").classList.remove("sidebar-closed");
+    }
 
-<script>
-function w3_open() {
-  document.getElementById("mySidebar").style.display = "block";
-}
-
-function w3_close() {
-  document.getElementById("mySidebar").style.display = "none";
-}
-</script>
-     
+    function w3_close() {
+      document.getElementById("mySidebar").style.display = "none";
+      document.getElementById("mainContent").classList.add("sidebar-closed");
+      document.getElementById("topNav").classList.add("sidebar-closed");
+      document.getElementById("mainRow").classList.add("sidebar-closed");
+    }
+  </script>
 </body>
 </html> 

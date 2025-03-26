@@ -11,207 +11,445 @@
     <title>Edit Profile</title>
     <style>
         body {
-            font-family: 'Inter';
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
         }
     
-        .container {
-            font-family: 'Inter';
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            width: 60%;
-            margin-top: 10px;
-            margin-bottom: 10px;
-            padding-left: 100px;
-            position: relative;
-        }
-
-        .container h4 {
-            font-family: "Inter";
-            font-weight: bold;
-        }
-
-        img {
-            height: 150px;
-            width: 150px;
-            clip-path: circle(50%);
-        }
-
         .div {
-            background-color: #1e7898;
+            background-color: #85807f;
             color: white;
         }
 
         .sub-div {
             display: flex;
-            justify-content: left; 
-            align-items: left;
-            padding: 7px;
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
             color: white;
-            position: absolute;
-            bottom: 0px;
+            position: sticky;
+            bottom: 0;
             width: 100%;
+            background-color: rgba(0, 0, 0, 0.1);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sub-div a {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .sub-div a:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .sub-div i {
+            margin-right: 10px;
+            font-size: 16px;
         }
 
         .btn {
-            background-color: #1e7898;
+            background-color: transparent;
             color: white;
-            padding: 5px 0;
+            padding: 10px 15px;
             border: none;
-            background: none;
             margin-left: 5px;
             font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 6px;
+        }
+
+        .btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: scale(1.05);
         }
 
         .btn p {
-            font-size: 15px;
+            font-size: 20px;
+            margin: 0;
+            line-height: 1;
         }
 
         .a {
             color: white;
         }
 
-        input[type=text], input[type=email], input[type=password], select {
-            font-family: 'Inter';
-            width: 100%;
-            padding: 8px;
-            margin: 8px 0;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+        .w3-sidebar {
+            background-color: #85807f !important;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            transform: translateX(0);
         }
 
-        button[type=submit] {
-            font-family: "Inter";
-            width: 50%;
-            background-color: #1e7898;
+        .w3-sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .w3-sidebar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .w3-sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        .w3-sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .w3-sidebar a {
+            padding: 15px 20px;
+            text-decoration: none;
+            font-size: 14px;
             color: white;
-            padding: 10px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+            margin: 4px 0;
+            border-radius: 0 8px 8px 0;
+            position: relative;
+            overflow: hidden;
         }
 
-        button[type=submit]:hover {
-            background-color: #155a74;
+        .w3-sidebar a:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-left: 3px solid #fff;
+            padding-left: 25px;
+            transform: translateX(5px);
         }
 
-        .href {
-            font-family: "Inter";
-            width: 50%;
-            background-color: #1e7898;
-            color: white;
-            padding: 10px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .href:hover {
-            background-color: #155a74;
-        }
-
-        .flash {
-            padding: 12px;
-            margin: 10px 0;
-            border-radius: 5px;
+        .w3-sidebar a i {
+            margin-right: 15px;
+            width: 20px;
             text-align: center;
+            font-size: 16px;
+            transition: all 0.3s ease;
         }
 
-        .flash.success {
-            background-color: #d4edda;
-            color: #155724;
+        .w3-sidebar a:hover i {
+            transform: scale(1.1);
         }
 
-        .flash.danger {
-            background-color: #f8d7da;
-            color: #721c24;
+        .w3-sidebar a.active {
+            background-color: rgba(255, 255, 255, 0.15);
+            border-left: 3px solid #fff;
+            font-weight: 500;
+        }
+
+        /* Add padding to main content to prevent overlap with sidebar */
+        .main-content {
+            margin-left: 200px;
+            transition: margin-left 0.3s ease;
+        }
+
+        /* When sidebar is closed, adjust main content margin */
+        .main-content.sidebar-closed {
+            margin-left: 0;
+        }
+
+        /* Update top-nav to work with fixed sidebar */
+        .top-nav {
+            background-color: #85807f;
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: fixed;
+            top: 0;
+            right: 0;
+            left: 200px;
+            z-index: 900;
+            transition: left 0.3s ease;
+        }
+
+        /* When sidebar is closed, adjust top-nav position */
+        .top-nav.sidebar-closed {
+            left: 0;
+        }
+
+        /* Update sidebar animation */
+        @keyframes slideIn {
+            from {
+                transform: translateX(-100%);
+            }
+            to {
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+            }
+            to {
+                transform: translateX(-100%);
+            }
+        }
+
+        .w3-sidebar[style*="display: block"] {
+            animation: slideIn 0.3s ease forwards;
+        }
+
+        .w3-sidebar[style*="display: none"] {
+            animation: slideOut 0.3s ease forwards;
+        }
+
+        /* Adjust edit container for fixed sidebar */
+        .edit-container {
+            max-width: 800px;
+            margin: 80px auto 30px;
+            padding: 30px;
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: margin-left 0.3s ease;
+        }
+
+        .edit-container.sidebar-closed {
+            margin-left: 20px;
+        }
+
+        .edit-header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #85807f;
+        }
+
+        .edit-header h2 {
+            color: #2c2c2c;
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background-color: white;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            border-color: #85807f;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(133, 128, 127, 0.1);
+        }
+
+        .form-group input[readonly] {
+            background-color: #f8f8f8;
+            cursor: not-allowed;
+        }
+
+        .avatar-section {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+            background-color: #f8f8f8;
+            border-radius: 12px;
+        }
+
+        .avatar-section img {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            object-fit: cover;
+            border: 4px solid #fff;
+            margin-bottom: 20px;
+            transition: transform 0.3s ease;
+        }
+
+        .avatar-section img:hover {
+            transform: scale(1.05);
+        }
+
+        .submit-btn {
+            background-color: #85807f;
+            color: white;
+            padding: 14px 28px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .submit-btn:hover {
+            background-color: #6b6665;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        @media (max-width: 768px) {
+            .edit-container {
+                margin: 15px;
+                padding: 20px;
+            }
+
+            .top-nav {
+                padding: 10px 15px;
+            }
+
+            .avatar-section img {
+                width: 120px;
+                height: 120px;
+            }
         }
     </style>
 </head>
 <body>
     <!-- Sidebar -->
-    <div class="w3-sidebar w3-bar-block" style="background-color:#1e7898; display: none; width: 25%;" id="mySidebar">
+    <div class="w3-sidebar w3-bar-block" style="display: block; width: 200px;" id="mySidebar">
         <button onclick="w3_close()" class="btn w3-bar-item"> 
-        <p> &times; </p> </button>
+            <p>&times;</p> 
+        </button>
         <div class="a">
             <a href="/dashboard" class="w3-bar-item w3-button"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
             <a href="/information" class="w3-bar-item w3-button"><i class="fas fa-user"></i> Profile</a>
-            <a href="/edit" class="w3-bar-item w3-button"><i class="fas fa-edit"></i> Edit</a>
+            <a href="/edit" class="w3-bar-item w3-button active"><i class="fas fa-edit"></i> Edit</a>
             <a href="/announcement" class="w3-bar-item w3-button"><i class="fas fa-bullhorn"></i> Announcement</a>
             <a href="/sit-in" class="w3-bar-item w3-button"><i class="fas fa-book"></i> Sit-in Rules</a>
-            <a href="/labrules" class="w3-bar-item w3-button"><i class="fas fa-book-open"></i> Lab Rules and Regulations</a>
+            <a href="/labrules" class="w3-bar-item w3-button"><i class="fas fa-book-open"></i> Lab Rules</a>
             <a href="/sessions" class="w3-bar-item w3-button"><i class="fas fa-clock"></i> Sessions</a>
             <a href="/history" class="w3-bar-item w3-button"><i class="fas fa-history"></i> History</a>
             <a href="/reservations" class="w3-bar-item w3-button"><i class="fas fa-calendar-check"></i> Reservation</a>
         </div>
+
         <div class="sub-div">
-        <p><a href="/logout" class="w3-bar-item w3-button"><i class="fas fa-sign-out-alt"></i> Logout</a></p>
+            <a href="/logout" class="w3-bar-item w3-button"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>
     </div>
     
-    <!-- Page Content -->
-    <div style="background-color: #1e7898">
-        <button class="btn" style="background-color: #1e7898;" onclick="w3_open()">☰ EDIT </button>
-        <div class="w3-container" style="color: white;">
-        <h5 style="font-family: 'Inter';"> Edit Profile <br> </h5>
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent">
+        <!-- Page Content -->
+        <div class="top-nav" id="topNav">
+            <button class="btn" onclick="w3_open()">☰ Edit Profile</button>
+            <h5 class="welcome-text">Welcome, {{ username.fname }}!</h5>
+        </div>
+
+        <div class="edit-container" id="editContainer">
+            <div class="edit-header">
+                <h2>Edit Profile</h2>
+            </div>
+
+            <form action="{{ url_for('edit') }}" method="POST" enctype="multipart/form-data">
+                <div class="avatar-section">
+                    {% if student[7] %}
+                        <img src="{{ url_for('static', filename='images/uploads/' + student[7]) }}" alt="Current Avatar">
+                    {% else %}
+                        <img src="{{ url_for('static', filename='images/uploads/default_avatar.png') }}" alt="Default Avatar">
+                    {% endif %}
+                    <div class="form-group">
+                        <label for="avatar">Change Profile Picture</label>
+                        <input type="file" id="avatar" name="avatar" accept="image/*">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="idno">ID Number</label>
+                    <input type="text" id="idno" name="idno" value="{{ student[0] }}" required readonly>
+                </div>
+
+                <div class="form-group">
+                    <label for="lastname">Last Name</label>
+                    <input type="text" id="lastname" name="lastname" value="{{ student[1] }}" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="fname">First Name</label>
+                    <input type="text" id="fname" name="fname" value="{{ student[2] }}" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="mname">Middle Name</label>
+                    <input type="text" id="mname" name="mname" value="{{ student[3] }}">
+                </div>
+
+                <div class="form-group">
+                    <label for="course">Course</label>
+                    <select id="course" name="course" required>
+                        <option value="IT" {% if student[4] == 'IT' %}selected{% endif %}>Information Technology</option>
+                        <option value="CS" {% if student[4] == 'CS' %}selected{% endif %}>Computer Science</option>
+                        <option value="IS" {% if student[4] == 'IS' %}selected{% endif %}>Information Systems</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="yrlvl">Year Level</label>
+                    <select id="yrlvl" name="yrlvl" required>
+                        <option value="1" {% if student[5] == '1' %}selected{% endif %}>1st Year</option>
+                        <option value="2" {% if student[5] == '2' %}selected{% endif %}>2nd Year</option>
+                        <option value="3" {% if student[5] == '3' %}selected{% endif %}>3rd Year</option>
+                        <option value="4" {% if student[5] == '4' %}selected{% endif %}>4th Year</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" value="{{ student[6] }}" required>
+                </div>
+
+                <button type="submit" class="submit-btn">Update Profile</button>
+            </form>
         </div>
     </div>
 
-<!-- Edit Profile Form -->
-<div class="container">
-    <form action="{{ url_for('edit') }}" method="POST" enctype="multipart/form-data">        
-        <label for="current_avatar"></label>
-        {% if student[7] %}  <!-- Assuming student[7] is the avatar filename -->
-            <img src="{{ url_for('static', filename='images/uploads/' + student[7]) }}" alt="Current Avatar">
-        {% else %}
-            <img src="{{ url_for('static', filename='images/uploads/default_avatar.png') }}" alt="Default Avatar">
-        {% endif %}
-        <br> <br>
-        <label for="avatar"></label>
-        <input type="file" id="avatar" name="avatar" accept="image/*">
-        <hr>
-        <label for="idno">ID Number</label>
-        <input type="text" id="idno" name="idno" value="{{ student[0] }}" required readonly>
+    <script>
+        function w3_open() {
+            document.getElementById("mySidebar").style.display = "block";
+            document.getElementById("mainContent").classList.remove("sidebar-closed");
+            document.getElementById("topNav").classList.remove("sidebar-closed");
+            document.getElementById("editContainer").classList.remove("sidebar-closed");
+        }
 
-        <label for="lastname">Last Name</label>
-        <input type="text" id="lastname" name="lastname" value="{{ student[1] }}" required>
-        
-        <label for="fname">First Name</label>
-        <input type="text" id="fname" name="fname" value ="{{ student[2] }}" required>
-        
-        <label for="mname">Middle Name</label>
-        <input type="text" id="mname" name="mname" value="{{ student[3] }}">
-        
-        <label for="course">Course</label>
-        <select id="course" name="course" required>
-            <option value="IT" {% if student[4] == 'IT' %}selected{% endif %}>Information Technology</option>
-            <option value="CS" {% if student[4] == 'CS' %}selected{% endif %}>Computer Science</option>
-        </select>
-        
-        <label for="yrlvl">Year Level</label>
-        <select id="yrlvl" name="yrlvl" required>
-            <option value="1" {% if student[5] == '1' %}selected{% endif %}>1</option>
-            <option value="2" {% if student[5] == '2' %}selected{% endif %}>2</option>
-            <option value="3" {% if student[5] == '3' %}selected{% endif %}>3</option>
-            <option value="4" {% if student[5] == '4' %}selected{% endif %}>4</option>
-        </select>
-
-        <label for="email">Email</label>
-        <input type="email" id="email" name="email" value="{{ student[6] }}" required>
-        
-        <br><br>
-        <button type="submit">Update Profile</button>
-    </form>
-</div>
-
-<script>
-    function w3_open() {
-        document.getElementById("mySidebar").style.display = "block";
-    }
-    
-    function w3_close() {
-        document.getElementById("mySidebar").style.display = "none";
-    }
-</script>
+        function w3_close() {
+            document.getElementById("mySidebar").style.display = "none";
+            document.getElementById("mainContent").classList.add("sidebar-closed");
+            document.getElementById("topNav").classList.add("sidebar-closed");
+            document.getElementById("editContainer").classList.add("sidebar-closed");
+        }
+    </script>
 </body>
+</html>

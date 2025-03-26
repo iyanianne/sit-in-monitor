@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie-edge">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="icon" type="image/x-icon" href="../static/favicon/ccslogo.png">
+    <title>Sessions</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .div {
+            background-color: #85807f;
+            color: white;
+        }
+
+        .sub-div {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+            color: white;
+            position: sticky;
+            bottom: 0;
+            width: 100%;
+            background-color: rgba(0, 0, 0, 0.1);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sub-div a {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .sub-div a:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .sub-div i {
+            margin-right: 10px;
+            font-size: 16px;
+        }
+
+        .btn {
+            background-color: transparent;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            margin-left: 5px;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 6px;
+        }
+
+        .btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: scale(1.05);
+        }
+
+        .btn p {
+            font-size: 20px;
+            margin: 0;
+            line-height: 1;
+        }
+
+        .a {
+            color: white;
+        }
+
+        .w3-sidebar {
+            background-color: #85807f !important;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            transform: translateX(0);
+        }
+
+        .w3-sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .w3-sidebar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .w3-sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        .w3-sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .w3-sidebar a {
+            padding: 15px 20px;
+            text-decoration: none;
+            font-size: 14px;
+            color: white;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+            margin: 4px 0;
+            border-radius: 0 8px 8px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .w3-sidebar a:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-left: 3px solid #fff;
+            padding-left: 25px;
+            transform: translateX(5px);
+        }
+
+        .w3-sidebar a i {
+            margin-right: 15px;
+            width: 20px;
+            text-align: center;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .w3-sidebar a:hover i {
+            transform: scale(1.1);
+        }
+
+        .w3-sidebar a.active {
+            background-color: rgba(255, 255, 255, 0.15);
+            border-left: 3px solid #fff;
+            font-weight: 500;
+        }
+
+        .top-nav {
+            background-color: #85807f;
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: fixed;
+            top: 0;
+            right: 0;
+            left: 200px;
+            z-index: 900;
+            transition: left 0.3s ease;
+        }
+
+        .welcome-text {
+            color: white;
+            font-size: 16px;
+            margin: 0;
+            font-weight: 500;
+        }
+
+        .sessions-container {
+            max-width: 800px;
+            margin: 80px auto 30px;
+            padding: 20px;
+        }
+
+        .sessions-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #85807f;
+        }
+
+        .sessions-header h2 {
+            color: #2c2c2c;
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .sessions-card {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .sessions-info {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 30px;
+        }
+
+        .session-stat {
+            text-align: center;
+            padding: 20px;
+            background-color: #f8f8f8;
+            border-radius: 8px;
+            flex: 1;
+            margin: 0 10px;
+        }
+
+        .session-stat h3 {
+            color: #85807f;
+            font-size: 16px;
+            margin: 0 0 10px 0;
+        }
+
+        .session-stat p {
+            color: #2c2c2c;
+            font-size: 24px;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: #85807f;
+            transition: width 0.3s ease;
+        }
+
+        .session-details {
+            margin-top: 30px;
+            text-align: left;
+        }
+
+        .session-details h3 {
+            color: #2c2c2c;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+
+        .session-details p {
+            color: #555;
+            margin: 5px 0;
+        }
+
+        @media (max-width: 768px) {
+            .sessions-container {
+                margin: 15px;
+                padding: 15px;
+            }
+
+            .sessions-info {
+                flex-direction: column;
+            }
+
+            .session-stat {
+                margin: 10px 0;
+            }
+        }
+
+        /* Add padding to main content to prevent overlap with sidebar */
+        .main-content {
+            margin-left: 200px;
+            transition: margin-left 0.3s ease;
+        }
+
+        /* When sidebar is closed, adjust main content margin */
+        .main-content.sidebar-closed {
+            margin-left: 0;
+        }
+
+        /* Update top-nav to work with fixed sidebar */
+        .top-nav {
+            background-color: #85807f;
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: fixed;
+            top: 0;
+            right: 0;
+            left: 200px;
+            z-index: 900;
+            transition: left 0.3s ease;
+        }
+
+        /* When sidebar is closed, adjust top-nav position */
+        .top-nav.sidebar-closed {
+            left: 0;
+        }
+
+        /* Update sessions container to work with fixed sidebar */
+        .sessions-container {
+            max-width: 800px;
+            margin: 80px auto 30px;
+            padding: 20px;
+        }
+
+        /* Update sidebar animation */
+        @keyframes slideIn {
+            from {
+                transform: translateX(-100%);
+            }
+            to {
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+            }
+            to {
+                transform: translateX(-100%);
+            }
+        }
+
+        .w3-sidebar[style*="display: block"] {
+            animation: slideIn 0.3s ease forwards;
+        }
+
+        .w3-sidebar[style*="display: none"] {
+            animation: slideOut 0.3s ease forwards;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="w3-sidebar w3-bar-block" style="display: block; width: 200px;" id="mySidebar">
+        <button onclick="w3_close()" class="btn w3-bar-item"> 
+            <p>&times;</p> 
+        </button>
+        <div class="a">
+            <a href="/dashboard" class="w3-bar-item w3-button"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <a href="/information" class="w3-bar-item w3-button"><i class="fas fa-user"></i> Profile</a>
+            <a href="/edit" class="w3-bar-item w3-button"><i class="fas fa-edit"></i> Edit</a>
+            <a href="/announcement" class="w3-bar-item w3-button"><i class="fas fa-bullhorn"></i> Announcement</a>
+            <a href="/sit-in" class="w3-bar-item w3-button"><i class="fas fa-book"></i> Sit-in Rules</a>
+            <a href="/labrules" class="w3-bar-item w3-button"><i class="fas fa-book-open"></i> Lab Rules</a>
+            <a href="/sessions" class="w3-bar-item w3-button active"><i class="fas fa-clock"></i> Sessions</a>
+            <a href="/history" class="w3-bar-item w3-button"><i class="fas fa-history"></i> History</a>
+            <a href="/reservations" class="w3-bar-item w3-button"><i class="fas fa-calendar-check"></i> Reservation</a>
+        </div>
+
+        <div class="sub-div">
+            <a href="/logout" class="w3-bar-item w3-button"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent">
+        <!-- Page Content -->
+        <div class="top-nav" id="topNav">
+            <button class="btn" onclick="w3_open()">☰ Sessions</button>
+            <h5 class="welcome-text">Welcome, {{ username.fname }}!</h5>
+        </div>
+
+        <!-- Sessions Container -->
+        <div class="sessions-container">
+            <div class="sessions-header">
+                <h2><i class="fas fa-clock"></i> Your Sessions</h2>
+            </div>
+
+            <div class="sessions-card">
+                <div class="sessions-info">
+                    <div class="session-stat">
+                        <h3>Remaining Sessions</h3>
+                        <p>{{ sessions.remaining }}</p>
+                    </div>
+                    <div class="session-stat">
+                        <h3>Total Sessions</h3>
+                        <p>{{ sessions.total }}</p>
+                    </div>
+                </div>
+
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {{ sessions.percentage }}%"></div>
+                </div>
+
+                <div class="session-details">
+                    <h3>Session Information</h3>
+                    <p>• Each sit-in session counts as one session.</p>
+                    <p>• Sessions are deducted when you complete a sit-in.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function w3_open() {
+            document.getElementById("mySidebar").style.display = "block";
+            document.getElementById("mainContent").classList.remove("sidebar-closed");
+            document.getElementById("topNav").classList.remove("sidebar-closed");
+        }
+
+        function w3_close() {
+            document.getElementById("mySidebar").style.display = "none";
+            document.getElementById("mainContent").classList.add("sidebar-closed");
+            document.getElementById("topNav").classList.add("sidebar-closed");
+        }
+    </script>
+</body>
+</html>

@@ -4,129 +4,145 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie-edge">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="icon" type="image/x-icon" href="../static/favicon/ccslogo.png">
-  <title>SIT IN MONITORING</title>
+  <title>Students List</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <style>
     body {
       margin: 0;
-      font-family: 'Inter';
+      font-family: 'Inter', sans-serif;
+      background-color: #f5f5f5;
     }
     
     .topnav {
       overflow: hidden;
       background-color: #3f3636;
-      padding: 5px 0;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
     
     .topnav a {
-      float: right;
-      transition: 0.3s;
       color: #f2f2f2;
       text-align: center;
-      padding: 6px 10px;
+      padding: 8px 16px;
       text-decoration: none;
-      font-size: 15px;
+      font-size: 14px;
+      border-radius: 4px;
+      transition: 0.3s;
     }
     
     .topnav a:hover {
       background-color: #a09191;
-      border-radius: 4px;
-      color:rgb(75, 72, 71);
+      color: #3f3636;
     }
     
     .topnav a.active {
-      background-color:rgb(33, 92, 114);
+      background-color: #4a5c5e;
       color: white;
     }
 
     .head {
-      float: left;
       color: #f2f2f2;
-      text-align: center;
-      padding: 6px 10px;
-      text-decoration: none;
       font-size: 20px;
+      font-weight: 600;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .dashboard-container {
+      padding: 20px;
     }
 
     input[type=text], select, input[type=number] {
       padding: 8px;
-      margin-left: 20px;
       margin-top: 8px;
-      background: transparent;
+      background: white;
       border: 1px solid #ccc;
       outline: none;
-      display: inline-block;
       border-radius: 4px;
-      color: rgb(59, 48, 28);
+      color: #333;
+      width: 100%;
     }
 
-    .table {
+    .table-container {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin: 20px 0;
+      overflow: hidden;
+    }
+    
+    .table-header {
+      height: 50px;
+      border-radius: 8px 8px 0 0;
+      font-size: 16px;
+      padding: 0 20px;
+      display: flex;
         align-items: center;
+      justify-content: space-between;
+      color: white;
+      background-color: #3f3636;
+    }
+
+    .search-container {
+      width: 300px;
+      margin: 20px 0;
     }
     
     table {
-        display: flex;
-        text-align: center;
-        margin: auto;
-        border-radius: 4px;
-        width: 85%;
-        border: rgb(59, 48, 28);
+      width: 100%;
         border-collapse: collapse;
+      margin-bottom: 0;
+    }
+
+    th, td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
     }
 
     th {
         background-color: #3f3636;
         color: white;
-        font-weight: bold;
-        text-align: left;
-        padding: 8px;
+      font-weight: 500;
+      text-transform: uppercase;
+      font-size: 14px;
+      letter-spacing: 0.5px;
     }
 
-    th a.sort-by { 
-        padding-right: 18px;
-        position: relative;
+    td {
+      color: #333;
+      font-size: 14px;
     }
 
-    a.sort-by:before,
-    a.sort-by:after {
-        border: 4px solid transparent;
-        content: "";
-        display: block;
-        height: 0;
-        right: 5px;
-        top: 50%;
-        position: absolute;
-        width: 0;
+    tr:hover {
+      background-color: #f8f9fa;
     }
 
-    th a {
-        text-decoration: none;
+    tr:last-child td {
+      border-bottom: none;
     }
 
-    a.sort-by:before {
-        border-bottom-color: #666;
-        margin-top: -9px;
-    }
-    
-    a.sort-by:after {
-        border-top-color: #666;
-        margin-top: 1px;
+    .btn-container {
+      display: flex;
+      gap: 8px;
     }
 
-    button {
-        color: white;
-        padding: 8px 20px;
-        margin: 8px 0;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        width: 100%;
+    .btn-action {
+      padding: 6px 12px;
+      font-size: 13px;
+      min-width: 80px;
     }
 
     /* Modal Styles */
@@ -139,177 +155,197 @@
             width: 100%;
             height: 100%;
             overflow: auto;
-            background-color: rgba(0, 0, 0, 0.4); /* Background with transparency */
+      background-color: rgba(0, 0, 0, 0.4);
             padding-top: 60px;
         }
 
         .modal-content {
             color: white;
-            background-color: #5f4b2e;
+      background-color: #3f3636;
             margin: 5% auto;
-            padding: 20px;
+      padding: 30px;
             border: 1px solid #ccc;
             width: 65%;
             max-width: 600px;
             border-radius: 7px;
         }
 
-        .modal-content input[type=text] {
+    .form-group {
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+    }
+
+    .form-group label {
+      width: 150px;
+      color: white;
+      font-size: 14px;
+    }
+
+    .form-group input[type="text"] {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.1);
             color: white;
+      font-size: 14px;
+    }
+
+    .form-group input[type="text"]:read-only {
+      background: rgba(255, 255, 255, 0.05);
+      cursor: not-allowed;
         }
 
         .modal-content h3 {
-            font-family: 'Inter';
+      color: white;
             text-align: center;        
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
         }
 
         .close {
-            color: black;
+      color: white;
             float: right;
             font-size: 28px;
             font-weight: bold;
+      cursor: pointer;
         }
 
         .close:hover,
         .close:focus {
-            color: black;
+      color: #aaa;
             text-decoration: none;
-            cursor: pointer;
         }
 
         select {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.1);
             color: white;
+      font-size: 14px;
         }
 
         select option {
-            color: #3f3636;
-        }
+      background: #3f3636;
+      color: white;
+    }
 
-        .confirm {
-            width: 80px;
+    .button-group {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .btn-action.accept {
             background-color: #4CAF50; 
-            color: white;
-            border: none; 
-            padding: 5px 10px; 
-            border-radius: 5px; 
-            cursor: pointer; 
         }
 
-        .reject {
-            width: 80px;
+    .btn-action.reject {
             background-color: #f44336; 
-            color: white; 
-            border: none; 
-            padding: 5px 10px; 
-            border-radius: 5px; 
-            cursor: pointer; 
         }
 
-        .confirm:hover {
+    .btn-action.accept:hover {
             background-color: #45a049; 
         }
 
-        .reject:hover {
+    .btn-action.reject:hover {
             background-color: #d32f2f; 
-        }
-
-    .add a {
-        background-color: #3f3636;
-        color: white;
-        padding: 8px 20px;
-        margin: 8px 0;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        text-align: center;
-        text-decoration: none;
     }
   </style>
 
-<body>
     <div class="topnav">
       <div class="head"> 
-        Students List 
+      College of Computer Studies Admin 
+    </div>
+    <div class="nav-links">
+      <a href="/admin_dashboard"><i class="fas fa-home"></i> Home</a>
+      <a href="/ad_students" class="active"><i class="fas fa-users"></i> Students</a>
+      <a href="/ad_sit-in"><i class="fas fa-chart-bar"></i> Current Sit-in</a>
+      <a href="/ad_records"><i class="fas fa-clipboard-list"></i> Sit-in Records</a>
+      <a href="/ad_reports"><i class="fas fa-chart-bar"></i> Sit-in Reports</a>
+      <a href="/ad_feedback"><i class="fas fa-comments"></i> Feedback Reports</a>
+      <a href="/ad_reserve"><i class="fas fa-calendar-check"></i> Reservation</a>
+      <a href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </div>
       </div>
-      <p><a href="/logout" class="w3-bar-item w3-button"> Logout</a></p>
-      <a href="/ad_reserve">Reservation</a>
-      <a href="/ad_feedback">Feedback Reports</a>
-      <a href="/ad_reports">Sit-in Reports</a>
-      <a href="/ad_records">Sit-in Records</a>
-      <a href="/ad_students">Students</a>
-      <a href="/admin_dashboard">Home</a>
+    
+  <div class="dashboard-container">
+    <div class="search-container">
+      <input type="text" id="search" placeholder="Search by ID Number" onkeyup="searchStudent(this.value)">
     </div>
     
-<div class="add">
-    <input type="text" id="search" placeholder="Search Students">
-    <a href="#" id="openModal"> Add Student </a>
+    <div class="table-container">
+      <div class="table-header">
+        <i class="fas fa-users"></i> Students List
 </div>
-<br>
-<div class="table">
     <table>
-        <tr>
-            <th><a href="#" class="sort-by"> ID Number </a></th>
-            <th> Name </th>
-            <th> Purpose </th>
-            <th> Laboratory </th>
-            <th> Login </th>
-            <th> Sign out </th>
-            <th> Date </th>
+        <thead>
+          <tr>
+            <th>ID Number</th>
+            <th>Name</th>
+            <th>Remaining Sessions</th>
+            <th>Total Sessions</th>
         </tr>
-    </tr>
+        </thead>
+        <tbody id="studentTableBody">
     {% if students %}
         {% for student in students %}
-        <tr>
+          <tr onclick="showStudentModal('{{ student.idno }}')" style="cursor: pointer;">
             <td>{{ student.idno }}</td>
             <td>{{ student.name }}</td>
-            <td>{{ student.purpose }}</td>
-            <td>{{ student.laboratory }}</td>
-            <td>{{ student.sessions }}</td>
+            <td>{{ student.remaining_sessions }}</td>
+            <td>{{ student.total_sessions }}</td>
         </tr>
         {% endfor %}
     {% else %}
         <tr>
-            <td colspan="7">No students found.</td>
+            <td colspan="4" style="text-align: center">No students found.</td>
         </tr>
     {% endif %}
+        </tbody>
     </table>
 </div>
+  </div>
+
 <!-- Student Modal -->
 <div id="studentModal" class="modal">
-    <div class="modal-content w3-container">
+    <div class="modal-content">
         <span class="close">&times;</span>
-        <h3>Sit In Form</h3>
-        <table>
-            <form action="{{ url_for('sitinform', idno=student.idno) }}">
-
-                <!-- ID Number -->
-                <div class="form-group idno-field">
-                    <label for="idno">ID Number</label> &nbsp; &nbsp; &nbsp; &nbsp; &emsp; &emsp;
-                    <input type="text" id="idno" name="idno" required>
+        <h3>Student Sit-in Form</h3>
+        <form id="studentForm" onsubmit="handleSitIn(event)">
+            <!-- Basic Information (Read-only) -->
+            <div class="form-group">
+                <label for="idno">ID Number:</label>
+                <input type="text" id="studentId" name="idno" readonly>
                 </div>
 
-                <!-- Name Field -->
-                <div class="form-group name-field">
-                    <label for="lastname">Student Name</label> &emsp; &emsp; &nbsp;
-                    <input type="text" id="name" name="name" required>
+            <div class="form-group">
+                <label for="name">Student Name:</label>
+                <input type="text" id="studentName" name="name" readonly>
                 </div>
 
-                <!-- Purpose and Laboratory Options -->
-                <div class="purpose">
-                    <label for="purpose">Purpose</label>
-                    &emsp; &emsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+            <!-- Editable Fields -->
+            <div class="form-group">
+                <label for="purpose">Purpose:</label>
                     <select id="purpose" name="purpose" required>
-                        <option value="python">Python</option>
-                        <option value="php">PHP</option>
-                        <option value="c#">C#</option>
-                        <option value="c++">C++</option>
-                        <option value="java">Java</option>
+                    <option value="">Select Purpose</option>
+                    <option value="Python">Python</option>
+                    <option value="Java">Java</option>
+                    <option value="C#">C#</option>
+                    <option value="C++">C++</option>
+                    <option value="PHP">PHP</option>
                     </select>
                 </div>
-                <div class="lab">
-                    <label for="lab">Laboratory</label>
-                    &emsp;&emsp;&emsp;&nbsp;&nbsp;&nbsp; &nbsp;
-                    <select id="lab" name="lab" required>
+
+            <div class="form-group">
+                <label for="laboratory">Laboratory:</label>
+                <select id="laboratory" name="laboratory" required>
+                    <option value="">Select Laboratory</option>
                         <option value="524">524</option>
                         <option value="526">526</option>
                         <option value="528">528</option>
@@ -319,56 +355,164 @@
                     </select>
                 </div>
 
-                <!-- Session Field -->
-                <div class="form-group session-fields">
-                    <label for="session">Remaining Sessions</label>
-                    &nbsp;
-                    <input type="text" id="session" name="session" required>
+            <div class="form-group">
+                <label for="remaining_sessions">Remaining Sessions:</label>
+                <input type="text" id="remainingSessions" name="remaining_sessions" readonly>
                 </div>
 
-                <!-- Confirm and Reject Buttons -->
-                    <button type="submit" class="confirm">Confirm</button>
-                    &nbsp;
-                    <button type="submit" class="reject">Reject</button>
+            <div class="button-group">
+                <button type="submit" class="btn-action accept">Sit-in</button>
+                <button type="button" class="btn-action reject" onclick="closeModal()">Cancel</button>
+            </div>
             </form>
-        </table>
     </div>
 </div>
-</body>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-    function fetchStudentData(idno) {
+    function showStudentModal(idno) {
+        // If idno is an object, it was called from the search function
+        if (typeof idno === 'object') {
+            $('#studentId').val(idno.idno);
+            $('#studentName').val(idno.name);
+            $('#remainingSessions').val(idno.remaining_sessions);
+            modal.style.display = "block";
+            return;
+        }
+        
+        // Otherwise, fetch the student data
     $.ajax({
         url: '/sitinform/' + idno,
         method: 'GET',
         success: function(data) {
-            if (data.error) {
-                alert(data.error);
-            } else {
                 $('#studentId').val(data.idno);
                 $('#studentName').val(data.name);
-                $('#studentPurpose').val(data.purpose);
-                $('#studentLab').val(data.lab);
-                $('#remainingSessions').val(data.session);
+                $('#remainingSessions').val(data.remaining_sessions);
+                modal.style.display = "block";
+            },
+            error: function(error) {
+                console.log("Error fetching student data:", error);
+                alert('Failed to get student information.');
+            }
+        });
+    }
+
+    function searchStudent(idno) {
+        if (idno.length >= 3) {
+            $.ajax({
+                url: '/sitinform/' + idno,
+                method: 'GET',
+                success: function(data) {
+                    if (data.error) {
+                        // Clear the table if no student found
+                        $('#studentTableBody').html('<tr><td colspan="4" style="text-align: center">No students found.</td></tr>');
+                    } else {
+                        // Store the student data as a global variable for easy access
+                        window.currentStudentData = data;
+                        
+                        // Update the table with the found student
+                        const row = `
+                            <tr class="student-row" data-idno="${data.idno}" style="cursor: pointer;">
+                                <td>${data.idno}</td>
+                                <td>${data.name}</td>
+                                <td>${data.remaining_sessions}</td>
+                                <td>${data.total_sessions}</td>
+                            </tr>
+                        `;
+                        $('#studentTableBody').html(row);
+                        
+                        // Add click event handler explicitly
+                        $('.student-row').on('click', function() {
+                            const idno = $(this).data('idno');
+                            showStudentModal(window.currentStudentData);
+                        });
             }
         },
         error: function(error) {
-            console.log("Error fetching data: ", error);
+                    console.log("Error fetching data:", error);
+                }
+            });
+        } else if (idno.length === 0) {
+            // Reload the original table
+            location.reload();
+        }
+    }
+
+    function handleSitIn(event) {
+        event.preventDefault();
+        
+        // Get the form data
+        const idno = $('#studentId').val();
+        const purpose = $('#purpose').val();
+        const laboratory = $('#laboratory').val();
+        
+        // Validate the form
+        if (!purpose) {
+            alert('Please select a purpose');
+            return;
+        }
+        if (!laboratory) {
+            alert('Please select a laboratory');
+            return;
+        }
+        
+        const formData = {
+            idno: idno,
+            purpose: purpose,
+            laboratory: laboratory
+        };
+        
+        // Show processing message
+        const submitBtn = $('.btn-action.accept');
+        const originalText = submitBtn.text();
+        submitBtn.text('Processing...').prop('disabled', true);
+
+        $.ajax({
+            url: '/process_sit_in',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            success: function(response) {
+                submitBtn.text(originalText).prop('disabled', false);
+                if (response.success) {
+                    alert('Sit-in recorded successfully!');
+                    modal.style.display = "none";
+                    window.location.href = '/ad_sit-in';  // Redirect to current sit-in page
+                } else {
+                    alert(response.error || 'Failed to record sit-in.');
+                }
+            },
+            error: function(xhr, status, error) {
+                submitBtn.text(originalText).prop('disabled', false);
+                console.log("Error processing sit-in:", xhr.responseText);
+                
+                // Try to parse the error message from the response
+                let errorMessage = 'Failed to process sit-in request.';
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    if (response.error) {
+                        errorMessage = response.error;
+                    }
+                } catch (e) {
+                    console.error('Error parsing error response:', e);
+                }
+                
+                alert(errorMessage);
         }
     });
 }
 
-const modal = document.getElementById("studentModal");
-    document.getElementById("openModal").onclick = function() {
-        modal.style.display = "block";
-    };
-    document.querySelector(".close").onclick = function() {
+    function closeModal() {
         modal.style.display = "none";
-    };
+    }
+
+    const modal = document.getElementById("studentModal");
+    document.querySelector(".close").onclick = closeModal;
     window.onclick = function(event) {
         if (event.target === modal) {
-            modal.style.display = "none";
+            closeModal();
         }
     };
 </script>
+</body>
 </html>

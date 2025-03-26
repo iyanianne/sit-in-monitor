@@ -1,0 +1,19 @@
+sqlite> .schema USERS
+CREATE TABLE USERS (
+id integer primary key autoincrement,
+idno text not null unique,
+lastname varchar (30) not null,
+fname varchar (30) not null,
+mname varchar (30) null,
+course varchar (50) not null,
+yrlvl int not null,
+email varchar (50) not null unique,
+username text not null unique,
+password varchar (255) not null
+, avatar text, avatar_filename text, purpose text, laboratory text);
+sqlite> .tables
+USERS  admin
+sqlite> .schema admin
+CREATE TABLE admin (
+username TEXT primary key,
+password TEXT);

@@ -447,6 +447,7 @@
     </div>
   </div>
 
+<<<<<<< HEAD
   <!-- Main Content -->
   <div class="main-content" id="mainContent">
     <!-- Page Content -->
@@ -480,6 +481,45 @@
             <p><b>E-mail:</b> {{ username.email }}</p>
             <p><b>Session:</b> {% if username.current_session %}Active{% else %}None{% endif %}</p>
           </div>
+=======
+<!-- Profile Container -->
+<div class="row">
+  <div class="column" style="width: 300px;">
+    <div>
+      <div class="col-head"> Student Information </div>
+        <div class="prof-info">
+          <div class="w3-center w3-padding-left">
+            <label for="current_avatar"></label>
+            {% if username.avatar_filename %}
+                <img src="{{ url_for('static', filename='images/uploads/' + username.avatar_filename) }}" alt="Current Avatar">
+            {% else %}
+                <img src="{{ url_for('static', filename='images/uploads/man.png') }}" alt="Default Avatar">
+            {% endif %}
+          </div>
+        <hr>
+        <p><b> ID Number: </b> {{ username.idno}}</p>
+        <p><b> Name: </b> {{ username.fname }} {{ username.mname }} {{ username.lastname }} </p>
+        <p><b> Course: </b> {{ username.course }}</p>
+        <p><b> Year: </b> {{ username.yrlvl }}</p>
+        <p><b> E-mail: </b> {{ username.email}}</p>
+        <p><b> Session: </b> </p>
+      </div>
+    </div>
+  </div>
+
+<!-- Announcement Container -->
+<div class="column" style="width: 45%; overflow-y: auto;">
+  <div class="col-head">
+    <i class="fa fa-bullhorn"></i> Announcements
+  </div>
+  
+  <div style="padding: 10px;">
+    {% if announcements %}
+      {% for announcement in announcements %}
+        <div style="margin-bottom: 10px; padding: 8px; background-color: #f9f9f9; border-radius: 5px;">
+          <h4 style="margin: 5px 0; color: #3f3636;">{{ announcement.title }}</h4>
+          <p style="margin: 5px 0; color: rgb(68, 65, 64);">{{ announcement.content }}</p>
+>>>>>>> c3146be3e2a7c5b4ea2af77a924be396b12ef12b
         </div>
       </div>
 

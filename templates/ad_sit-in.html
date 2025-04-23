@@ -16,48 +16,64 @@
     body {
       margin: 0;
       font-family: 'Inter', sans-serif;
-      background-color: #f5f5f5;
+      background-color: #f8f9fa;
     }
     
     .topnav {
       overflow: hidden;
-      background-color: #3f3636;
+      background-color: #2c3e50;
       padding: 10px 20px;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
     }
     
     .topnav a {
-      color: #f2f2f2;
+      color: #ecf0f1;
       text-align: center;
       padding: 8px 16px;
       text-decoration: none;
       font-size: 14px;
       border-radius: 4px;
       transition: 0.3s;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
     
     .topnav a:hover {
-      background-color: #a09191;
-      color: #3f3636;
+      background-color: #34495e;
+      color: #ecf0f1;
     }
     
     .topnav a.active {
-      background-color: #4a5c5e;
+      background-color: #3498db;
       color: white;
     }
 
     .head {
-      color: #f2f2f2;
+      color: #ecf0f1;
       font-size: 20px;
       font-weight: 600;
+      white-space: nowrap;
     }
 
     .nav-links {
       display: flex;
       align-items: center;
       gap: 10px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      padding-bottom: 5px;
+    }
+
+    .nav-links::-webkit-scrollbar {
+      display: none;
     }
 
     .dashboard-container {
@@ -67,7 +83,7 @@
     .table-container {
       background: white;
       border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
       margin: 20px 0;
       overflow: hidden;
     }
@@ -79,10 +95,11 @@
       padding: 0 20px;
       display: flex;
       align-items: center;
+      justify-content: space-between;
       color: white;
-      background-color: #3f3636;
+      background-color: #2c3e50;
     }
-    
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -96,7 +113,7 @@
     }
 
     th {
-      background-color: #3f3636;
+      background-color: #2c3e50;
       color: white;
       font-weight: 500;
       text-transform: uppercase;
@@ -105,7 +122,7 @@
     }
 
     td {
-      color: #333;
+      color: #2c3e50;
       font-size: 14px;
     }
 
@@ -120,42 +137,136 @@
     .btn-container {
       display: flex;
       gap: 8px;
-      justify-content: center;
     }
 
     .btn-action {
       padding: 6px 12px;
       font-size: 13px;
       min-width: 80px;
-      background-color: #f44336;
+      background-color: #eb6258;
       color: white;
       border: none;
       border-radius: 4px;
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: 0.3s;
     }
 
-    .btn-action:hover {
-      background-color: #d32f2f;
-    }
-
-    .flash-message {
-      padding: 10px 20px;
-      margin: 10px 0;
-      border-radius: 4px;
+    .btn-action.end {
+      background-color: #e74c3c;
       color: white;
     }
 
-    .flash-success {
-      background-color: #4CAF50;
+    .btn-action.end:hover {
+      background-color: #c0392b;
     }
 
-    .flash-danger {
-      background-color: #f44336;
+    .btn-action.view {
+      background-color: #3498db;
+      color: white;
     }
 
-    .flash-info {
-      background-color: #2196F3;
+    .btn-action.view:hover {
+      background-color: #2980b9;
+    }
+
+    /* Modal Styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.4);
+      padding-top: 60px;
+    }
+
+    .modal-content {
+      color: white;
+      background-color: #2c3e50;
+      margin: 5% auto;
+      padding: 30px;
+      border: 1px solid #ccc;
+      width: 65%;
+      max-width: 600px;
+      border-radius: 7px;
+    }
+
+    .modal-content h3 {
+      color: white;
+      text-align: center;        
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .close {
+      color: white;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .close:hover,
+    .close:focus {
+      color: #aaa;
+      text-decoration: none;
+    }
+
+    .details-group {
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+    }
+
+    .details-group label {
+      width: 150px;
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .details-group span {
+      flex: 1;
+      color: #ecf0f1;
+      font-size: 14px;
+    }
+
+    @media (max-width: 768px) {
+      .modal-content {
+        width: 90%;
+        margin: 10% auto;
+      }
+      
+      .details-group {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      
+      .details-group label {
+        width: 100%;
+        margin-bottom: 5px;
+      }
+    }
+
+    /* add points button */
+    .add-points-btn {
+      padding: 6px 12px;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.3s ease;
+    }
+
+    .add-points-btn:hover {
+      background-color: #2980b9;
+      transform: translateY(-2px);
     }
   </style>
 
@@ -169,7 +280,7 @@
       <a href="/ad_sit-in" class="active"><i class="fas fa-chart-bar"></i> Current Sit-in</a>
       <a href="/ad_records"><i class="fas fa-clipboard-list"></i> Sit-in Records</a>
       <a href="/ad_reports"><i class="fas fa-chart-bar"></i> Sit-in Reports</a>
-      <a href="/ad_feedback"><i class="fas fa-comments"></i> Feedback Reports</a>
+      <a href="/ad_feedbacks"><i class="fas fa-comments"></i> Feedback Reports</a>
       <a href="/ad_reserve"><i class="fas fa-calendar-check"></i> Reservation</a>
       <a href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
     </div>
@@ -204,8 +315,12 @@
             <td>{{ student.remaining_sessions }}</td>
             <td>
               <div class="btn-container">
-                <button class="btn-action" onclick="endSitIn('{{ student.idno }}')">End Session</button>
-              </div>
+                <button class="btn-action" onclick="endSitIn('{{ student.idno }}')">
+                  <i class="fas fa-logout"></i> Log out</button>
+              <button class="add-points-btn" onclick="addLabPoints('{{ student.idno }}')">
+                <i class="fas fa-plus"></i> Add Points
+              </button>
+            </div>
             </td>
           </tr>
           {% endfor %}
@@ -223,6 +338,12 @@
   <script>
     function endSitIn(idno) {
       if (confirm('Are you sure you want to end this sit-in session?')) {
+        // Disable the button to prevent multiple clicks
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = "Processing...";
+        
         $.ajax({
           url: '/end_sit_in/' + idno,
           method: 'POST',
@@ -231,12 +352,28 @@
               alert('Sit-in session ended successfully!');
               location.reload();
             } else {
+              btn.disabled = false;
+              btn.textContent = originalText;
               alert(response.error || 'Failed to end sit-in session.');
             }
           },
-          error: function(error) {
+          error: function(xhr, status, error) {
+            btn.disabled = false;
+            btn.textContent = originalText;
             console.log("Error ending sit-in:", error);
-            alert('Failed to end sit-in session.');
+            
+            // Try to parse the error response
+            let errorMessage = 'Failed to end sit-in session.';
+            try {
+              const response = JSON.parse(xhr.responseText);
+              if (response.error) {
+                errorMessage = response.error;
+              }
+            } catch (e) {
+              console.error('Error parsing error response:', e);
+            }
+            
+            alert(errorMessage);
           }
         });
       }

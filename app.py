@@ -10,13 +10,6 @@ app.secret_key = "database1234!"
 app.config['UPLOAD_FOLDER'] = 'static/images/uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
-# Initialize global variables
-announcements_list = []  # Initialize this to an empty list
-
-# Define a function to check if user is logged in
-def is_user_logged_in():
-    return "idno" in session
-
 # Register route
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -48,17 +41,15 @@ def index():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        username = request.form.get("username")  # Get username from form
+        idno = request.form.get("idno")
+        username = request.form.get("username")
         password = request.form.get("password")
 
-        print(f"Login attempt - Username: {username}")  # Debug log
-
         # fetch user info from dbhelper
-        user = dbhelper.get_user_by_idno_or_username_and_password(username, username, password)  # Pass username for both idno and username fields
+        user = dbhelper.get_user_by_idno_or_username_and_password(idno, username, password)
         admin = dbhelper.get_admin_by_username_and_password(username, password)
             
         if user:
-<<<<<<< HEAD
             # Store user info in session
             session['idno'] = user[0]  # IDNO
             session['lastname'] = user[1]  # Last name
@@ -72,70 +63,22 @@ def login():
             session['total_sessions'] = user[11]  # Total sessions
             flash('Login successful!', 'success')
             return redirect(url_for('dashboard'))
-=======
-            print(f"User found - Raw data: {user}")  # Debug log
-            
-            # Print column positions for debugging
-            print("COLUMN POSITIONS:")
-            for i, value in enumerate(user):
-                print(f"Index {i}: {value}")
-            
-            # Store user info in session - with proper debugging
-            session.clear()  # Clear any existing session
-            
-            # Database schema:
-            # 0:id, 1:idno, 2:lastname, 3:fname, 4:mname, 5:course, 6:yrlvl, 7:email, 8:username, 9:password, etc.
-            try:
-                # Set session values properly according to the schema
-                session['id'] = user[0]
-                session['idno'] = user[1]
-                session['lastname'] = user[2]
-                session['fname'] = user[3]
-                session['mname'] = user[4]
-                session['course'] = user[5]
-                session['yrlvl'] = user[6]
-                session['email'] = user[7]
-                session['username'] = user[8]
-                
-                # Avatar filename is at index 11
-                if len(user) > 11:
-                    session['avatar_filename'] = user[11]
-                
-                session.modified = True  # Ensure session is saved
-                print(f"Session after login: {dict(session)}")  # Debug log
-                
-                # Try debugging the redirect
-                print(f"Redirecting to: /dashboard")
-                flash('Login successful!', 'success')
-                
-                # Use regular redirect
-                return redirect('/dashboard')
-            except Exception as e:
-                print(f"Error setting session: {str(e)}")
-                flash(f"Login error: {str(e)}", "danger")
-                return redirect('/')
->>>>>>> c3146be3e2a7c5b4ea2af77a924be396b12ef12b
         
         elif admin: 
-            print(f"Admin found: {admin}")  # Debug log
             # Store user info in session
-            session.clear()  # Clear any existing session
-            session['username'] = admin[0]  # admin username
-            session.modified = True  # Ensure session is saved
-            flash('Admin Login successful!', 'success')
-            return redirect('/admin_dashboard')
+           session['username'] = admin[0]  # admin username
+           flash('Admin Login successful!', 'success')
+           return redirect(url_for('admin_dashboard'))
         
         else:
-            print("No user or admin found")  # Debug log
             flash('Invalid username or password!', 'danger')
-            return redirect('/')
+            return redirect(url_for('index'))
 
     return render_template("login.html")
 
 # Dashboard route
 @app.route('/dashboard', methods=['GET'])
 def dashboard():
-<<<<<<< HEAD
     if "idno" in session:  # Check for the correct session key
         # Create user dictionary from session data
         user = {
@@ -154,76 +97,6 @@ def dashboard():
         return render_template("dashboard.html", username=user, announcements=announcements)
     else:
         flash("Please log in to continue.", "info")
-=======
-    try:
-        print(f"Dashboard route - Raw session data: {dict(session)}")  # Debug log
-        if "idno" in session:  # Check for the correct session key
-            try:
-                # Print each individual session value for debugging
-                print(f"SESSION VALUES:")
-                print(f"ID: {session.get('id')}")
-                print(f"IDNO: {session.get('idno')}")
-                print(f"First Name: {session.get('fname')}")
-                print(f"Last Name: {session.get('lastname')}")
-                print(f"Middle Name: {session.get('mname')}")
-                print(f"Course: {session.get('course')}")
-                print(f"Year Level: {session.get('yrlvl')}")
-                print(f"Email: {session.get('email')}")
-                print(f"Username: {session.get('username')}")
-                print(f"Avatar: {session.get('avatar_filename')}")
-                
-                #  fetch user info from dbhelper
-                user = dbhelper.get_user_by_id(session["idno"])  # Get user by ID
-                print(f"User from database: {user}")  # Debug log
-                
-                if user:
-                    # Create username dictionary directly from database values
-                    username = {
-                        "id": user["id"],
-                        "idno": user["idno"],
-                        "lastname": user["lastname"],
-                        "fname": user["fname"],
-                        "mname": user["mname"],
-                        "course": user["course"],
-                        "yrlvl": user["yrlvl"],
-                        "email": user["email"],
-                        "username": user["username"],
-                        "avatar_filename": user.get("avatar_filename", None)
-                    }
-                    print(f"Username dict from database: {username}")  # Debug the constructed dictionary
-                    return render_template("dashboard.html", username=username, announcements=announcements_list)
-                else:
-                    # If user is not found in database, create username dictionary from session
-                    print("User not found in database but session exists")
-                    username = {
-                        "id": session.get("id", ""),
-                        "idno": session.get("idno", ""),
-                        "lastname": session.get("lastname", ""),
-                        "fname": session.get("fname", ""),
-                        "mname": session.get("mname", ""),
-                        "course": session.get("course", ""),
-                        "yrlvl": session.get("yrlvl", ""),
-                        "email": session.get("email", ""),
-                        "username": session.get("username", ""),
-                        "avatar_filename": session.get("avatar_filename", None)
-                    }
-                    print(f"Username dict from session: {username}")  # Debug the constructed dictionary
-                    return render_template("dashboard.html", username=username, announcements=announcements_list)
-            except Exception as e:
-                print(f"Error in dashboard route when getting user: {str(e)}")
-                flash(f"An error occurred when retrieving user data: {str(e)}", "danger")
-                # Clear the session and redirect to login
-                session.clear()
-                return redirect(url_for('login'))
-        else:
-            print("No idno in session")  # Debug log
-            flash("Please log in to continue.", "info")
-            return redirect(url_for('login'))
-    except Exception as e:
-        print(f"Unexpected error in dashboard route: {str(e)}")
-        flash("An unexpected error occurred. Please try again.", "danger")
-        session.clear()  # Clear session on error
->>>>>>> c3146be3e2a7c5b4ea2af77a924be396b12ef12b
         return redirect(url_for('login'))
     
 # Information Route
@@ -233,7 +106,6 @@ def information():
         # Get user data including avatar from database
         user_data = dbhelper.get_user_by_id(session["idno"])
         
-<<<<<<< HEAD
         # Create user dictionary from database data
         user = {
             "idno": session["idno"],
@@ -248,25 +120,6 @@ def information():
             "total_sessions": session.get("total_sessions", 30)
         }
         return render_template("information.html", username=user)
-=======
-        if user:
-            username = {
-                "id": user["id"],
-                "idno": user["idno"],
-                "lastname": user["lastname"],
-                "fname": user["fname"],
-                "mname": user["mname"],
-                "course": user["course"],
-                "yrlvl": user["yrlvl"],
-                "email": user["email"],
-                "username": user["username"],
-                "avatar_filename": user.get("avatar_filename", None)
-            }
-            return render_template("information.html", username=username)
-        else:
-            flash("User not found.", "danger")
-            return redirect(url_for('login'))
->>>>>>> c3146be3e2a7c5b4ea2af77a924be396b12ef12b
     else:
         flash("Please log in to continue.", "info")
         return redirect(url_for('login'))
@@ -285,10 +138,10 @@ def edit():
     user = {
         "idno": session["idno"],
         "fname": session["fname"],
-        "lastname": session["lastname"],
+        "lname": session["lastname"],  # Note: Using lastname from session but lname in template
         "mname": session["mname"],
         "course": session["course"],
-        "yrlvl": session["yrlvl"],
+        "year": session["yrlvl"],  # Note: Using yrlvl from session but year in template
         "email": session["email"],
         "remaining_sessions": session.get("remaining_sessions", 30),
         "total_sessions": session.get("total_sessions", 30)
@@ -301,6 +154,8 @@ def edit():
             avatar.save(os.path.join(app.config['UPLOAD_FOLDER'], avatar_filename))
             # Update the avatar filename in the database
             dbhelper.update_user_avatar(idno, avatar_filename)
+            # Update session with new avatar filename
+            session['avatar_filename'] = avatar_filename
 
         # Handle other user details
         lastname = request.form.get('lastname')
@@ -325,13 +180,7 @@ def edit():
         return redirect(url_for('dashboard'))
     
     # For GET requests, display the edit form
-    if student:
-        # Convert student tuple to list format for template compatibility
-        student_list = list(student)  # The order is already correct from the database query
-        return render_template('edit.html', student=student_list, username=user)
-    else:
-        flash("User not found.", "danger")
-        return redirect(url_for('dashboard'))
+    return render_template("edit.html", username=user)
 
 # Announcement route
 @app.route('/announcement')
@@ -359,23 +208,15 @@ def announcement():
 # Lab Rules route
 @app.route('/labrules')
 def labrules():
-    if "idno" in session:
-        # Create user dictionary from session data
-        user = {
-            "idno": session["idno"],
-            "fname": session["fname"],
-            "lastname": session["lastname"],
-            "mname": session["mname"],
-            "course": session["course"],
-            "yrlvl": session["yrlvl"],
-            "email": session["email"],
-            "remaining_sessions": session.get("remaining_sessions", 30),
-            "total_sessions": session.get("total_sessions", 30)
-        }
-        return render_template('labrules.html', username=user)
-    else:
-        flash("Please log in to continue.", "info")
+    if 'idno' not in session:
         return redirect(url_for('login'))
+    
+    username = dbhelper.get_user_by_id(session['idno'])
+    resources_enabled = dbhelper.get_resources_enabled()
+    
+    return render_template('labrules.html', 
+                         username=username, 
+                         resources_enabled=resources_enabled)
     
 # Sit-in Rules route
 @app.route('/sit-in')
@@ -406,40 +247,31 @@ def admin_dashboard():
     if "username" not in session:
         flash("Please log in to continue.", "info")
         return redirect(url_for('login'))
-
-    if request.method == 'POST':
-        password = request.form.get('password')
-        if password:
-            admin = dbhelper.get_admin_by_username_and_password(session['username'], password)
-            if admin:
-                username = {"username": admin[0]}
-                return render_template("admin_dashboard.html", username=username)
-            else:
-                flash("Invalid admin credentials.", "danger")
-                return redirect(url_for("index"))
-        else:
-            flash("Password is required.", "danger")
-            return redirect(url_for("admin_dashboard"))
-
+    
+    # Get statistics
     students_registered = dbhelper.count_registered_students()
-    currently_sit_in = dbhelper.count_currently_sit_in()  # Get current day's sit-in count
+    currently_sit_in = dbhelper.count_currently_sit_in()
     total_sit_in = dbhelper.count_total_sit_in()
     
-    # Get sit-in purposes data
+    # Get purposes distribution for the chart
     purposes_data = dbhelper.get_sit_in_purposes_distribution()
     purposes_labels = [purpose[0] for purpose in purposes_data]
     purposes_counts = [purpose[1] for purpose in purposes_data]
     
-    # Get announcements from session
-    announcements = session.get('announcements', [])
+    # Get all students for the leaderboard
+    students = dbhelper.get_all_students()
     
-    return render_template("admin_dashboard.html", 
-                         announcements=announcements,
+    # Get resource status
+    resources_enabled = dbhelper.get_resources_enabled()
+    
+    return render_template('admin_dashboard.html',
                          students_registered=students_registered,
                          currently_sit_in=currently_sit_in,
                          total_sit_in=total_sit_in,
                          purposes_labels=purposes_labels,
-                         purposes_data=purposes_counts)
+                         purposes_data=purposes_counts,
+                         students=students,
+                         resources_enabled=resources_enabled)
 
 # Announcement route
 @app.route('/add_announcement', methods=['POST'])
@@ -492,8 +324,8 @@ def ad_reports():
         flash("Please log in to continue.", "info")
         return redirect(url_for('login'))
 
-    reports = dbhelper.get_sit_in_reports()
-    return render_template('ad_reports.html', reports=reports)
+    lab_reports = dbhelper.get_lab_reports()
+    return render_template('ad_reports.html', reports=lab_reports)
 
 # Records route
 @app.route('/ad_records')
@@ -502,8 +334,8 @@ def ad_records():
         flash("Please log in to continue.", "info")
         return redirect(url_for('login'))
 
-    records = dbhelper.get_sit_in_records()
-    return render_template('ad_records.html', records=records)
+    reports = dbhelper.get_sit_in_records()
+    return render_template('ad_records.html', reports=reports)
 
 # Sit-In route
 @app.route('/ad_sit-in')
@@ -525,8 +357,6 @@ def end_sit_in(idno):
     try:
         # Update the sit-in record with end time
         dbhelper.end_sit_in_session(idno)
-        # Decrement the remaining sessions
-        dbhelper.decrement_student_session(idno)
         return jsonify({"success": True})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -572,7 +402,6 @@ def logout():
     flash("Successfully logged out!", "info")
     return redirect(url_for('index'))
 
-<<<<<<< HEAD
 # Sessions route
 @app.route('/sessions')
 def sessions():
@@ -581,6 +410,21 @@ def sessions():
         return redirect(url_for('login'))
     
     idno = session['idno']
+    # Get the latest user data from database
+    user_data = dbhelper.get_user_by_id(idno)
+    
+    if not user_data:
+        flash('User data not found.')
+        return redirect(url_for('login'))
+    
+    # Get the latest remaining and total sessions from database
+    remaining_sessions = user_data[8] if user_data[8] is not None else 30
+    total_sessions = user_data[9] if user_data[9] is not None else 30
+    
+    # Update session with latest values
+    session['remaining_sessions'] = remaining_sessions
+    session['total_sessions'] = total_sessions
+    
     user = {
         'idno': session['idno'],
         'fname': session['fname'],
@@ -590,13 +434,10 @@ def sessions():
         'yrlvl': session['yrlvl'],
         'email': session['email'],
         'avatar_filename': session.get('avatar_filename', 'default.png'),
-        'remaining_sessions': session.get('remaining_sessions', 30),
-        'total_sessions': session.get('total_sessions', 30)
+        'remaining_sessions': remaining_sessions,
+        'total_sessions': total_sessions
     }
     
-    # Get the remaining and total sessions directly from the session
-    remaining_sessions = session.get('remaining_sessions', 30)
-    total_sessions = session.get('total_sessions', 30)
     percentage = (remaining_sessions / total_sessions) * 100 if total_sessions > 0 else 0
     
     # Create sessions data for the template
@@ -663,8 +504,6 @@ def process_sit_in():
         
         dbhelper.update_sit_in_status(idno, purpose, laboratory)
         
-        dbhelper.decrement_student_session(idno)
-        
         if 'idno' in session and session['idno'] == idno:
             # Get current values
             student_info = dbhelper.get_student_sessions(idno)
@@ -681,59 +520,96 @@ def process_sit_in():
         return jsonify({"error": str(e)}), 500
 
 # Feedbacks route
-@app.route('/feedback')
-def feedback():
+@app.route('/ad_feedbacks')
+def ad_feedbacks():
     if "username" not in session:
         flash("Please log in to continue.", "info")
         return redirect(url_for('login'))
     
-    return render_template('feedback.html')
-=======
-# Debug route to check session
-@app.route('/debug-session')
-def debug_session():
-    if "idno" in session:
-        session_data = dict(session)
-        idno = session.get('idno')
+    feedbacks = dbhelper.get_all_feedbacks()
+    return render_template('ad_feedbacks.html', feedbacks=feedbacks)
+
+# Reset Sessions route
+@app.route('/reset_sessions/<string:idno>', methods=['POST'])
+def reset_sessions(idno):
+    if "username" not in session:
+        return jsonify({"error": "Not authorized"}), 401
+    
+    try:
+        # Call the function to reset student sessions
+        dbhelper.reset_student_sessions(idno)
         
-        html = "<h2>Session Data</h2>"
-        html += f"<pre>{session_data}</pre>"
-        
-        html += "<h2>Individual Session Values</h2>"
-        html += f"<p><b>ID:</b> {session.get('id')}</p>"
-        html += f"<p><b>IDNO:</b> {session.get('idno')}</p>"
-        html += f"<p><b>First Name:</b> {session.get('fname')}</p>"
-        html += f"<p><b>Last Name:</b> {session.get('lastname')}</p>"
-        html += f"<p><b>Middle Name:</b> {session.get('mname')}</p>"
-        html += f"<p><b>Course:</b> {session.get('course')}</p>"
-        html += f"<p><b>Year Level:</b> {session.get('yrlvl')}</p>"
-        html += f"<p><b>Email:</b> {session.get('email')}</p>"
-        html += f"<p><b>Username:</b> {session.get('username')}</p>"
-        html += f"<p><b>Avatar Filename:</b> {session.get('avatar_filename')}</p>"
-        
-        html += "<h2>User Data from Database</h2>"
-        user = dbhelper.get_user_by_id(idno)
-        if user:
-            html += f"<pre>{user}</pre>"
+        # If the student is currently logged in, update their session data
+        if 'idno' in session and session['idno'] == idno:
+            session['remaining_sessions'] = 30
+            session['total_sessions'] = 30
             
-            html += "<h2>Database Fields</h2>"
-            html += f"<p><b>ID:</b> {user.get('id')}</p>"
-            html += f"<p><b>IDNO:</b> {user.get('idno')}</p>"
-            html += f"<p><b>First Name:</b> {user.get('fname')}</p>"
-            html += f"<p><b>Last Name:</b> {user.get('lastname')}</p>"
-            html += f"<p><b>Middle Name:</b> {user.get('mname')}</p>"
-            html += f"<p><b>Course:</b> {user.get('course')}</p>"
-            html += f"<p><b>Year Level:</b> {user.get('yrlvl')}</p>"
-            html += f"<p><b>Email:</b> {user.get('email')}</p>"
-            html += f"<p><b>Username:</b> {user.get('username')}</p>"
-            html += f"<p><b>Avatar Filename:</b> {user.get('avatar_filename')}</p>"
-        else:
-            html += "<p>User not found in database</p>"
-            
-        return html
-    else:
-        return "No session data found"
->>>>>>> c3146be3e2a7c5b4ea2af77a924be396b12ef12b
+        return jsonify({"success": True})
+    except Exception as e:
+        print(f"Error in reset_sessions: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/submit_feedback', methods=['POST'])
+def submit_feedback():
+    if 'idno' not in session:
+        return redirect(url_for('login'))
+    
+    laboratory = request.form.get('laboratory')
+    feedback = request.form.get('feedback')
+    user_id = session['idno']
+    
+    try:
+        dbhelper.add_feedback(user_id, laboratory, feedback)
+        flash('Thank you for your feedback!', 'success')
+    except Exception as e:
+        flash('Error submitting feedback. Please try again.', 'error')
+        print(f"Error submitting feedback: {str(e)}")
+    
+    return redirect(url_for('sessions'))
+
+# Add Lab Points route
+@app.route('/add_lab_points', methods=['POST'])
+def add_lab_points():
+    if "username" not in session:
+        return jsonify({"success": False, "message": "Not authorized"}), 401
+    
+    data = request.get_json()
+    idno = data.get('idno')
+    
+    if not idno:
+        return jsonify({"success": False, "message": "Student ID is required"}), 400
+    
+    try:
+        # Add 3 points to the student
+        dbhelper.add_lab_points(idno, 3)
+        return jsonify({"success": True, "message": "Points added successfully"})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+@app.route('/reset_all_sessions', methods=['POST'])
+def reset_all_sessions():
+    if 'idno' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    try:
+        dbhelper.reset_all_sessions()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/toggle_resources', methods=['POST'])
+def toggle_resources():
+    if 'idno' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    try:
+        enabled = request.json.get('enabled', False)
+        dbhelper.toggle_resources(enabled)
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 if __name__ == "__main__":
     app.run(debug=True)

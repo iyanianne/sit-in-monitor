@@ -1,5 +1,15 @@
 import sqlite3
+import os
 from datetime import datetime
+
+def get_db_connection():
+    try:
+        conn = sqlite3.connect('sitinmonitor.db')
+        conn.row_factory = sqlite3.Row
+        return conn
+    except sqlite3.Error as e:
+        print(f"Error connecting to database: {e}")
+        raise
 
 def add_user(idno, lastname, fname, mname, course, yrlvl, email, username, password):
     with sqlite3.connect("sitinmonitor.db") as conn:
@@ -11,7 +21,6 @@ def add_user(idno, lastname, fname, mname, course, yrlvl, email, username, passw
 def get_user_by_idno_or_username_and_password(idno, username, password):
     with sqlite3.connect("sitinmonitor.db") as conn:
         cursor = conn.cursor()
-<<<<<<< HEAD
         cursor.execute("""
             SELECT 
                 idno,
@@ -29,10 +38,6 @@ def get_user_by_idno_or_username_and_password(idno, username, password):
             FROM USERS 
             WHERE (idno=? OR username=?) AND password=?
         """, (idno, username, password))
-=======
-        cursor.execute("SELECT * FROM USERS WHERE (idno=? AND password=?) OR (username=? AND password=?)", 
-                      (idno, password, username, password))
->>>>>>> c3146be3e2a7c5b4ea2af77a924be396b12ef12b
         return cursor.fetchone()
 
 def get_admin_by_username_and_password(username, password):
@@ -44,7 +49,6 @@ def get_admin_by_username_and_password(username, password):
 def get_user_by_id(idno):
     with sqlite3.connect("sitinmonitor.db") as conn:
         cursor = conn.cursor()
-<<<<<<< HEAD
         cursor.execute("""
             SELECT 
                 idno,
@@ -61,24 +65,6 @@ def get_user_by_id(idno):
             WHERE idno=?
         """, (idno,))
         return cursor.fetchone()
-=======
-        cursor.execute("SELECT * FROM USERS WHERE idno=?", (idno,))
-        row = cursor.fetchone()
-        if row:
-            return {
-                "id": row[0],
-                "idno": row[1],
-                "lastname": row[2],
-                "fname": row[3],
-                "mname": row[4],
-                "course": row[5],
-                "yrlvl": row[6],
-                "email": row[7],
-                "username": row[8],
-                "avatar_filename": row[11] if len(row) > 11 else None
-            }
-        return None
->>>>>>> c3146be3e2a7c5b4ea2af77a924be396b12ef12b
 
 def update_user(idno, lastname, fname, mname, course, yrlvl, email):
     with sqlite3.connect("sitinmonitor.db") as conn:
@@ -105,12 +91,15 @@ def get_all_students():
                 lastname,
                 fname,
                 mname,
-                fname || ' ' || mname || ' ' || lastname AS name,
+                course,
+                yrlvl,
+                email,
+                COALESCE(lab_points, 0) as lab_points,
                 COALESCE(remaining_sessions, 30) as remaining_sessions,
                 COALESCE(total_sessions, 30) as total_sessions
             FROM USERS
             WHERE username NOT IN (SELECT username FROM ADMIN)
-            ORDER BY lastname, fname
+            ORDER BY lab_points DESC, lastname, fname
         """)
         
         students = cursor.fetchall()
@@ -138,21 +127,30 @@ def get_student_sessions(idno):
         return cursor.fetchone()
 
 def get_student_history(idno):
+    """
+    Get the complete sit-in history for a student including all session details
+    """
     with sqlite3.connect("sitinmonitor.db") as conn:
+        conn.row_factory = sqlite3.Row  # Enable dictionary-like access
         cursor = conn.cursor()
         cursor.execute("""
             SELECT 
-                idno,
-                date,
-                time_in,
-                time_out,
-                purpose,
-                laboratory
-            FROM SIT_IN_HISTORY 
-            WHERE idno=?
-            ORDER BY date DESC, time_in DESC
+                SIT_IN_HISTORY.idno,
+                SIT_IN_HISTORY.date,
+                SIT_IN_HISTORY.time_in,
+                SIT_IN_HISTORY.time_out,
+                SIT_IN_HISTORY.purpose,
+                SIT_IN_HISTORY.laboratory,
+                USERS.fname || ' ' || COALESCE(USERS.mname, '') || ' ' || USERS.lastname as student_name,
+                USERS.course
+            FROM SIT_IN_HISTORY
+            JOIN USERS ON SIT_IN_HISTORY.idno = USERS.idno
+            WHERE SIT_IN_HISTORY.idno = ?
+            ORDER BY SIT_IN_HISTORY.date DESC, SIT_IN_HISTORY.time_in DESC
         """, (idno,))
-        return cursor.fetchall()
+        
+        history = cursor.fetchall()
+        return [dict(row) for row in history]  # Convert rows to dictionaries
 
 def update_student_sessions(idno, remaining_sessions):
     with sqlite3.connect("sitinmonitor.db") as conn:
@@ -272,11 +270,21 @@ def end_sit_in_session(idno):
         current_date = datetime.now().strftime("%Y-%m-%d")
         current_time = datetime.now().strftime("%H:%M:%S")
         
+        # Update the session end time
         cursor.execute("""
             UPDATE SIT_IN_HISTORY 
             SET time_out = ?
             WHERE idno = ? AND date = ? AND time_in = time_out
         """, (current_time, idno, current_date))
+        
+        # Only decrement if we actually ended a session (i.e., if the update affected a row)
+        if cursor.rowcount > 0:
+            cursor.execute("""
+                UPDATE USERS 
+                SET remaining_sessions = remaining_sessions - 1 
+                WHERE idno = ? AND remaining_sessions > 0
+            """, (idno,))
+        
         conn.commit()
 
 def get_sit_in_reports():
@@ -355,18 +363,202 @@ def get_sit_in_records():
             else:
                 duration = "Active Session"
             
+            # Ensure all values are properly handled to avoid undefined in JSON
             records.append({
-                'idno': row[0],
-                'name': row[1],
-                'date': row[2],
-                'time_in': row[3],
-                'time_out': row[4],
-                'purpose': row[5],
-                'laboratory': row[6],
-                'course': row[7],
-                'year_level': row[8],
-                'remaining_sessions': row[9] if row[9] is not None else 30,
-                'total_sessions': row[10] if row[10] is not None else 30,
+                'idno': str(row[0]) if row[0] is not None else "",
+                'name': str(row[1]) if row[1] is not None else "",
+                'date': str(row[2]) if row[2] is not None else "",
+                'time_in': str(row[3]) if row[3] is not None else "",
+                'time_out': str(row[4]) if row[4] is not None else "",
+                'purpose': str(row[5]) if row[5] is not None else "",
+                'laboratory': str(row[6]) if row[6] is not None else "",
+                'course': str(row[7]) if row[7] is not None else "",
+                'year_level': str(row[8]) if row[8] is not None else "",
+                'remaining_sessions': int(row[9]) if row[9] is not None else 30,
+                'total_sessions': int(row[10]) if row[10] is not None else 30,
                 'duration': duration
             })
         return records
+
+def reset_student_sessions(idno):
+    """Reset a student's sessions to 30."""
+    with sqlite3.connect("sitinmonitor.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE USERS 
+            SET remaining_sessions = 30, total_sessions = 30 
+            WHERE idno = ?
+        """, (idno,))
+        conn.commit()
+        return True
+
+def get_sit_in_leaderboard():
+    """Get students sorted by their sit-in count."""
+    with sqlite3.connect("sitinmonitor.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT 
+                u.idno,
+                u.lastname || ', ' || u.fname || ' ' || COALESCE(u.mname, '') as name,
+                u.course,
+                COUNT(h.idno) as sit_in_count
+            FROM USERS u
+            LEFT JOIN SIT_IN_HISTORY h ON u.idno = h.idno
+            WHERE u.username NOT IN (SELECT username FROM ADMIN)
+            GROUP BY u.idno, u.lastname, u.fname, u.mname, u.course
+            ORDER BY sit_in_count DESC
+            LIMIT 5
+        """)
+        
+        results = cursor.fetchall()
+        leaderboard = []
+        for row in results:
+            leaderboard.append({
+                'idno': str(row[0]),
+                'name': str(row[1]),
+                'course': str(row[2]),
+                'sit_in_count': int(row[3])
+            })
+        return leaderboard
+
+def add_feedback(user_id, laboratory, feedback):
+    """
+    Add a feedback record to the database
+    """
+    try:
+        conn = sqlite3.connect("sitinmonitor.db")
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            INSERT INTO FEEDBACK (user_id, laboratory, feedback, created_at)
+            VALUES (?, ?, ?, datetime('now'))
+        ''', (user_id, laboratory, feedback))
+        
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"Error adding feedback: {str(e)}")
+        raise e
+
+def get_all_feedbacks():
+    """Get all feedback records with student details."""
+    with sqlite3.connect("sitinmonitor.db") as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT 
+                f.id,
+                f.user_id,
+                f.laboratory,
+                f.feedback,
+                f.created_at,
+                u.fname || ' ' || COALESCE(u.mname, '') || ' ' || u.lastname as student_name,
+                u.course
+            FROM FEEDBACK f
+            JOIN USERS u ON f.user_id = u.idno
+            ORDER BY f.created_at DESC
+        """)
+        feedbacks = cursor.fetchall()
+        return [dict(row) for row in feedbacks]
+
+def add_lab_points(idno, points):
+    with sqlite3.connect("sitinmonitor.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE USERS 
+            SET lab_points = COALESCE(lab_points, 0) + ?
+            WHERE idno = ?
+        """, (points, idno))
+        conn.commit()
+        return True
+
+def get_student_lab_points(idno):
+    with sqlite3.connect("sitinmonitor.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT COALESCE(lab_points, 0) as lab_points
+            FROM USERS 
+            WHERE idno = ?
+        """, (idno,))
+        result = cursor.fetchone()
+        return result[0] if result else 0
+
+def get_lab_reports():
+    """Get reports grouped by laboratory and purpose."""
+    with sqlite3.connect("sitinmonitor.db") as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT 
+                laboratory,
+                purpose,
+                COUNT(*) as usage_count,
+                COUNT(DISTINCT idno) as unique_students,
+                strftime('%Y-%m', date) as month
+            FROM SIT_IN_HISTORY
+            GROUP BY laboratory, purpose, month
+            ORDER BY month DESC, laboratory, purpose
+        """)
+        reports = cursor.fetchall()
+        return [dict(row) for row in reports]
+
+def reset_all_sessions():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("UPDATE USERS SET remaining_sessions = 30")
+        conn.commit()
+    finally:
+        conn.close()
+
+def toggle_resources(enabled):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Create the settings table if it doesn't exist
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS SETTINGS (
+                key TEXT PRIMARY KEY,
+                value TEXT
+            )
+        """)
+        
+        # Update or insert the resources_enabled setting
+        cursor.execute("""
+            INSERT OR REPLACE INTO SETTINGS (key, value)
+            VALUES ('resources_enabled', ?)
+        """, (str(enabled).lower(),))
+        
+        conn.commit()
+    finally:
+        conn.close()
+
+def get_resources_enabled():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Create the settings table if it doesn't exist
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS SETTINGS (
+                key TEXT PRIMARY KEY,
+                value TEXT
+            )
+        """)
+        
+        # Try to get the resources_enabled setting
+        cursor.execute("SELECT value FROM SETTINGS WHERE key = 'resources_enabled'")
+        result = cursor.fetchone()
+        
+        # If no setting exists, create it with default value False
+        if not result:
+            cursor.execute("""
+                INSERT INTO SETTINGS (key, value)
+                VALUES ('resources_enabled', 'false')
+            """)
+            conn.commit()
+            return False
+            
+        return result[0].lower() == 'true'
+    finally:
+        conn.close()

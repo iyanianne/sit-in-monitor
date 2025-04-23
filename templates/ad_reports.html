@@ -8,7 +8,25 @@
   <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="icon" type="image/x-icon" href="../static/favicon/ccslogo.png">
-  <title>Sit-in Reports</title>
+  <title>Laboratory Reports</title>
+  
+  <!-- DataTables CSS -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/datetime/1.5.1/css/dataTables.dateTime.min.css">
+  
+  <!-- Include jQuery and DataTables JS -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.colVis.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+  <script src="https://cdn.datatables.net/datetime/1.5.1/js/dataTables.dateTime.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -16,60 +34,149 @@
     body {
       margin: 0;
       font-family: 'Inter', sans-serif;
-      background-color: #f5f5f5;
+      background-color: #f8f9fa;
     }
     
     .topnav {
       overflow: hidden;
-      background-color: #3f3636;
+      background-color: #2c3e50;
       padding: 10px 20px;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
     }
     
     .topnav a {
-      color: #f2f2f2;
+      color: #ecf0f1;
       text-align: center;
       padding: 8px 16px;
       text-decoration: none;
       font-size: 14px;
       border-radius: 4px;
       transition: 0.3s;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
     
     .topnav a:hover {
-      background-color: #a09191;
-      color: #3f3636;
+      background-color: #34495e;
+      color: #ecf0f1;
     }
     
     .topnav a.active {
-      background-color: #4a5c5e;
+      background-color: #3498db;
       color: white;
     }
 
     .head {
-      color: #f2f2f2;
+      color: #ecf0f1;
       font-size: 20px;
       font-weight: 600;
+      white-space: nowrap;
     }
 
     .nav-links {
       display: flex;
       align-items: center;
       gap: 10px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      padding-bottom: 5px;
+    }
+
+    .nav-links::-webkit-scrollbar {
+      display: none;
     }
 
     .dashboard-container {
       padding: 20px;
     }
 
+    .filter-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 20px;
+      padding: 15px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    
+    .filter-section-title {
+      width: 100%;
+      margin-bottom: 10px;
+      font-size: 18px;
+      font-weight: 600;
+      color: #2c3e50;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      min-width: 200px;
+    }
+    
+    .filter-group label {
+      font-weight: 600;
+      margin-bottom: 5px;
+      color: #2c3e50;
+    }
+    
+    .date-inputs {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .date-inputs input {
+      padding: 8px;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      width: 140px;
+    }
+    
+    .select-filter {
+      padding: 8px;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      background: white;
+    }
+    
+    .clear-filter-btn {
+      align-self: flex-end;
+      padding: 8px 15px;
+      background: #e74c3c;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 24px;
+    }
+    
+    .clear-filter-btn:hover {
+      background: #c0392b;
+    }
+    
+    .btn-export {
+      margin-right: 5px;
+    }
+
     .table-container {
       background: white;
       border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
       margin: 20px 0;
       overflow: hidden;
+      padding-bottom: 20px;
     }
     
     .table-header {
@@ -79,24 +186,48 @@
       padding: 0 20px;
       display: flex;
       align-items: center;
+      justify-content: space-between;
       color: white;
-      background-color: #3f3636;
+      background-color: #2c3e50;
     }
     
-    table {
+    .export-buttons {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .export-button {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .export-button:hover {
+      background-color: #2980b9;
+    }
+    
+    #recordsTable {
       width: 100%;
       border-collapse: collapse;
       margin-bottom: 0;
     }
 
-    th, td {
+    #recordsTable th, #recordsTable td {
       padding: 12px 15px;
       text-align: left;
       border-bottom: 1px solid #eee;
     }
 
-    th {
-      background-color: #3f3636;
+    #recordsTable th {
+      background-color: #2c3e50;
       color: white;
       font-weight: 500;
       text-transform: uppercase;
@@ -104,36 +235,36 @@
       letter-spacing: 0.5px;
     }
 
-    td {
-      color: #333;
+    #recordsTable td {
+      color: #2c3e50;
       font-size: 14px;
     }
 
-    tr:hover {
+    #recordsTable tr:hover {
       background-color: #f8f9fa;
     }
 
-    tr:last-child td {
+    #recordsTable tr:last-child td {
       border-bottom: none;
     }
-
-    .flash-message {
-      padding: 10px 20px;
-      margin: 10px 0;
-      border-radius: 4px;
-      color: white;
+    
+    .dataTables_wrapper .dataTables_length, 
+    .dataTables_wrapper .dataTables_filter, 
+    .dataTables_wrapper .dataTables_info, 
+    .dataTables_wrapper .dataTables_processing, 
+    .dataTables_wrapper .dataTables_paginate {
+      margin: 15px 20px;
     }
 
-    .flash-success {
-      background-color: #4CAF50;
-    }
-
-    .flash-danger {
-      background-color: #f44336;
-    }
-
-    .flash-info {
-      background-color: #2196F3;
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .filter-container {
+        flex-direction: column;
+      }
+      
+      .filter-group {
+        width: 100%;
+      }
     }
   </style>
 
@@ -147,52 +278,390 @@
       <a href="/ad_sit-in"><i class="fas fa-chart-bar"></i> Current Sit-in</a>
       <a href="/ad_records"><i class="fas fa-clipboard-list"></i> Sit-in Records</a>
       <a href="/ad_reports" class="active"><i class="fas fa-chart-bar"></i> Sit-in Reports</a>
-      <a href="/ad_feedback"><i class="fas fa-comments"></i> Feedback Reports</a>
+      <a href="/ad_feedbacks"><i class="fas fa-comments"></i> Feedback Reports</a>
       <a href="/ad_reserve"><i class="fas fa-calendar-check"></i> Reservation</a>
       <a href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
     </div>
   </div>
     
   <div class="dashboard-container">
-    <div class="table-container">
-      <div class="table-header">
-        <i class="fas fa-chart-bar"></i> Sit-in Session Reports
+    <!-- Filter Controls Section -->
+    <div class="filter-container">
+      <div class="filter-section-title">
+        <i class="fas fa-filter"></i> Filter Records
       </div>
-      <table>
+      <div class="filter-group">
+        <label>Date Range:</label>
+        <div class="date-inputs">
+          <input type="date" id="min" name="min" placeholder="From">
+          <input type="date" id="max" name="max" placeholder="To">
+        </div>
+      </div>
+      
+      <div class="filter-group">
+        <label>Purpose:</label>
+        <select id="purpose-filter" class="select-filter" title="Filter by purpose">
+          <option value="">All Purposes</option>
+          <!-- Options will be populated dynamically -->
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label>Laboratory:</label>
+        <select id="lab-filter" class="select-filter" title="Filter by laboratory">
+          <option value="">All Laboratories</option>
+          <!-- Options will be populated dynamically -->
+        </select>
+      </div>
+      
+      <button id="clearFilters" class="clear-filter-btn">
+        <i class="fas fa-times"></i> Clear Filters
+      </button>
+    </div>
+
+    <!-- Table Section -->
+    <div class="table-responsive">
+      <table id="recordsTable" class="table table-striped">
         <thead>
           <tr>
-            <th>ID Number</th>
-            <th>Name</th>
-            <th>Date</th>
-            <th>Time In</th>
-            <th>Time Out</th>
-            <th>Purpose</th>
             <th>Laboratory</th>
-            <th>Remaining Sessions</th>
+            <th>Purpose</th>
+            <th>Month</th>
+            <th>Usage Count</th>
+            <th>Unique Students</th>
           </tr>
         </thead>
         <tbody>
         {% if reports %}
           {% for report in reports %}
           <tr>
-            <td>{{ report.idno }}</td>
-            <td>{{ report.name }}</td>
-            <td>{{ report.date }}</td>
-            <td>{{ report.time_in }}</td>
-            <td>{{ report.time_out }}</td>
-            <td>{{ report.purpose }}</td>
             <td>{{ report.laboratory }}</td>
-            <td>{{ report.remaining_sessions }}</td>
+            <td>{{ report.purpose }}</td>
+            <td>{{ report.month }}</td>
+            <td>{{ report.usage_count }}</td>
+            <td>{{ report.unique_students }}</td>
           </tr>
           {% endfor %}
         {% else %}
           <tr>
-            <td colspan="8" style="text-align: center">No sit-in reports available.</td>
+            <td colspan="5" style="text-align: center">No reports available.</td>
           </tr>
         {% endif %}
         </tbody>
       </table>
     </div>
   </div>
+
+  <script>
+    $(document).ready(function() {
+      // Custom filtering function for date range
+      $.fn.dataTable.ext.search.push(
+        function(settings, data, dataIndex) {
+          let min = moment($('#min').val(), 'YYYY-MM-DD');
+          let max = moment($('#max').val(), 'YYYY-MM-DD');
+          let date = moment(data[2], 'MMM DD, YYYY'); // 3rd column is date (index 2)
+          
+          let purposeFilter = $('#purpose-filter').val();
+          let purposeValue = data[1]; // 2nd column is purpose (index 1)
+          
+          let labFilter = $('#lab-filter').val();
+          let labValue = data[0]; // 1st column is laboratory (index 0)
+          
+          // Check date range
+          let dateValid = true;
+          if (min.isValid() && max.isValid()) {
+            dateValid = (date.isSameOrAfter(min, 'day') && date.isSameOrBefore(max, 'day'));
+          } else if (min.isValid()) {
+            dateValid = date.isSameOrAfter(min, 'day');
+          } else if (max.isValid()) {
+            dateValid = date.isSameOrBefore(max, 'day');
+          }
+          
+          // Check purpose filter
+          let purposeValid = true;
+          if (purposeFilter) {
+            purposeValid = (purposeValue === purposeFilter);
+          }
+          
+          // Check laboratory filter
+          let labValid = true;
+          if (labFilter) {
+            labValid = (labValue === labFilter);
+          }
+          
+          return dateValid && purposeValid && labValid;
+        }
+      );
+
+      // Initialize the DataTable
+      var table = $('#recordsTable').DataTable({
+        dom: 'Bfrtip',
+        buttons: [
+          {
+            extend: 'csvHtml5',
+            text: '<i class="fas fa-file-csv"></i> CSV',
+            titleAttr: 'Export as CSV',
+            className: 'btn btn-primary mr-1',
+            exportOptions: {
+              columns: ':visible'
+            },
+            filename: function() {
+              let title = 'Laboratory Reports';
+              const min = $('#min').val();
+              const max = $('#max').val();
+              const purpose = $('#purpose-filter').val();
+              const lab = $('#lab-filter').val();
+              
+              if (min || max) {
+                title += ' - Date Range';
+                if (min) title += ' From ' + min;
+                if (max) title += ' To ' + max;
+              }
+              
+              if (purpose) {
+                title += ' - Purpose ' + purpose;
+              }
+              
+              if (lab) {
+                title += ' - Lab ' + lab;
+              }
+              
+              return title;
+            }
+          },
+          {
+            extend: 'excelHtml5',
+            text: '<i class="fas fa-file-excel"></i> Excel',
+            titleAttr: 'Export as Excel',
+            className: 'btn btn-success mr-1',
+            exportOptions: {
+              columns: ':visible'
+            },
+            filename: function() {
+              let title = 'Laboratory Reports';
+              const min = $('#min').val();
+              const max = $('#max').val();
+              const purpose = $('#purpose-filter').val();
+              const lab = $('#lab-filter').val();
+              
+              if (min || max) {
+                title += ' - Date Range';
+                if (min) title += ' From ' + min;
+                if (max) title += ' To ' + max;
+              }
+              
+              if (purpose) {
+                title += ' - Purpose ' + purpose;
+              }
+              
+              if (lab) {
+                title += ' - Lab ' + lab;
+              }
+              
+              return title;
+            }
+          },
+          {
+            extend: 'pdfHtml5',
+            text: '<i class="fas fa-file-pdf"></i> PDF',
+            titleAttr: 'Export as PDF',
+            className: 'btn btn-danger mr-1',
+            exportOptions: {
+              columns: ':visible'
+            },
+            filename: function() {
+              let title = 'Laboratory Reports';
+              const min = $('#min').val();
+              const max = $('#max').val();
+              const purpose = $('#purpose-filter').val();
+              const lab = $('#lab-filter').val();
+              
+              if (min || max) {
+                title += ' - Date Range';
+                if (min) title += ' From ' + min;
+                if (max) title += ' To ' + max;
+              }
+              
+              if (purpose) {
+                title += ' - Purpose ' + purpose;
+              }
+              
+              if (lab) {
+                title += ' - Lab ' + lab;
+              }
+              
+              return title;
+            },
+            customize: function(doc) {
+              // Set background color and font
+              doc.styles.tableHeader.fillColor = '#2c3e50';
+              doc.styles.tableHeader.color = '#fff';
+              doc.styles.tableBodyEven.fillColor = '#f8f9fa';
+              doc.styles.tableBodyOdd.fillColor = '#fff';
+              
+              // Add title
+              doc.content[0].text = 'Laboratory Reports';
+              doc.content[0].alignment = 'center';
+              doc.content[0].fontSize = 18;
+              doc.content[0].margin = [0, 0, 0, 20];
+              
+              // Add date generated
+              doc.content.splice(1, 0, {
+                text: 'Generated on: ' + moment().format('MMMM D, YYYY, h:mm A'),
+                alignment: 'center',
+                margin: [0, 0, 0, 20]
+              });
+              
+              // Add date range if specified
+              const minDateValue = $('#min').val();
+              const maxDateValue = $('#max').val();
+              const purposeValue = $('#purpose-filter').val();
+              const labValue = $('#lab-filter').val();
+              
+              let filterInfos = [];
+              
+              // Add date range
+              if (minDateValue || maxDateValue) {
+                let dateRangeText = 'Date Range: ';
+                if (minDateValue) dateRangeText += 'From ' + minDateValue;
+                if (minDateValue && maxDateValue) dateRangeText += ' ';
+                if (maxDateValue) dateRangeText += 'To ' + maxDateValue;
+                filterInfos.push(dateRangeText);
+              }
+              
+              // Add purpose filter
+              if (purposeValue) {
+                filterInfos.push('Purpose: ' + purposeValue);
+              }
+              
+              // Add lab filter
+              if (labValue) {
+                filterInfos.push('Laboratory: ' + labValue);
+              }
+              
+              // Add filter information to PDF
+              if (filterInfos.length > 0) {
+                doc.content.splice(3, 0, {
+                  text: filterInfos.join(' | '),
+                  style: 'subheader',
+                  alignment: 'center',
+                  margin: [0, 0, 0, 20]
+                });
+              }
+            }
+          },
+          {
+            extend: 'print',
+            text: '<i class="fas fa-print"></i> Print',
+            titleAttr: 'Print Reports',
+            className: 'btn btn-info mr-1',
+            exportOptions: {
+              columns: ':visible'
+            },
+            customize: function(win) {
+              // Add custom styling to the print view
+              $(win.document.body).css('font-family', "'Inter', sans-serif");
+              $(win.document.body).find('table')
+                .addClass('compact')
+                .css('font-size', '14px')
+                .css('border-collapse', 'collapse');
+                
+              $(win.document.body).find('h1')
+                .css('text-align', 'center')
+                .css('font-size', '24px')
+                .css('margin-bottom', '20px');
+                
+              $(win.document.body).find('thead tr th')
+                .css('background-color', '#2c3e50')
+                .css('color', 'white')
+                .css('padding', '8px 15px');
+                
+              $(win.document.body).find('tbody tr td')
+                .css('border-bottom', '1px solid #ddd')
+                .css('padding', '8px 15px');
+                
+              $(win.document.body).find('tbody tr:nth-child(even)')
+                .css('background-color', '#f8f9fa');
+                
+              // Add date range information if specified
+              const minDateValue = $('#min').val();
+              const maxDateValue = $('#max').val();
+              const purposeValue = $('#purpose-filter').val();
+              const labValue = $('#lab-filter').val();
+              
+              let filterInfo = '';
+              
+              // Date range
+              if (minDateValue || maxDateValue) {
+                filterInfo += '<div style="text-align:center; margin-bottom:10px;"><strong>Date Range:</strong> ';
+                if (minDateValue) filterInfo += 'From ' + minDateValue;
+                if (minDateValue && maxDateValue) filterInfo += ' ';
+                if (maxDateValue) filterInfo += 'To ' + maxDateValue;
+                filterInfo += '</div>';
+              }
+              
+              // Purpose
+              if (purposeValue) {
+                filterInfo += '<div style="text-align:center; margin-bottom:10px;"><strong>Purpose:</strong> ' + purposeValue + '</div>';
+              }
+              
+              // Laboratory
+              if (labValue) {
+                filterInfo += '<div style="text-align:center; margin-bottom:10px;"><strong>Laboratory:</strong> ' + labValue + '</div>';
+              }
+              
+              if (filterInfo) {
+                $(win.document.body).find('h1').after(filterInfo);
+              }
+            }
+          }
+        ]
+      });
+      
+      // Add an event handler to redraw the table when date range changes
+      $('#min, #max, #purpose-filter, #lab-filter').on('change', function() {
+        table.draw();
+      });
+      
+      // Create dropdown options for purpose and laboratory filters
+      function populateFilterDropdowns() {
+        // Get unique purpose values
+        let purposes = [];
+        table.column(1).data().unique().sort().each(function(value) {
+          if (value) purposes.push(value);
+        });
+        
+        // Populate purpose dropdown
+        let purposeFilter = $('#purpose-filter');
+        purposeFilter.empty().append('<option value="">All Purposes</option>');
+        purposes.forEach(function(purpose) {
+          purposeFilter.append('<option value="' + purpose + '">' + purpose + '</option>');
+        });
+        
+        // Get unique laboratory values
+        let labs = [];
+        table.column(0).data().unique().sort().each(function(value) {
+          if (value) labs.push(value);
+        });
+        
+        // Populate laboratory dropdown
+        let labFilter = $('#lab-filter');
+        labFilter.empty().append('<option value="">All Laboratories</option>');
+        labs.forEach(function(lab) {
+          labFilter.append('<option value="' + lab + '">' + lab + '</option>');
+        });
+      }
+      
+      // Call the function after table initialization
+      populateFilterDropdowns();
+      
+      // Clear all filters
+      $('#clearFilters').on('click', function() {
+        $('#min, #max').val('');
+        $('#purpose-filter, #lab-filter').val('');
+        table.draw();
+      });
+    });
+  </script>
 </body>
 </html>

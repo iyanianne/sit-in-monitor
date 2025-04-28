@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie-edge">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="icon" type="image/x-icon" href="../static/favicon/ccslogo.png">
+    <title>Reservations</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #2c3e50;
+            line-height: 1.6;
+        }
+
+        .div {
+            background-color: #2c3e50;
+            color: white;
+        }
+
+        .sub-div {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+            color: white;
+            position: sticky;
+            bottom: 0;
+            width: 100%;
+            background-color: rgba(0, 0, 0, 0.1);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sub-div a {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .sub-div a:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .sub-div i {
+            margin-right: 10px;
+            font-size: 16px;
+        }
+
+        .btn {
+            background-color: transparent;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            margin-left: 5px;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 6px;
+        }
+
+        .btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: scale(1.05);
+        }
+
+        .btn p {
+            font-size: 20px;
+            margin: 0;
+            line-height: 1;
+        }
+
+        .a {
+            color: white;
+        }
+
+        .w3-sidebar {
+            background-color: #2c3e50 !important;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            transform: translateX(0);
+        }
+
+        .w3-sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .w3-sidebar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .w3-sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        .w3-sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .w3-sidebar a {
+            padding: 15px 20px;
+            text-decoration: none;
+            font-size: 14px;
+            color: white;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+            margin: 4px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .w3-sidebar a:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-left: 3px solid #fff;
+            padding-left: 25px;
+            transform: translateX(5px);
+        }
+
+        .w3-sidebar a i {
+            margin-right: 15px;
+            width: 20px;
+            text-align: center;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .w3-sidebar a.active {
+            background-color: rgba(255, 255, 255, 0.15);
+            border-left: 3px solid #fff;
+            font-weight: 500;
+        }
+
+        .top-nav {
+            background-color: #2c3e50;
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: fixed;
+            top: 0;
+            right: 0;
+            left: 200px;
+            z-index: 900;
+            transition: left 0.3s ease;
+        }
+
+        .welcome-text {
+            color: white;
+            font-size: 16px;
+            margin: 0;
+            font-weight: 500;
+        }
+
+        .main-content {
+            margin-left: 200px;
+            transition: margin-left 0.3s ease;
+            padding-top: 60px;
+        }
+
+        .reservation-container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+
+        .reservation-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #3498db;
+        }
+
+        .reservation-header h2 {
+            color: #2c3e50;
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .reservation-card {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .form-control:disabled {
+            background-color: #f5f5f5;
+        }
+
+        .computer-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 0.8rem;
+            padding: 20px;
+        }
+
+        .computer-item {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: left;
+            transition: all 0.3s ease;
+        }
+
+        .computer-item:hover {
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .computer-item.disabled {
+            background-color: #f5f5f5;
+            opacity: 0.7;
+        }
+
+        .computer-checkbox {
+            margin-right: 10px;
+        }
+
+        .computer-name {
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        .modal-footer {
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            text-align: right;
+        }
+
+        .selected-computers {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            min-height: 40px;
+            max-height: 100px;
+            overflow-y: auto;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+
+        .alert-info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 1000px;
+            position: relative;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 20px;
+            top: 10px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #2c3e50;
+        }
+
+        .close-modal:hover {
+            color: #000;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+            }
+            .top-nav {
+                left: 0;
+            }
+            .modal-content {
+                width: 95%;
+                margin: 5% auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="w3-sidebar w3-bar-block" style="display: block; width: 200px;" id="mySidebar">
+        <button onclick="w3_close()" class="btn w3-bar-item"> 
+            <p>&times;</p> 
+        </button>
+        <div class="a">
+            <a href="/dashboard" class="w3-bar-item w3-button"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <a href="/information" class="w3-bar-item w3-button"><i class="fas fa-user"></i> Profile</a>
+            <a href="/edit" class="w3-bar-item w3-button"><i class="fas fa-edit"></i> Edit</a>
+            <a href="/announcement" class="w3-bar-item w3-button"><i class="fas fa-bullhorn"></i> Announcement</a>
+            <a href="/sit-in" class="w3-bar-item w3-button"><i class="fas fa-book"></i> Sit-in Rules</a>
+            <a href="/labrules" class="w3-bar-item w3-button"><i class="fas fa-book-open"></i> Lab Rules</a>
+            <a href="/sessions" class="w3-bar-item w3-button"><i class="fas fa-clock"></i> Sessions</a>
+            <a href="/history" class="w3-bar-item w3-button"><i class="fas fa-history"></i> History</a>
+            <a href="/reservations" class="w3-bar-item w3-button active"><i class="fas fa-calendar-check"></i> Reservation</a>
+        </div>
+
+        <div class="sub-div">
+            <a href="/logout" class="w3-bar-item w3-button"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent">
+        <!-- Page Content -->
+        <div class="top-nav" id="topNav">
+            <button class="btn" onclick="w3_open()">☰ Reservations</button>
+            <h5 class="welcome-text">Welcome, {{ username.fname }}!</h5>
+        </div>
+
+        <!-- Reservation Container -->
+        <div class="reservation-container">
+            <div class="reservation-header">
+                <h2><i class="fas fa-calendar-check"></i> Lab Reservation</h2>
+            </div>
+
+            <form id="reservationForm" method="POST">
+                <div class="reservation-card">
+                    <!-- Student Information -->
+                    <div class="form-group">
+                        <label class="form-label">ID Number</label>
+                        <input type="text" class="form-control" id="idno" name="idno" value="{{ username.idno }}" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Student Name</label>
+                        <input type="text" class="form-control" id="studentName" name="studentName" 
+                               value="{{ username.fname }} {{ username.mname }} {{ username.lastname }}" readonly>
+                    </div>
+
+                    <!-- Lab Purpose -->
+                    <div class="form-group">
+                        <label class="form-label">Lab Purpose</label>
+                        <select class="form-control" name="purpose" required>
+                            <option value="">Select Purpose</option>
+                            <option value="C">C Programming</option>
+                            <option value="Java">Java Programming</option>
+                            <option value="Python">Python Programming</option>
+                            <option value="C#">C# programming</option>
+                            <option value="Database">Database</option>
+                            <option value="Digilog">Digital Logic & Design</option>
+                            <option value="IoT">Embedded Systems & IoT</option>
+                            <option value="Sysarch">System Integration & Architecture</option>
+                            <option value="ComApp">Computer Application</option>
+                            <option value="PM">project Management</option>
+                            <option value="ITtrends">IT Trends</option>
+                            <option value="Techno">Technopreneurship</option>
+                            <option value="Capstone">Capstone</option>
+                        </select>                    
+                    </div>
+
+                    <!-- Laboratory Selection -->
+                    <div class="form-group">
+                        <label class="form-label">Select Laboratory</label>
+                        <select class="form-control" id="laboratory" name="laboratory" required>
+                            <option value="">Choose a laboratory...</option>
+                            <option value="524">Laboratory 524</option>
+                            <option value="526">Laboratory 526</option>
+                            <option value="528">Laboratory 528</option>
+                            <option value="530">Laboratory 530</option>
+                            <option value="542">Laboratory 542</option>
+                            <option value="544">Laboratory 544</option>
+                            <option value="517">Laboratory 517</option>
+                        </select>
+                    </div>
+
+                    <!-- Selected Computers Display -->
+                    <div class="form-group">
+                        <label class="form-label">Selected Computers</label>
+                        <div class="selected-computers" id="selectedComputersDisplay">
+                            No computers selected
+                        </div>
+                        <button type="button" class="btn-primary" onclick="openComputerModal()" style="margin-top: 10px;">
+                            Select Computers
+                        </button>
+                    </div>
+
+                    <!-- Computer Selection Modal -->
+                    <div id="computerModal" class="modal">
+                        <div class="modal-content">
+                            <span class="close-modal" onclick="closeComputerModal()">&times;</span>
+                            <h3>Select Computers</h3>
+                            <p>Laboratory: <span id="selectedLabName"></span></p>
+                            <div id="computerGrid" class="computer-grid">
+                                <!-- Computers will be populated dynamically -->
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn-primary" onclick="confirmComputerSelection()">
+                                    Confirm Selection
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Date and Time Selection -->
+                    <div class="form-group">
+                        <label class="form-label">Reservation Date</label>
+                        <input type="text" class="form-control" id="reservationDate" name="reservationDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Time In</label>
+                        <input type="text" class="form-control" id="timeIn" name="timeIn" required>
+                    </div>
+
+                    <!-- Remaining Sessions Info -->
+                    <div class="alert alert-info" id="remainingSessions">
+                        {% if sessions %}
+                            Remaining sessions: {{ sessions.remaining }}
+                        {% else %}
+                            Loading remaining sessions...
+                        {% endif %}
+                    </div>
+
+                    <button type="submit" class="btn-primary">Submit Reservation</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script>
+        function w3_open() {
+            document.getElementById("mySidebar").style.display = "block";
+            document.getElementById("mainContent").classList.remove("sidebar-closed");
+            document.getElementById("topNav").classList.remove("sidebar-closed");
+        }
+
+        function w3_close() {
+            document.getElementById("mySidebar").style.display = "none";
+            document.getElementById("mainContent").classList.add("sidebar-closed");
+            document.getElementById("topNav").classList.add("sidebar-closed");
+        }
+
+        // Initialize date picker
+        flatpickr("#reservationDate", {
+            enableTime: false,
+            dateFormat: "Y-m-d",
+            minDate: "today"
+        });
+
+        // Initialize time picker
+        flatpickr("#timeIn", {
+            enableTime: true,
+            noCalendar: true,
+            dateFormat: "H:i K",
+            time_24hr: false
+        });
+
+        // Fetch remaining sessions on page load
+        const idno = document.getElementById('idno').value;
+        if (idno) {
+            fetch(`/api/remaining-sessions/${idno}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('remainingSessions').textContent = 
+                        `Remaining sessions: ${data.remaining}`;
+                })
+                .catch(error => {
+                    console.error('Error fetching remaining sessions:', error);
+                    document.getElementById('remainingSessions').textContent = 
+                        'Unable to load remaining sessions';
+                });
+        }
+
+        // Fetch laboratories on page load
+        fetch('/api/laboratories')
+            .then(response => response.json())
+            .then(data => {
+                const labSelect = document.getElementById('laboratory');
+                data.forEach(lab => {
+                    const option = document.createElement('option');
+                    option.value = lab.id;
+                    option.textContent = lab.name;
+                    labSelect.appendChild(option);
+                });
+            });
+
+        // Computer selection modal functions
+        function openComputerModal() {
+            const laboratory = document.getElementById('laboratory');
+            const labId = laboratory.value;
+            const labName = laboratory.options[laboratory.selectedIndex].text;
+            
+            if (!labId) {
+                alert('Please select a laboratory first');
+                return;
+            }
+
+            document.getElementById('selectedLabName').textContent = labName;
+            document.getElementById('computerModal').style.display = 'block';
+            fetchComputers(labId);
+        }
+
+        function closeComputerModal() {
+            document.getElementById('computerModal').style.display = 'none';
+        }
+
+        function fetchComputers(labId) {
+            // Generate 50 computers
+            const computerGrid = document.getElementById('computerGrid');
+            computerGrid.innerHTML = '';
+            
+            for (let i = 1; i <= 50; i++) {
+                const div = document.createElement('div');
+                // For now, setting all as available. You can modify this based on your backend data
+                const isAvailable = true; // This should come from your backend
+                div.className = `computer-item ${isAvailable ? '' : 'disabled'}`;
+                div.innerHTML = `
+                    <label class="computer-checkbox-label">
+                        <input type="checkbox" 
+                            class="computer-checkbox" 
+                            name="computers" 
+                            value="PC${i}"
+                            ${isAvailable ? '' : 'disabled'}
+                            onchange="updateSelectedComputers(this)">
+                        <span class="computer-name">PC ${i}</span>
+                    </label>
+                `;
+                computerGrid.appendChild(div);
+            }
+        }
+
+        let selectedComputers = new Set();
+
+        function updateSelectedComputers(checkbox) {
+            const computerName = checkbox.nextElementSibling.textContent.trim();
+            if (checkbox.checked) {
+                selectedComputers.add(computerName);
+            } else {
+                selectedComputers.delete(computerName);
+            }
+        }
+
+        function confirmComputerSelection() {
+            const display = document.getElementById('selectedComputersDisplay');
+            if (selectedComputers.size > 0) {
+                display.textContent = Array.from(selectedComputers).join(', ');
+            } else {
+                display.textContent = 'No computers selected';
+            }
+            closeComputerModal();
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('computerModal');
+            if (event.target == modal) {
+                closeComputerModal();
+            }
+        }
+
+        // Form submission
+        document.getElementById('reservationForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (selectedComputers.size === 0) {
+                alert('Please select at least one computer');
+                return;
+            }
+            
+            const formData = new FormData(this);
+            formData.append('computers', Array.from(selectedComputers).join(','));
+            
+            fetch('/api/reserve', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Reservation successful!');
+                    window.location.reload();
+                } else {
+                    alert('Error making reservation: ' + data.message);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

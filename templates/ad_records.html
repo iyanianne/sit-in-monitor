@@ -605,31 +605,7 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      // Initialize DataTable for better table functionality
-      $(document).ready(function() {
-        $('#recordsTable').DataTable({
-          dom: 'Bfrtip',
-          buttons: [
-            'copy', 'csv', 'excel', 'pdf', 'print'
-          ],
-          responsive: true,
-          order: [[2, 'desc'], [3, 'desc']], // Sort by date and time
-          pageLength: 10,
-          lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "All"]],
-          columnDefs: [
-            { className: "dt-center", targets: "_all" },
-            { width: "8%", targets: 0 }, // ID No
-            { width: "15%", targets: 1 }, // Name
-            { width: "10%", targets: 2 }, // Date
-            { width: "7%", targets: 3 }, // Time In
-            { width: "7%", targets: 4 }, // Time Out
-            { width: "7%", targets: 5 }, // Duration
-            { width: "12%", targets: 6 }, // Purpose
-            { width: "10%", targets: 7 }, // Laboratory
-            { width: "8%", targets: 8 }, // Sessions
-          ]
-        });
-      });
+      
 
       // Get the reports data from the hidden div
       const reportsDataElement = document.getElementById('reportsData');

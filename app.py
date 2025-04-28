@@ -529,6 +529,50 @@ def ad_feedbacks():
     feedbacks = dbhelper.get_all_feedbacks()
     return render_template('ad_feedbacks.html', feedbacks=feedbacks)
 
+#  Reservations route
+@app.route('/reservations')
+def reservations():
+    if 'idno' not in session:
+        flash('Please log in to view reservations.')
+        return redirect(url_for('login'))
+    
+    idno = session['idno']
+    # Get the latest user data from database
+    user_data = dbhelper.get_user_by_id(idno)
+    
+    if not user_data:
+        flash('User data not found.')
+        return redirect(url_for('login'))
+    
+    # Get the latest remaining and total sessions from database
+    remaining_sessions = user_data[8] if user_data[8] is not None else 30
+    total_sessions = user_data[9] if user_data[9] is not None else 30
+    
+    # Update session with latest values
+    session['remaining_sessions'] = remaining_sessions
+    session['total_sessions'] = total_sessions
+    
+    user = {
+        'idno': session['idno'],
+        'fname': session['fname'],
+        'lastname': session['lastname'],
+        'mname': session['mname'],
+        'course': session['course'],
+        'yrlvl': session['yrlvl'],
+        'email': session['email'],
+        'avatar_filename': session.get('avatar_filename', 'default.png')
+    }
+    
+    # Create sessions data for the template
+    sessions_data = {
+        'remaining': remaining_sessions,
+        'total': total_sessions
+    }
+    
+    return render_template('reservations.html', 
+                         username=user,
+                         sessions=sessions_data)
+
 # Reset Sessions route
 @app.route('/reset_sessions/<string:idno>', methods=['POST'])
 def reset_sessions(idno):
@@ -610,6 +654,21 @@ def toggle_resources():
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+
+# API endpoint for remaining sessions
+@app.route('/api/remaining-sessions/<string:idno>')
+def get_remaining_sessions(idno):
+    try:
+        user_data = dbhelper.get_user_by_id(idno)
+        if user_data:
+            remaining_sessions = user_data[8] if user_data[8] is not None else 30
+            return jsonify({
+                'remaining': remaining_sessions
+            })
+        return jsonify({'error': 'User not found'}), 404
+    except Exception as e:
+        print(f"Error fetching remaining sessions: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)

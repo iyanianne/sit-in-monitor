@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie-edge">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" type="image/x-icon" href="../static/favicon/ccslogo.png">
+  <title>Reservation Management</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background-color: #f8f9fa;
+    }
+    
+    .topnav {
+      overflow: hidden;
+      background-color: #2c3e50;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+    
+    .topnav a {
+      color: #ecf0f1;
+      text-align: center;
+      padding: 8px 16px;
+      text-decoration: none;
+      font-size: 14px;
+      border-radius: 4px;
+      transition: 0.3s;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .topnav a:hover {
+      background-color: #34495e;
+      color: #ecf0f1;
+    }
+    
+    .topnav a.active {
+      background-color: #3498db;
+      color: white;
+    }
+
+    .head {
+      color: #ecf0f1;
+      font-size: 20px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      padding-bottom: 5px;
+    }
+
+    .nav-links::-webkit-scrollbar {
+      display: none;
+    }
+
+    .dashboard-container {
+      padding: 20px;
+    }
+
+    .table-container {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+      margin: 20px 0;
+      overflow: hidden;
+    }
+    
+    .table-header {
+      height: 50px;
+      border-radius: 8px 8px 0 0;
+      font-size: 16px;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: white;
+      background-color: #2c3e50;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 0;
+    }
+
+    th, td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+
+    th {
+      background-color: #2c3e50;
+      color: white;
+      font-weight: 500;
+      text-transform: uppercase;
+      font-size: 14px;
+      letter-spacing: 0.5px;
+    }
+
+    td {
+      color: #2c3e50;
+      font-size: 14px;
+    }
+
+    tr:hover {
+      background-color: #f8f9fa;
+    }
+
+    .search-container {
+      width: 300px;
+      margin: 20px 0;
+    }
+
+    .search-container input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .status-badge {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .status-pending {
+      background-color: #ffd700;
+      color: #000;
+    }
+
+    .status-approved {
+      background-color: #2ecc71;
+      color: white;
+    }
+
+    .status-rejected {
+      background-color: #e74c3c;
+      color: white;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: 0.3s;
+    }
+
+    .btn-approve {
+      background-color: #2ecc71;
+      color: white;
+    }
+
+    .btn-reject {
+      background-color: #e74c3c;
+      color: white;
+    }
+
+    .btn:hover {
+      opacity: 0.9;
+    }
+
+    .flash-messages {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+    }
+
+    .flash-message {
+      padding: 15px 25px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+      color: white;
+      background-color: #2ecc71;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .flash-message.error {
+      background-color: #e74c3c;
+    }
+
+    .close-flash {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 0 0 0 15px;
+    }
+
+    .computer-management {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+      margin: 20px 0;
+      padding: 20px;
+    }
+
+    .computer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 1rem;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      margin-top: 20px;
+    }
+
+    .computer-item {
+      background: white;
+      padding: 15px;
+      border-radius: 6px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      text-align: center;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      border: 2px solid transparent;
+    }
+
+    .computer-item.available {
+      border-color: #2ecc71;
+    }
+
+    .computer-item.unavailable {
+      border-color: #e74c3c;
+      opacity: 0.7;
+    }
+
+    .computer-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .computer-number {
+      font-weight: 600;
+      color: #2c3e50;
+      margin-bottom: 5px;
+    }
+
+    .computer-status {
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 12px;
+      display: inline-block;
+    }
+
+    .status-available {
+      background: #2ecc71;
+      color: white;
+    }
+
+    .status-unavailable {
+      background: #e74c3c;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="topnav">
+    <div class="head"> 
+      College of Computer Studies Admin 
+    </div>
+    <div class="nav-links">
+      <a href="/admin_dashboard"><i class="fas fa-home"></i> Home</a>
+      <a href="/ad_students"><i class="fas fa-users"></i> Students</a>
+      <a href="/ad_sit-in"><i class="fas fa-chart-bar"></i> Current Sit-in</a>
+      <a href="/ad_records"><i class="fas fa-clipboard-list"></i> Sit-in Records</a>
+      <a href="/ad_reports"><i class="fas fa-chart-bar"></i> Sit-in Reports</a>
+      <a href="/ad_feedbacks"><i class="fas fa-comments"></i> Feedback Reports</a>
+      <a href="/ad_reserve" class="active"><i class="fas fa-calendar-check"></i> Reservation</a>
+      <a href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </div>
+  </div>
+
+  <!-- Flash Messages -->
+  <div class="flash-messages">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash-message {% if category == 'error' %}error{% endif %}">
+            {{ message }}
+            <button class="close-flash" onclick="this.parentElement.remove()">&times;</button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+  </div>
+    
+  <div class="dashboard-container">
+    <!-- Computer Management Section -->
+    <div class="computer-management">
+      <div class="filter-section-title">
+        <i class="fas fa-desktop"></i> Computer Management
+      </div>
+      <div class="filter-container">
+        <div class="form-group">
+          <label>Select Laboratory:</label>
+          <select id="lab-select" class="select-filter" title="Select Laboratory">
+            <option value="">Choose a laboratory...</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="computer-grid" id="computerGrid">
+        <!-- Computers will be populated here -->
+      </div>
+    </div>
+
+    <!-- Reservations Section -->
+    <div class="search-container">
+      <input type="text" id="searchReservations" placeholder="Search reservations..." 
+             onkeyup="searchReservations(this.value)" title="Search reservations">
+    </div>
+    
+    <div class="table-container">
+      <div class="table-header">
+        <i class="fas fa-calendar-check"></i> Reservation Requests
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Student Name</th>
+            <th>Course</th>
+            <th>Laboratory</th>
+            <th>Computer No.</th>
+            <th>Date & Time</th>
+            <th>Purpose</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% if reservations %}
+          {% for reservation in reservations %}
+          <tr>
+            <td>{{ reservation.student_name }}</td>
+            <td>{{ reservation.course }}</td>
+            <td>Laboratory {{ reservation.laboratory }}</td>
+            <td>PC-{{ reservation.computer_no }}</td>
+            <td>{{ reservation.datetime }}</td>
+            <td>{{ reservation.purpose }}</td>
+            <td>
+              <span class="status-badge status-{{ reservation.status }}">
+                {{ reservation.status|title }}
+              </span>
+            </td>
+            <td class="action-buttons">
+              {% if reservation.status == 'pending' %}
+                <button class="btn btn-approve" onclick="approveReservation('{{ reservation.id }}')">
+                  <i class="fas fa-check"></i> Approve
+                </button>
+                <button class="btn btn-reject" onclick="rejectReservation('{{ reservation.id }}')">
+                  <i class="fas fa-times"></i> Reject
+                </button>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="8" style="text-align: center; padding: 30px;">
+              <i class="fas fa-calendar-times" style="font-size: 48px; color: #ccc; margin-bottom: 10px;"></i>
+              <p>No reservation requests found</p>
+            </td>
+          </tr>
+        {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    function searchReservations(query) {
+      query = query.toLowerCase();
+      const rows = document.querySelectorAll('tbody tr');
+      
+      rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(query) ? '' : 'none';
+      });
+    }
+
+    function showFlashMessage(message, type = 'success') {
+      const flashContainer = document.querySelector('.flash-messages');
+      const flashMessage = document.createElement('div');
+      flashMessage.className = `flash-message ${type === 'error' ? 'error' : ''}`;
+      flashMessage.innerHTML = `
+        ${message}
+        <button class="close-flash" onclick="this.parentElement.remove()">&times;</button>
+      `;
+      flashContainer.appendChild(flashMessage);
+      
+      // Auto-remove after 5 seconds
+      setTimeout(() => flashMessage.remove(), 5000);
+    }
+
+    function approveReservation(reservationId) {
+      fetch(`/approve_reservation/${reservationId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showFlashMessage('Reservation approved successfully!');
+          // Refresh the page or update the UI
+          location.reload();
+        } else {
+          showFlashMessage(data.message || 'Error approving reservation', 'error');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        showFlashMessage('Error approving reservation. Please try again.', 'error');
+      });
+    }
+
+    function rejectReservation(reservationId) {
+      const reason = prompt('Please enter a reason for rejection:');
+      if (reason === null) return; // User cancelled
+
+      fetch(`/reject_reservation/${reservationId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ reason: reason })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showFlashMessage('Reservation rejected successfully!');
+          // Refresh the page or update the UI
+          location.reload();
+        } else {
+          showFlashMessage(data.message || 'Error rejecting reservation', 'error');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        showFlashMessage('Error rejecting reservation. Please try again.', 'error');
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      // Fetch laboratories for the dropdown
+      fetch('/api/laboratories')
+        .then(response => response.json())
+        .then(data => {
+          const labSelect = document.getElementById('lab-select');
+          data.forEach(lab => {
+            const option = document.createElement('option');
+            option.value = lab.id;
+            option.textContent = `Laboratory ${lab.number}`;
+            labSelect.appendChild(option);
+          });
+        });
+
+      // Handle laboratory selection
+      document.getElementById('lab-select').addEventListener('change', function() {
+        const labId = this.value;
+        if (labId) {
+          fetchComputers(labId);
+        } else {
+          document.getElementById('computerGrid').innerHTML = '';
+        }
+      });
+
+      function fetchComputers(labId) {
+        const computerGrid = document.getElementById('computerGrid');
+        computerGrid.innerHTML = '<div class="loading">Loading computers...</div>';
+
+        fetch(`/api/computers/${labId}`)
+          .then(response => response.json())
+          .then(computers => {
+            computerGrid.innerHTML = '';
+            computers.forEach(computer => {
+              const div = document.createElement('div');
+              div.className = `computer-item ${computer.is_available ? 'available' : 'unavailable'}`;
+              div.innerHTML = `
+                <div class="computer-number">PC ${computer.number}</div>
+                <span class="computer-status ${computer.is_available ? 'status-available' : 'status-unavailable'}">
+                  ${computer.is_available ? 'Available' : 'In Use'}
+                </span>
+              `;
+              div.onclick = () => toggleComputerStatus(computer.id, computer.is_available);
+              computerGrid.appendChild(div);
+            });
+          });
+      }
+
+      function toggleComputerStatus(computerId, currentStatus) {
+        fetch(`/update_computer_status/${computerId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            is_available: !currentStatus
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === 'success') {
+            // Refresh the computer grid
+            const labId = document.getElementById('lab-select').value;
+            fetchComputers(labId);
+          } else {
+            alert('Error updating computer status: ' + data.message);
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>

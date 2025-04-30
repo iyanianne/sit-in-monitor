@@ -324,27 +324,35 @@
       <table id="recordsTable" class="table table-striped">
         <thead>
           <tr>
-            <th>Laboratory</th>
+            <th>ID Number</th>
+            <th>Name</th>
+            <th>Date</th>
+            <th>Time In</th>
+            <th>Time Out</th>
+            <th>Duration</th>
             <th>Purpose</th>
-            <th>Month</th>
-            <th>Usage Count</th>
-            <th>Unique Students</th>
+            <th>Laboratory</th>
+            <th>Sessions</th>
           </tr>
         </thead>
         <tbody>
         {% if reports %}
           {% for report in reports %}
           <tr>
-            <td>{{ report.laboratory }}</td>
+            <td>{{ report.idno }}</td>
+            <td>{{ report.name }}</td>
+            <td>{{ report.date }}</td>
+            <td>{{ report.time_in }}</td>
+            <td>{{ report.time_out }}</td>
+            <td>{{ report.duration }}</td>
             <td>{{ report.purpose }}</td>
-            <td>{{ report.month }}</td>
-            <td>{{ report.usage_count }}</td>
-            <td>{{ report.unique_students }}</td>
+            <td>Laboratory {{ report.laboratory }}</td>
+            <td>{{ report.remaining_sessions }}/{{ report.total_sessions }}</td>
           </tr>
           {% endfor %}
         {% else %}
           <tr>
-            <td colspan="5" style="text-align: center">No reports available.</td>
+            <td colspan="9" style="text-align: center">No reports available.</td>
           </tr>
         {% endif %}
         </tbody>

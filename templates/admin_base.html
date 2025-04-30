@@ -1,0 +1,23 @@
+<ul class="navbar-nav">
+    <li class="nav-item">
+        <a class="nav-link {% if request.endpoint == 'admin_dashboard' %}active{% endif %}" href="{{ url_for('admin_dashboard') }}">Dashboard</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if request.endpoint == 'ad_students' %}active{% endif %}" href="{{ url_for('ad_students') }}">Students</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if request.endpoint == 'ad_reports' %}active{% endif %}" href="{{ url_for('ad_reports') }}">Reports</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if request.endpoint == 'ad_records' %}active{% endif %}" href="{{ url_for('ad_records') }}">Records</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if request.endpoint == 'ad_reserve' %}active{% endif %}" href="{{ url_for('ad_reserve') }}">Reserve</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if request.endpoint == 'reservation_logs' %}active{% endif %}" href="{{ url_for('reservation_logs') }}">Reservation Logs</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if request.endpoint == 'ad_feedbacks' %}active{% endif %}" href="{{ url_for('ad_feedbacks') }}">Feedbacks</a>
+    </li>
+</ul> 

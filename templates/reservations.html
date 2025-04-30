@@ -400,19 +400,21 @@
                 <div class="reservation-card">
                     <!-- Student Information -->
                     <div class="form-group">
-                        <label class="form-label">ID Number</label>
-                        <input type="text" class="form-control" id="idno" name="idno" value="{{ username.idno }}" readonly>
+                        <label class="form-label" for="idno">ID Number</label>
+                        <input type="text" class="form-control" id="idno" name="idno" 
+                               value="{{ username.idno }}" readonly title="Student ID Number">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Student Name</label>
+                        <label class="form-label" for="studentName">Student Name</label>
                         <input type="text" class="form-control" id="studentName" name="studentName" 
-                               value="{{ username.fname }} {{ username.mname }} {{ username.lastname }}" readonly>
+                               value="{{ username.fname }} {{ username.mname }} {{ username.lastname }}" 
+                               readonly title="Student Full Name">
                     </div>
 
                     <!-- Lab Purpose -->
                     <div class="form-group">
-                        <label class="form-label">Lab Purpose</label>
-                        <select class="form-control" name="purpose" required>
+                        <label class="form-label" for="purpose">Lab Purpose</label>
+                        <select class="form-control" id="purpose" name="purpose" required title="Select Lab Purpose">
                             <option value="">Select Purpose</option>
                             <option value="C">C Programming</option>
                             <option value="Java">Java Programming</option>
@@ -432,16 +434,16 @@
 
                     <!-- Laboratory Selection -->
                     <div class="form-group">
-                        <label class="form-label">Select Laboratory</label>
-                        <select class="form-control" id="laboratory" name="laboratory" required>
+                        <label class="form-label" for="laboratory">Select Laboratory</label>
+                        <select class="form-control" id="laboratory" name="laboratory" required title="Select Laboratory">
                             <option value="">Choose a laboratory...</option>
-                            <option value="524">Laboratory 524</option>
-                            <option value="526">Laboratory 526</option>
-                            <option value="528">Laboratory 528</option>
-                            <option value="530">Laboratory 530</option>
-                            <option value="542">Laboratory 542</option>
-                            <option value="544">Laboratory 544</option>
-                            <option value="517">Laboratory 517</option>
+                                <option value="524">524</option>
+                                <option value="526">526</option>
+                                <option value="528">528</option>
+                                <option value="530">530</option>
+                                <option value="542">542</option>
+                                <option value="544">544</option>
+                                <option value="517">517</option>
                         </select>
                     </div>
 
@@ -475,12 +477,14 @@
 
                     <!-- Date and Time Selection -->
                     <div class="form-group">
-                        <label class="form-label">Reservation Date</label>
-                        <input type="text" class="form-control" id="reservationDate" name="reservationDate" required>
+                        <label class="form-label" for="reservationDate">Reservation Date</label>
+                        <input type="text" class="form-control" id="reservationDate" name="reservationDate" 
+                               required title="Select Reservation Date">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Time In</label>
-                        <input type="text" class="form-control" id="timeIn" name="timeIn" required>
+                        <label class="form-label" for="timeIn">Time In</label>
+                        <input type="text" class="form-control" id="timeIn" name="timeIn" 
+                               required title="Select Time In">
                     </div>
 
                     <!-- Remaining Sessions Info -->
@@ -549,12 +553,16 @@
             .then(response => response.json())
             .then(data => {
                 const labSelect = document.getElementById('laboratory');
+                labSelect.innerHTML = '<option value="">Choose a laboratory...</option>';
                 data.forEach(lab => {
                     const option = document.createElement('option');
                     option.value = lab.id;
-                    option.textContent = lab.name;
+                    option.textContent = `Laboratory ${lab.number}`;
                     labSelect.appendChild(option);
                 });
+            })
+            .catch(error => {
+                console.error('Error fetching laboratories:', error);
             });
 
         // Computer selection modal functions
@@ -578,38 +586,51 @@
         }
 
         function fetchComputers(labId) {
-            // Generate 50 computers
             const computerGrid = document.getElementById('computerGrid');
-            computerGrid.innerHTML = '';
+            computerGrid.innerHTML = '<div class="loading">Loading computers...</div>';
             
-            for (let i = 1; i <= 50; i++) {
-                const div = document.createElement('div');
-                // For now, setting all as available. You can modify this based on your backend data
-                const isAvailable = true; // This should come from your backend
-                div.className = `computer-item ${isAvailable ? '' : 'disabled'}`;
-                div.innerHTML = `
-                    <label class="computer-checkbox-label">
-                        <input type="checkbox" 
-                            class="computer-checkbox" 
-                            name="computers" 
-                            value="PC${i}"
-                            ${isAvailable ? '' : 'disabled'}
-                            onchange="updateSelectedComputers(this)">
-                        <span class="computer-name">PC ${i}</span>
-                    </label>
-                `;
-                computerGrid.appendChild(div);
-            }
+            fetch(`/api/computers/${labId}`)
+                .then(response => response.json())
+                .then(computers => {
+                    computerGrid.innerHTML = '';
+                    computers.forEach(computer => {
+                        const div = document.createElement('div');
+                        div.className = `computer-item ${computer.is_available ? '' : 'disabled'}`;
+                        div.innerHTML = `
+                            <label class="computer-checkbox-label">
+                                <input type="checkbox" 
+                                    class="computer-checkbox" 
+                                    name="computers" 
+                                    value="PC${computer.number}"
+                                    ${computer.is_available ? '' : 'disabled'}
+                                    onchange="updateSelectedComputers(this)">
+                                <span class="computer-name">PC ${computer.number}</span>
+                            </label>
+                        `;
+                        computerGrid.appendChild(div);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching computers:', error);
+                    computerGrid.innerHTML = '<div class="error">Error loading computers</div>';
+                });
         }
 
         let selectedComputers = new Set();
 
         function updateSelectedComputers(checkbox) {
-            const computerName = checkbox.nextElementSibling.textContent.trim();
+            // Uncheck all other checkboxes
+            document.querySelectorAll('.computer-checkbox').forEach(cb => {
+                if (cb !== checkbox) {
+                    cb.checked = false;
+                }
+            });
+
+            // Update selected computers set
+            selectedComputers.clear();
             if (checkbox.checked) {
+                const computerName = checkbox.nextElementSibling.textContent.trim();
                 selectedComputers.add(computerName);
-            } else {
-                selectedComputers.delete(computerName);
             }
         }
 
@@ -634,26 +655,53 @@
         // Form submission
         document.getElementById('reservationForm').addEventListener('submit', function(e) {
             e.preventDefault();
+            
+            // Validate form
             if (selectedComputers.size === 0) {
                 alert('Please select at least one computer');
                 return;
             }
+
+            const laboratory = document.getElementById('laboratory').value;
+            const purpose = document.getElementById('purpose').value;
+            const reservationDate = document.getElementById('reservationDate').value;
+            const timeIn = document.getElementById('timeIn').value;
+
+            if (!laboratory || !purpose || !reservationDate || !timeIn) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            // Create datetime string by combining date and time
+            const datetime = `${reservationDate} ${timeIn}:00`;
             
-            const formData = new FormData(this);
-            formData.append('computers', Array.from(selectedComputers).join(','));
+            // Get the first selected computer (since we're only allowing one computer per reservation)
+            const computerNo = Array.from(selectedComputers)[0].replace('PC ', '');
             
-            fetch('/api/reserve', {
+            // Send reservation request
+            fetch('/reserve_computer', {
                 method: 'POST',
-                body: formData
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    'laboratory_id': parseInt(laboratory),
+                    'computer_no': parseInt(computerNo),
+                    'purpose': purpose,
+                    'datetime': datetime
+                })
             })
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
-                    alert('Reservation successful!');
-                    window.location.reload();
+                if (data.status === 'success') {
+                    window.location.href = '/reservations';
                 } else {
-                    alert('Error making reservation: ' + data.message);
+                    alert(data.message || 'Error submitting reservation. Please try again.');
                 }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error submitting reservation. Please try again.');
             });
         });
     </script>

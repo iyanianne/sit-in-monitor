@@ -1,0 +1,47 @@
+{% extends "admin_base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Reservation Logs</h2>
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Date/Time</th>
+                            <th>Student ID</th>
+                            <th>Laboratory</th>
+                            <th>Computer</th>
+                            <th>Action</th>
+                            <th>Performed By</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs %}
+                        <tr>
+                            <td>{{ log.created_at }}</td>
+                            <td>{{ log.student_id }}</td>
+                            <td>Laboratory {{ log.laboratory_id }}</td>
+                            <td>Computer {{ log.computer_no }}</td>
+                            <td>
+                                {% if log.action == 'approved' %}
+                                <span class="badge bg-success">Approved</span>
+                                {% elif log.action == 'rejected' %}
+                                <span class="badge bg-danger">Rejected</span>
+                                {% else %}
+                                <span class="badge bg-info">{{ log.action|title }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ log.performed_by_name }}</td>
+                            <td>{{ log.notes }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

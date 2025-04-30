@@ -588,5 +588,50 @@
       document.getElementById("mainRow").classList.add("sidebar-closed");
     }
   </script>
+
+  <!-- Add this at the end of the file, before the endblock -->
+  {% block scripts %}
+  <script>
+  function loadAnnouncements() {
+      fetch('/api/announcements')
+          .then(response => response.json())
+          .then(announcements => {
+              const container = document.getElementById('announcements-container');
+              if (announcements.length === 0) {
+                  container.innerHTML = '<p class="text-muted">No new announcements</p>';
+                  return;
+              }
+              
+              container.innerHTML = announcements.map(announcement => `
+                  <div class="alert alert-${announcement.type} ${announcement.is_read ? 'opacity-75' : ''}" role="alert">
+                      <div class="d-flex justify-content-between align-items-center">
+                          <div>${announcement.message}</div>
+                          <small class="text-muted">${new Date(announcement.created_at).toLocaleString()}</small>
+                      </div>
+                  </div>
+              `).join('');
+              
+              // Mark unread announcements as read
+              announcements.forEach(announcement => {
+                  if (!announcement.is_read) {
+                      fetch(`/api/mark_announcement_read/${announcement.id}`, {
+                          method: 'POST',
+                          headers: {
+                              'Content-Type': 'application/json'
+                          }
+                      });
+                  }
+              });
+          })
+          .catch(error => console.error('Error loading announcements:', error));
+  }
+
+  // Load announcements when page loads
+  document.addEventListener('DOMContentLoaded', loadAnnouncements);
+
+  // Refresh announcements every 30 seconds
+  setInterval(loadAnnouncements, 30000);
+  </script>
+  {% endblock %}
 </body>
 </html> 

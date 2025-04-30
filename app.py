@@ -4,11 +4,35 @@ import os
 from werkzeug.utils import secure_filename
 import dbhelper
 from datetime import datetime
+from functools import wraps
 
 app = Flask(__name__)
 app.secret_key = "database1234!"
 app.config['UPLOAD_FOLDER'] = 'static/images/uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+
+# Initialize database on startup
+dbhelper.initialize_database()
+
+# Login required decorator
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'idno' not in session:
+            flash('Please log in to access this page.', 'warning')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+# Admin required decorator
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'username' not in session:
+            flash('Please log in as admin to access this page.', 'warning')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 # Register route
 @app.route("/register", methods=["GET", "POST"])
@@ -669,6 +693,193 @@ def get_remaining_sessions(idno):
     except Exception as e:
         print(f"Error fetching remaining sessions: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
+
+# Reservation Management Routes
+@app.route('/ad_reserve')
+def ad_reserve():
+    if 'username' not in session:
+        flash('Please log in as admin to access this page.', 'error')
+        return redirect(url_for('login'))
+    reservations = dbhelper.get_pending_reservations()
+    return render_template('ad_reserve.html', 
+                         reservations=reservations)
+
+@app.route('/approve_reservation/<int:reservation_id>', methods=['POST'])
+@admin_required
+def approve_reservation_route(reservation_id):
+    try:
+        # Get reservation details first
+        reservation = dbhelper.get_reservation_by_id(reservation_id)
+        if not reservation:
+            flash('Reservation not found.', 'error')
+            return jsonify({'success': False, 'message': 'Reservation not found'}), 404
+
+        # Approve the reservation
+        success, message = dbhelper.approve_reservation(reservation_id)
+        if not success:
+            flash(f'Error approving reservation: {message}', 'error')
+            return jsonify({'success': False, 'message': message}), 400
+        
+        # Create announcement for the student
+        message = f"Your reservation for Laboratory {reservation['laboratory_id']}, Computer {reservation['computer_no']} has been approved."
+        dbhelper.create_announcement(reservation['student_id'], message, 'success')
+        
+        # Log the action
+        dbhelper.create_reservation_log(
+            reservation_id=reservation_id,
+            action='approved',
+            performed_by=session['username'],
+            notes='Reservation approved by administrator'
+        )
+        
+        flash('Reservation approved successfully!', 'success')
+        return jsonify({'success': True, 'message': 'Reservation approved successfully'})
+    except Exception as e:
+        flash(f'Error approving reservation: {str(e)}', 'error')
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/reject_reservation/<int:reservation_id>', methods=['POST'])
+@admin_required
+def reject_reservation_route(reservation_id):
+    try:
+        # Get reservation details first
+        reservation = dbhelper.get_reservation_by_id(reservation_id)
+        if not reservation:
+            flash('Reservation not found.', 'error')
+            return jsonify({'success': False, 'message': 'Reservation not found'}), 404
+
+        # Get rejection reason from request
+        reason = request.json.get('reason', 'No reason provided')
+        
+        # Reject the reservation
+        success, message = dbhelper.reject_reservation(reservation_id)
+        if not success:
+            flash(f'Error rejecting reservation: {message}', 'error')
+            return jsonify({'success': False, 'message': message}), 400
+        
+        # Create announcement for the student
+        message = f"Your reservation for Laboratory {reservation['laboratory_id']}, Computer {reservation['computer_no']} has been rejected. Reason: {reason}"
+        dbhelper.create_announcement(reservation['student_id'], message, 'danger')
+        
+        # Log the action
+        dbhelper.create_reservation_log(
+            reservation_id=reservation_id,
+            action='rejected',
+            performed_by=session['username'],
+            notes=f'Reservation rejected by administrator. Reason: {reason}'
+        )
+        
+        flash('Reservation rejected successfully!', 'success')
+        return jsonify({'success': True, 'message': 'Reservation rejected successfully'})
+    except Exception as e:
+        flash(f'Error rejecting reservation: {str(e)}', 'error')
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/reservation_logs')
+@admin_required
+def reservation_logs():
+    """View reservation logs."""
+    logs = dbhelper.get_reservation_logs()
+    return render_template('reservation_logs.html', logs=logs)
+
+@app.route('/api/announcements')
+@login_required
+def get_announcements():
+    """Get announcements for the current user."""
+    announcements = dbhelper.get_user_announcements(session['idno'])
+    return jsonify(announcements)
+
+@app.route('/api/mark_announcement_read/<int:announcement_id>', methods=['POST'])
+@login_required
+def mark_announcement_read(announcement_id):
+    """Mark an announcement as read."""
+    try:
+        dbhelper.mark_announcement_as_read(announcement_id)
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/computers/<int:lab_id>')
+@admin_required
+def get_computers_route(lab_id):
+    computers = dbhelper.get_computers_by_lab(lab_id)
+    return jsonify(computers)
+
+@app.route('/update_computer_status/<int:computer_id>', methods=['POST'])
+@admin_required
+def update_computer_status_route(computer_id):
+    data = request.get_json()
+    is_available = data.get('is_available', False)
+    
+    success, message = dbhelper.update_computer_status(computer_id, is_available)
+    if success:
+        return jsonify({'status': 'success'})
+    else:
+        return jsonify({'status': 'error', 'message': message}), 400
+
+# Student Reservation Routes
+@app.route('/reserve_computer', methods=['POST'])
+@login_required
+def reserve_computer():
+    try:
+        # Get form data
+        laboratory_id = request.form.get('laboratory_id', type=int)
+        computer_no = request.form.get('computer_no', type=int)
+        purpose = request.form.get('purpose')
+        datetime_str = request.form.get('datetime')
+        student_id = session.get('idno')  # Get student ID from session
+        
+        # Validate all required fields
+        if not all([laboratory_id, computer_no, purpose, datetime_str, student_id]):
+            return jsonify({
+                'status': 'error',
+                'message': 'All fields are required'
+            }), 400
+        
+        # Create the reservation
+        success, message = dbhelper.create_reservation(
+            student_id=student_id,
+            laboratory_id=laboratory_id,
+            computer_no=computer_no,
+            purpose=purpose,
+            datetime=datetime_str
+        )
+        
+        if success:
+            return jsonify({
+                'status': 'success',
+                'message': 'Reservation request submitted successfully'
+            })
+        else:
+            return jsonify({
+                'status': 'error',
+                'message': message
+            }), 400
+            
+    except Exception as e:
+        print(f"Error in reserve_computer: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': 'An unexpected error occurred'
+        }), 500
+
+@app.route('/api/laboratories')
+def get_laboratories():
+    try:
+        laboratories = dbhelper.get_laboratories()
+        return jsonify(laboratories)
+    except Exception as e:
+        print(f"Error fetching laboratories: {e}")
+        return jsonify([])
+
+@app.route('/api/computers/<int:lab_id>')
+def get_computers(lab_id):
+    try:
+        computers = dbhelper.get_computers_by_lab(lab_id)
+        return jsonify(computers)
+    except Exception as e:
+        print(f"Error fetching computers: {e}")
+        return jsonify([])
 
 if __name__ == "__main__":
     app.run(debug=True)

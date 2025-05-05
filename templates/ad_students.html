@@ -357,6 +357,7 @@
             <th>Year Level</th>
             <th>Email</th>
             <th>Lab Points</th>
+            <th>Remaining Sessions</th>
             <th>Actions</th>
         </tr>
         </thead>
@@ -371,16 +372,24 @@
             <td>{{ student.yrlvl }}</td>
             <td>{{ student.email }}</td>
             <td>{{ student.lab_points|default(0) }}</td>
+            <td>{{ student.remaining_sessions|default(30) }}</td>
             <td>
-                <button class="reset-session" onclick="resetStudent('{{ student.idno }}')">
-                    <i class="fas fa-undo"></i> Reset
-                </button>
+                <div class="btn-container">
+                    {% if student.lab_points >= 3 %}
+                    <button class="btn-action accept" onclick="convertPointsToSession('{{ student.idno }}')">
+                        <i class="fas fa-exchange-alt"></i> Convert to Session
+                    </button>
+                    {% endif %}
+                    <button class="reset-session" onclick="resetStudent('{{ student.idno }}')">
+                        <i class="fas fa-undo"></i> Reset
+                    </button>
+                </div>
             </td>
         </tr>
         {% endfor %}
     {% else %}
         <tr>
-            <td colspan="4" style="text-align: center">No students found.</td>
+            <td colspan="9" style="text-align: center">No students found.</td>
         </tr>
     {% endif %}
         </tbody>
@@ -490,7 +499,7 @@
                 success: function(data) {
                     if (data.error) {
                         // Clear the table if no student found
-                        $('#studentTableBody').html('<tr><td colspan="4" style="text-align: center">No students found.</td></tr>');
+                        $('#studentTableBody').html('<tr><td colspan="9" style="text-align: center">No students found.</td></tr>');
                     } else {
                         // Store the student data as a global variable for easy access
                         window.currentStudentData = data;
@@ -499,18 +508,21 @@
                         const row = `
                             <tr class="student-row" data-idno="${data.idno}" style="cursor: pointer;">
                                 <td>${data.idno}</td>
-                                <td>${data.lname}</td>
+                                <td>${data.lastname}</td>
                                 <td>${data.fname}</td>
                                 <td>${data.course}</td>
-                                <td>${data.year_level}</td>
+                                <td>${data.yrlvl}</td>
                                 <td>${data.email}</td>
                                 <td>${data.lab_points || 0}</td>
+                                <td>${data.remaining_sessions || 30}</td>
                                 <td>
                                     <div class="btn-container">
-                                        <button class="btn-action" onclick="showStudentModal('${data.idno}')">
-                                            <i class="fas fa-clock"></i> Sit-In
+                                        ${data.lab_points >= 3 ? `
+                                        <button class="btn-action accept" onclick="convertPointsToSession('${data.idno}')">
+                                            <i class="fas fa-exchange-alt"></i> Convert to Session
                                         </button>
-                                        <button class="btn-action" style="background-color: #e74c3c;" onclick="resetStudent('${data.idno}')">
+                                        ` : ''}
+                                        <button class="reset-session" onclick="resetStudent('${data.idno}')">
                                             <i class="fas fa-undo"></i> Reset
                                         </button>
                                     </div>
@@ -524,10 +536,11 @@
                             const idno = $(this).data('idno');
                             showStudentModal(window.currentStudentData);
                         });
-            }
-        },
-        error: function(error) {
+                    }
+                },
+                error: function(error) {
                     console.log("Error fetching data:", error);
+                    $('#studentTableBody').html('<tr><td colspan="9" style="text-align: center">Error fetching student data.</td></tr>');
                 }
             });
         } else if (idno.length === 0) {
@@ -703,6 +716,31 @@
         // Update sort button icon
         const sortIcon = document.querySelector('.fa-sort');
         sortIcon.className = sortDirection === 1 ? 'fas fa-sort-up' : 'fas fa-sort-down';
+    }
+
+    function convertPointsToSession(idno) {
+        if (confirm('Convert 3 points to an additional session? This will deduct 3 points from the student\'s total.')) {
+            fetch('/convert_points_to_session', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ idno: idno })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Points successfully converted to a session!');
+                    location.reload();
+                } else {
+                    alert(data.message || 'Error converting points to session');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error converting points to session. Please try again.');
+            });
+        }
     }
 </script>
 </body>

@@ -13,6 +13,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 # Initialize database on startup
 dbhelper.initialize_database()
+dbhelper.ensure_lab_points_column()  # Make sure lab_points column exists
 
 # Login required decorator
 def login_required(f):
@@ -282,8 +283,11 @@ def admin_dashboard():
     purposes_labels = [purpose[0] for purpose in purposes_data]
     purposes_counts = [purpose[1] for purpose in purposes_data]
     
-    # Get all students for the leaderboard
-    students = dbhelper.get_all_students()
+    # Get leaderboard data
+    leaderboard_students = dbhelper.get_sit_in_leaderboard()
+    
+    # Debug: print leaderboard data to console
+    print("LEADERBOARD DATA:", leaderboard_students)
     
     # Get resource status
     resources_enabled = dbhelper.get_resources_enabled()
@@ -294,7 +298,7 @@ def admin_dashboard():
                          total_sit_in=total_sit_in,
                          purposes_labels=purposes_labels,
                          purposes_data=purposes_counts,
-                         students=students,
+                         students=leaderboard_students,
                          resources_enabled=resources_enabled)
 
 # Announcement route
@@ -394,21 +398,19 @@ def sitinform(idno):
         student = dbhelper.get_user_by_id(idno_str)
 
         if student:
-            # Make sure we have all the needed data
-            remaining_sessions = student[8] if len(student) > 8 else 30
-            total_sessions = student[9] if len(student) > 9 else 30
-            
+            # Create student data dictionary from the returned dictionary
             student_data = {
-                "idno": student[0],
-                "lastname": student[1],
-                "fname": student[2],
-                "mname": student[3] if student[3] else "",
-                "course": student[4],
-                "yrlvl": student[5],
-                "email": student[6],
-                "name": f"{student[2]} {student[3] if student[3] else ''} {student[1]}",  # Format: fname mname lastname
-                "remaining_sessions": remaining_sessions,
-                "total_sessions": total_sessions
+                "idno": student['idno'],
+                "lastname": student['lastname'],
+                "fname": student['fname'],
+                "mname": student['mname'] if student['mname'] else "",
+                "course": student['course'],
+                "yrlvl": student['yrlvl'],
+                "email": student['email'],
+                "name": f"{student['fname']} {student['mname'] if student['mname'] else ''} {student['lastname']}",
+                "remaining_sessions": student['remaining_sessions'],
+                "total_sessions": student['total_sessions'],
+                "lab_points": student['lab_points']
             }
             return jsonify(student_data)
         return jsonify({"error": "Student not found."}), 404
@@ -436,14 +438,15 @@ def sessions():
     idno = session['idno']
     # Get the latest user data from database
     user_data = dbhelper.get_user_by_id(idno)
+    sessions_data = dbhelper.get_student_sessions(idno)
     
     if not user_data:
         flash('User data not found.')
         return redirect(url_for('login'))
     
-    # Get the latest remaining and total sessions from database
-    remaining_sessions = user_data[8] if user_data[8] is not None else 30
-    total_sessions = user_data[9] if user_data[9] is not None else 30
+    # Get the latest remaining and total sessions
+    remaining_sessions = sessions_data['remaining_sessions']
+    total_sessions = sessions_data['total_sessions']
     
     # Update session with latest values
     session['remaining_sessions'] = remaining_sessions
@@ -465,7 +468,7 @@ def sessions():
     percentage = (remaining_sessions / total_sessions) * 100 if total_sessions > 0 else 0
     
     # Create sessions data for the template
-    sessions_data = {
+    display_sessions = {
         'remaining': remaining_sessions,
         'total': total_sessions,
         'percentage': percentage
@@ -473,7 +476,7 @@ def sessions():
     
     return render_template('sessions.html', 
                          username=user,
-                         sessions=sessions_data)
+                         sessions=display_sessions)
 
 # History route
 @app.route('/history')
@@ -523,7 +526,7 @@ def process_sit_in():
         dbhelper.initialize_student_sessions(idno)
         
         student_info = dbhelper.get_student_sessions(idno)
-        if not student_info or (student_info and student_info[1] <= 0):
+        if not student_info or student_info['remaining_sessions'] <= 0:
             return jsonify({"error": "Student has no remaining sessions"}), 400
         
         dbhelper.update_sit_in_status(idno, purpose, laboratory)
@@ -532,9 +535,8 @@ def process_sit_in():
             # Get current values
             student_info = dbhelper.get_student_sessions(idno)
             if student_info:
-                _, remaining_sessions, total_sessions = student_info
-                session['remaining_sessions'] = remaining_sessions
-                session['total_sessions'] = total_sessions
+                session['remaining_sessions'] = student_info['remaining_sessions']
+                session['total_sessions'] = student_info['total_sessions']
         
         return jsonify({"success": True})
     except Exception as e:
@@ -639,22 +641,49 @@ def submit_feedback():
 
 # Add Lab Points route
 @app.route('/add_lab_points', methods=['POST'])
+@admin_required
 def add_lab_points():
-    if "username" not in session:
-        return jsonify({"success": False, "message": "Not authorized"}), 401
-    
-    data = request.get_json()
-    idno = data.get('idno')
-    
-    if not idno:
-        return jsonify({"success": False, "message": "Student ID is required"}), 400
-    
     try:
-        # Add 3 points to the student
-        dbhelper.add_lab_points(idno, 3)
-        return jsonify({"success": True, "message": "Points added successfully"})
+        data = request.get_json()
+        idno = data.get('idno')
+        # Use the points parameter if provided, otherwise default to 1
+        points = data.get('points', 1)
+        
+        if not idno:
+            return jsonify({'success': False, 'message': 'Student ID is required'}), 400
+            
+        # Add the specified points (default is 1)
+        success = dbhelper.add_lab_points(idno, points)
+        
+        if success:
+            return jsonify({'success': True, 'message': f'{points} point(s) added successfully'})
+        return jsonify({'success': False, 'message': 'Failed to add lab points'}), 500
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/convert_points_to_session', methods=['POST'])
+@admin_required
+def convert_points_to_session():
+    try:
+        data = request.get_json()
+        idno = data.get('idno')
+        
+        if not idno:
+            return jsonify({'success': False, 'message': 'Student ID is required'}), 400
+            
+        # Get current points
+        student = dbhelper.get_user_by_id(idno)
+        if not student or student['lab_points'] < 3:
+            return jsonify({'success': False, 'message': 'Insufficient points'}), 400
+            
+        # Deduct 3 points and add a session
+        success = dbhelper.convert_points_to_session(idno)
+        
+        if success:
+            return jsonify({'success': True, 'message': 'Points converted to session successfully'})
+        return jsonify({'success': False, 'message': 'Failed to convert points to session'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/reset_all_sessions', methods=['POST'])
 def reset_all_sessions():
@@ -685,7 +714,7 @@ def get_remaining_sessions(idno):
     try:
         user_data = dbhelper.get_user_by_id(idno)
         if user_data:
-            remaining_sessions = user_data[8] if user_data[8] is not None else 30
+            remaining_sessions = user_data['remaining_sessions'] if user_data['remaining_sessions'] is not None else 30
             return jsonify({
                 'remaining': remaining_sessions
             })
@@ -700,80 +729,63 @@ def ad_reserve():
     if 'username' not in session:
         flash('Please log in as admin to access this page.', 'error')
         return redirect(url_for('login'))
+    
+    # Get both reservations and logs
     reservations = dbhelper.get_pending_reservations()
+    logs = dbhelper.get_reservation_logs()
+    
     return render_template('ad_reserve.html', 
-                         reservations=reservations)
+                         reservations=reservations,
+                         logs=logs)
 
 @app.route('/approve_reservation/<int:reservation_id>', methods=['POST'])
-@admin_required
-def approve_reservation_route(reservation_id):
-    try:
-        # Get reservation details first
-        reservation = dbhelper.get_reservation_by_id(reservation_id)
-        if not reservation:
-            flash('Reservation not found.', 'error')
-            return jsonify({'success': False, 'message': 'Reservation not found'}), 404
-
-        # Approve the reservation
-        success, message = dbhelper.approve_reservation(reservation_id)
-        if not success:
-            flash(f'Error approving reservation: {message}', 'error')
-            return jsonify({'success': False, 'message': message}), 400
-        
-        # Create announcement for the student
-        message = f"Your reservation for Laboratory {reservation['laboratory_id']}, Computer {reservation['computer_no']} has been approved."
-        dbhelper.create_announcement(reservation['student_id'], message, 'success')
-        
-        # Log the action
-        dbhelper.create_reservation_log(
-            reservation_id=reservation_id,
+def approve_reservation(reservation_id):
+    if 'username' not in session:
+        return jsonify({'error': 'Not authorized'}), 401
+    
+    # Get reservation details first
+    reservation = dbhelper.get_reservation_by_id(reservation_id)
+    if not reservation:
+        return jsonify({'error': 'Reservation not found'}), 404
+    
+    success = dbhelper.approve_reservation(reservation_id)
+    if success:
+        # Log the approval action
+        dbhelper.log_reservation_action(
+            student_id=reservation['student_id'],
+            laboratory_id=reservation['laboratory_id'],
+            computer_no=reservation['computer_no'],
             action='approved',
             performed_by=session['username'],
-            notes='Reservation approved by administrator'
+            notes='Reservation approved'
         )
-        
-        flash('Reservation approved successfully!', 'success')
-        return jsonify({'success': True, 'message': 'Reservation approved successfully'})
-    except Exception as e:
-        flash(f'Error approving reservation: {str(e)}', 'error')
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'message': 'Reservation approved successfully'})
+    return jsonify({'error': 'Failed to approve reservation'}), 500
 
 @app.route('/reject_reservation/<int:reservation_id>', methods=['POST'])
-@admin_required
-def reject_reservation_route(reservation_id):
-    try:
-        # Get reservation details first
-        reservation = dbhelper.get_reservation_by_id(reservation_id)
-        if not reservation:
-            flash('Reservation not found.', 'error')
-            return jsonify({'success': False, 'message': 'Reservation not found'}), 404
-
-        # Get rejection reason from request
-        reason = request.json.get('reason', 'No reason provided')
-        
-        # Reject the reservation
-        success, message = dbhelper.reject_reservation(reservation_id)
-        if not success:
-            flash(f'Error rejecting reservation: {message}', 'error')
-            return jsonify({'success': False, 'message': message}), 400
-        
-        # Create announcement for the student
-        message = f"Your reservation for Laboratory {reservation['laboratory_id']}, Computer {reservation['computer_no']} has been rejected. Reason: {reason}"
-        dbhelper.create_announcement(reservation['student_id'], message, 'danger')
-        
-        # Log the action
-        dbhelper.create_reservation_log(
-            reservation_id=reservation_id,
+def reject_reservation(reservation_id):
+    if 'username' not in session:
+        return jsonify({'error': 'Not authorized'}), 401
+    
+    # Get reservation details first
+    reservation = dbhelper.get_reservation_by_id(reservation_id)
+    if not reservation:
+        return jsonify({'error': 'Reservation not found'}), 404
+    
+    reason = request.form.get('reason', 'No reason provided')
+    success = dbhelper.reject_reservation(reservation_id)
+    if success:
+        # Log the rejection action
+        dbhelper.log_reservation_action(
+            student_id=reservation['student_id'],
+            laboratory_id=reservation['laboratory_id'],
+            computer_no=reservation['computer_no'],
             action='rejected',
             performed_by=session['username'],
-            notes=f'Reservation rejected by administrator. Reason: {reason}'
+            notes=f'Rejected: {reason}'
         )
-        
-        flash('Reservation rejected successfully!', 'success')
-        return jsonify({'success': True, 'message': 'Reservation rejected successfully'})
-    except Exception as e:
-        flash(f'Error rejecting reservation: {str(e)}', 'error')
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'message': 'Reservation rejected successfully'})
+    return jsonify({'error': 'Failed to reject reservation'}), 500
 
 @app.route('/reservation_logs')
 @admin_required
@@ -808,14 +820,28 @@ def get_computers_route(lab_id):
 @app.route('/update_computer_status/<int:computer_id>', methods=['POST'])
 @admin_required
 def update_computer_status_route(computer_id):
+    if 'username' not in session:
+        return jsonify({'status': 'error', 'message': 'Not authorized'}), 401
+        
     data = request.get_json()
     is_available = data.get('is_available', False)
+    admin_id = session.get('admin_id')
     
-    success, message = dbhelper.update_computer_status(computer_id, is_available)
+    success, message = dbhelper.update_computer_status(computer_id, is_available, admin_id)
     if success:
         return jsonify({'status': 'success'})
     else:
         return jsonify({'status': 'error', 'message': message}), 400
+
+@app.route('/check_reservation_status')
+@login_required
+def check_reservation_status():
+    student_id = session.get('idno')
+    has_pending = dbhelper.check_user_has_pending_reservation(student_id)
+    return jsonify({
+        'can_reserve': not has_pending,
+        'message': 'You already have a pending or approved reservation' if has_pending else None
+    })
 
 # Student Reservation Routes
 @app.route('/reserve_computer', methods=['POST'])
@@ -880,6 +906,17 @@ def get_computers(lab_id):
     except Exception as e:
         print(f"Error fetching computers: {e}")
         return jsonify([])
+
+@app.route('/reset_all_points', methods=['POST'])
+@admin_required
+def reset_all_points():
+    try:
+        success = dbhelper.reset_all_points()
+        if success:
+            return jsonify({'success': True, 'message': 'All points reset successfully'})
+        return jsonify({'success': False, 'message': 'Failed to reset points'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)

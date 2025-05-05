@@ -268,6 +268,62 @@
       background-color: #2980b9;
       transform: translateY(-2px);
     }
+
+    .flash-message {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 12px 20px;
+      border-radius: 4px;
+      color: white;
+      font-size: 14px;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-width: 250px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.16);
+    }
+
+    .flash-success {
+      background-color: #2ecc71;
+    }
+
+    .close-flash {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 18px;
+      cursor: pointer;
+      margin-left: 10px;
+    }
+
+    .button-container {
+      display: flex;
+      gap: 8px;
+    }
+
+    .add-point-btn {
+      padding: 6px 10px;
+      background-color: #f39c12;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      font-size: 13px;
+    }
+
+    .add-point-btn:hover {
+      background-color: #e67e22;
+      transform: translateY(-2px);
+    }
+
+    .add-point-btn i {
+      margin-right: 4px;
+    }
   </style>
 
   <div class="topnav">
@@ -300,7 +356,8 @@
             <th>Laboratory</th>
             <th>Time In</th>
             <th>Remaining Sessions</th>
-            <th style="text-align: center">Actions</th>
+            <th>Lab Points</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody id="studentTableBody">
@@ -310,23 +367,31 @@
             <td>{{ student.idno }}</td>
             <td>{{ student.name }}</td>
             <td>{{ student.purpose }}</td>
-            <td>{{ student.laboratory }}</td>
+            <td>
+              {% if student.laboratory.startswith('Laboratory') %}
+                {{ student.laboratory }}
+              {% else %}
+                Laboratory {{ student.laboratory }}
+              {% endif %}
+            </td>
             <td>{{ student.time_in }}</td>
             <td>{{ student.remaining_sessions }}</td>
+            <td>{{ student.lab_points }}</td>
             <td>
-              <div class="btn-container">
-                <button class="btn-action" onclick="endSitIn('{{ student.idno }}')">
-                  <i class="fas fa-logout"></i> Log out</button>
-              <button class="add-points-btn" onclick="addLabPoints('{{ student.idno }}')">
-                <i class="fas fa-plus"></i> Add Points
-              </button>
-            </div>
+              <div class="button-container">
+                <button class="end-session-btn" onclick="endSitIn('{{ student.idno }}')">
+                   End Session
+                </button>
+                <button class="add-point-btn" onclick="addLabPoint('{{ student.idno }}')">
+                  <i class="fas fa-plus"></i> Add Point
+                </button>
+              </div>
             </td>
           </tr>
           {% endfor %}
         {% else %}
           <tr>
-            <td colspan="7" style="text-align: center">No students currently sitting in.</td>
+            <td colspan="8" style="text-align: center">No students currently sitting in.</td>
           </tr>
         {% endif %}
         </tbody>
@@ -336,6 +401,44 @@
 
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script>
+    function addLabPoint(studentId) {
+      if (confirm('Add 1 lab point to this student?')) {
+        fetch('/add_lab_points', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ idno: studentId, points: 1 })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            // Show success message
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'flash-message flash-success';
+            messageDiv.innerHTML = `
+              <span>Point added successfully!</span>
+              <button onclick="this.parentElement.remove()" class="close-flash">&times;</button>
+            `;
+            document.body.appendChild(messageDiv);
+            
+            // Auto remove after 3 seconds
+            setTimeout(() => {
+              if (messageDiv.parentNode) {
+                messageDiv.remove();
+              }
+            }, 3000);
+          } else {
+            alert('Failed to add point: ' + data.message);
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('An error occurred. Please try again.');
+        });
+      }
+    }
+
     function endSitIn(idno) {
       if (confirm('Are you sure you want to end this sit-in session?')) {
         // Disable the button to prevent multiple clicks

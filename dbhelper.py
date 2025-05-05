@@ -47,7 +47,8 @@ def get_admin_by_username_and_password(username, password):
         return cursor.fetchone()
 
 def get_user_by_id(idno):
-    with sqlite3.connect("sitinmonitor.db") as conn:
+    try:
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
             SELECT 
@@ -60,11 +61,22 @@ def get_user_by_id(idno):
                 email,
                 avatar_filename,
                 COALESCE(remaining_sessions, 30) as remaining_sessions,
-                COALESCE(total_sessions, 30) as total_sessions
+                COALESCE(total_sessions, 30) as total_sessions,
+                COALESCE(lab_points, 0) as lab_points
             FROM USERS 
-            WHERE idno=?
+            WHERE idno = ?
         """, (idno,))
-        return cursor.fetchone()
+        row = cursor.fetchone()
+        
+        if row:
+            # Return as a tuple for backward compatibility
+            return row
+        return None
+    except Exception as e:
+        print(f"Error getting user by ID: {e}")
+        return None
+    finally:
+        conn.close()
 
 def update_user(idno, lastname, fname, mname, course, yrlvl, email):
     with sqlite3.connect("sitinmonitor.db") as conn:
@@ -114,17 +126,35 @@ def count_registered_students():
     return result
 
 def get_student_sessions(idno):
-    with sqlite3.connect("sitinmonitor.db") as conn:
+    """Get student's remaining and total sessions."""
+    try:
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
             SELECT 
-                idno,
-                remaining_sessions,
-                total_sessions
+                COALESCE(remaining_sessions, 30) as remaining_sessions,
+                COALESCE(total_sessions, 30) as total_sessions
             FROM USERS 
-            WHERE idno=?
+            WHERE idno = ?
         """, (idno,))
-        return cursor.fetchone()
+        result = cursor.fetchone()
+        if result:
+            return {
+                'remaining_sessions': result[0],
+                'total_sessions': result[1]
+            }
+        return {
+            'remaining_sessions': 30,
+            'total_sessions': 30
+        }
+    except Exception as e:
+        print(f"Error getting student sessions: {e}")
+        return {
+            'remaining_sessions': 30,
+            'total_sessions': 30
+        }
+    finally:
+        conn.close()
 
 def get_student_history(idno):
     """
@@ -244,7 +274,8 @@ def get_current_sit_in_students():
                 u.total_sessions,
                 h.purpose,
                 h.laboratory,
-                h.time_in
+                h.time_in,
+                COALESCE(u.lab_points, 0) as lab_points
             FROM USERS u
             JOIN SIT_IN_HISTORY h ON u.idno = h.idno
             WHERE h.date = ? AND h.time_in = h.time_out
@@ -260,15 +291,29 @@ def get_current_sit_in_students():
                 'total_sessions': row[3],
                 'purpose': row[4],
                 'laboratory': row[5],
-                'time_in': row[6]
+                'time_in': row[6],
+                'lab_points': row[7]
             })
         return students
 
 def end_sit_in_session(idno):
-    with sqlite3.connect("sitinmonitor.db") as conn:
+    """End a sit-in session and make the computer available again."""
+    try:
+        conn = get_db_connection()
         cursor = conn.cursor()
         current_date = datetime.now().strftime("%Y-%m-%d")
         current_time = datetime.now().strftime("%H:%M:%S")
+        
+        # Get the laboratory and computer number from the reservation
+        cursor.execute("""
+            SELECT r.laboratory_id, r.computer_no
+            FROM reservations r
+            WHERE r.student_id = ? 
+            AND r.status = 'approved'
+            ORDER BY r.created_at DESC
+            LIMIT 1
+        """, (idno,))
+        reservation = cursor.fetchone()
         
         # Update the session end time
         cursor.execute("""
@@ -277,8 +322,16 @@ def end_sit_in_session(idno):
             WHERE idno = ? AND date = ? AND time_in = time_out
         """, (current_time, idno, current_date))
         
-        # Only decrement if we actually ended a session (i.e., if the update affected a row)
+        # Only decrement if we actually ended a session
         if cursor.rowcount > 0:
+            # Make the computer available again
+            if reservation:
+                cursor.execute("""
+                    UPDATE computers 
+                    SET is_available = 1 
+                    WHERE laboratory_id = ? AND computer_no = ?
+                """, (reservation[0], reservation[1]))
+            
             cursor.execute("""
                 UPDATE USERS 
                 SET remaining_sessions = remaining_sessions - 1 
@@ -286,6 +339,10 @@ def end_sit_in_session(idno):
             """, (idno,))
         
         conn.commit()
+    except Exception as e:
+        print(f"Error ending sit-in session: {e}")
+    finally:
+        conn.close()
 
 def get_sit_in_reports():
     with sqlite3.connect("sitinmonitor.db") as conn:
@@ -394,20 +451,22 @@ def reset_student_sessions(idno):
 
 def get_sit_in_leaderboard():
     """Get students sorted by their sit-in count."""
-    with sqlite3.connect("sitinmonitor.db") as conn:
+    try:
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
             SELECT 
                 u.idno,
                 u.lastname || ', ' || u.fname || ' ' || COALESCE(u.mname, '') as name,
                 u.course,
-                COUNT(h.idno) as sit_in_count
+                COUNT(DISTINCT h.date || '-' || h.purpose) as sit_in_count,
+                COALESCE(u.lab_points, 0) as lab_points
             FROM USERS u
             LEFT JOIN SIT_IN_HISTORY h ON u.idno = h.idno
             WHERE u.username NOT IN (SELECT username FROM ADMIN)
             GROUP BY u.idno, u.lastname, u.fname, u.mname, u.course
-            ORDER BY sit_in_count DESC
-            LIMIT 5
+            ORDER BY lab_points DESC, sit_in_count DESC
+            LIMIT 10
         """)
         
         results = cursor.fetchall()
@@ -417,9 +476,19 @@ def get_sit_in_leaderboard():
                 'idno': str(row[0]),
                 'name': str(row[1]),
                 'course': str(row[2]),
-                'sit_in_count': int(row[3])
+                'sit_in_count': int(row[3]),
+                'lab_points': int(row[4])
             })
+        
+        # Debug: print the SQL result
+        print("LEADERBOARD SQL RESULT:", results)
+        
         return leaderboard
+    except Exception as e:
+        print(f"Error getting leaderboard: {e}")
+        return []
+    finally:
+        conn.close()
 
 def add_feedback(user_id, laboratory, feedback):
     """
@@ -462,16 +531,77 @@ def get_all_feedbacks():
         feedbacks = cursor.fetchall()
         return [dict(row) for row in feedbacks]
 
-def add_lab_points(idno, points):
-    with sqlite3.connect("sitinmonitor.db") as conn:
+def add_lab_points(student_id, points):
+    """Add lab points to a student."""
+    try:
+        conn = get_db_connection()
         cursor = conn.cursor()
+        
+        # First get current points
+        cursor.execute("SELECT lab_points FROM USERS WHERE idno = ?", (student_id,))
+        current_points = cursor.fetchone()
+        
+        if current_points is None:
+            return False
+            
+        new_points = (current_points[0] or 0) + points
+        
+        # Update points
         cursor.execute("""
             UPDATE USERS 
-            SET lab_points = COALESCE(lab_points, 0) + ?
+            SET lab_points = ? 
             WHERE idno = ?
-        """, (points, idno))
+        """, (new_points, student_id))
+        
         conn.commit()
         return True
+    except Exception as e:
+        print(f"Error adding lab points: {e}")
+        return False
+    finally:
+        conn.close()
+
+def convert_points_to_session(student_id):
+    """Convert 3 points to an additional session."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Start transaction
+        cursor.execute("BEGIN TRANSACTION")
+        
+        # Get current points and sessions
+        cursor.execute("""
+            SELECT lab_points, remaining_sessions 
+            FROM USERS 
+            WHERE idno = ?
+        """, (student_id,))
+        result = cursor.fetchone()
+        
+        if not result or result[0] < 3:
+            cursor.execute("ROLLBACK")
+            return False
+            
+        current_points = result[0]
+        current_sessions = result[1] or 0
+        
+        # Update points and sessions
+        cursor.execute("""
+            UPDATE USERS 
+            SET lab_points = ?, 
+                remaining_sessions = ? 
+            WHERE idno = ?
+        """, (current_points - 3, current_sessions + 1, student_id))
+        
+        # Commit transaction
+        cursor.execute("COMMIT")
+        return True
+    except Exception as e:
+        cursor.execute("ROLLBACK")
+        print(f"Error converting points to session: {e}")
+        return False
+    finally:
+        conn.close()
 
 def get_student_lab_points(idno):
     with sqlite3.connect("sitinmonitor.db") as conn:
@@ -676,9 +806,9 @@ def approve_reservation(reservation_id):
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Get reservation details
+        # Get reservation details first
         cursor.execute("""
-            SELECT laboratory_id, computer_no, datetime
+            SELECT laboratory_id, computer_no, student_id
             FROM reservations
             WHERE id = ?
         """, (reservation_id,))
@@ -687,47 +817,34 @@ def approve_reservation(reservation_id):
         if not reservation:
             return False, "Reservation not found"
         
-        # Check if computer is still available
-        cursor.execute("""
-            SELECT is_available 
-            FROM computers 
-            WHERE laboratory_id = ? AND computer_no = ?
-        """, (reservation[0], reservation[1]))
-        computer = cursor.fetchone()
-        
-        if not computer or not computer[0]:
-            return False, "Computer is no longer available"
-            
-        # Update reservation status
+        # Update reservation status to approved
         cursor.execute("""
             UPDATE reservations
             SET status = 'approved'
             WHERE id = ?
         """, (reservation_id,))
         
-        # Update computer availability
+        # Update computer status to unavailable
         cursor.execute("""
             UPDATE computers
             SET is_available = 0
             WHERE laboratory_id = ? AND computer_no = ?
         """, (reservation[0], reservation[1]))
         
-        # Update any other pending reservations for the same computer and time
+        # Create a sit-in session for the student
+        current_date = datetime.now().strftime("%Y-%m-%d")
+        current_time = datetime.now().strftime("%H:%M:%S")
+        
         cursor.execute("""
-            UPDATE reservations
-            SET status = 'rejected'
-            WHERE id != ? 
-            AND laboratory_id = ? 
-            AND computer_no = ? 
-            AND datetime = ?
-            AND status = 'pending'
-        """, (reservation_id, reservation[0], reservation[1], reservation[2]))
+            INSERT INTO SIT_IN_HISTORY (idno, date, time_in, time_out, purpose, laboratory)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (reservation[2], current_date, current_time, current_time, "Reservation", f"Laboratory {reservation[0]}"))
         
         conn.commit()
         return True, "Reservation approved successfully"
     except Exception as e:
         print(f"Error approving reservation: {e}")
-        return False, "Failed to approve reservation"
+        return False, str(e)
     finally:
         conn.close()
 
@@ -798,31 +915,29 @@ def get_computers_by_lab(laboratory_id):
     finally:
         conn.close()
 
-def update_computer_status(computer_id, is_available):
+def update_computer_status(computer_id, is_available, admin_id):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         
         # Get computer details first
         cursor.execute("""
-            SELECT laboratory_id, computer_no
-            FROM computers
-            WHERE id = ?
+            SELECT c.laboratory_id, c.computer_no, c.is_available,
+                   COALESCE(r.student_id, '') as student_id
+            FROM computers c
+            LEFT JOIN reservations r ON 
+                r.laboratory_id = c.laboratory_id 
+                AND r.computer_no = c.computer_no 
+                AND r.status = 'approved'
+                AND r.datetime >= date('now')
+            WHERE c.id = ?
+            ORDER BY r.created_at DESC
+            LIMIT 1
         """, (computer_id,))
         computer = cursor.fetchone()
         
         if not computer:
             return False, "Computer not found"
-        
-        # If marking as unavailable, check for any pending reservations
-        if not is_available:
-            cursor.execute("""
-                UPDATE reservations
-                SET status = 'rejected'
-                WHERE laboratory_id = ?
-                AND computer_no = ?
-                AND status = 'pending'
-            """, (computer[0], computer[1]))
         
         # Update computer status
         cursor.execute("""
@@ -831,11 +946,122 @@ def update_computer_status(computer_id, is_available):
             WHERE id = ?
         """, (1 if is_available else 0, computer_id))
         
+        # Log the action
+        action = "logged_out" if is_available else "logged_in"
+        notes = f"Computer {'made available' if is_available else 'marked as in use'} by admin"
+        
+        # If there was a student using this computer, log it
+        if computer[3]:  # student_id exists
+            if is_available:
+                # End their sit-in session
+                current_date = datetime.now().strftime("%Y-%m-%d")
+                current_time = datetime.now().strftime("%H:%M:%S")
+                
+                cursor.execute("""
+                    UPDATE SIT_IN_HISTORY 
+                    SET time_out = ?
+                    WHERE idno = ? AND date = ? AND time_in = time_out
+                """, (current_time, computer[3], current_date))
+                
+                # Decrement their sessions
+                cursor.execute("""
+                    UPDATE USERS 
+                    SET remaining_sessions = remaining_sessions - 1 
+                    WHERE idno = ? AND remaining_sessions > 0
+                """, (computer[3],))
+                
+                notes = f"Admin ended session for student {computer[3]}"
+        
+        # Log the reservation action
+        cursor.execute("""
+            INSERT INTO reservation_logs 
+            (student_id, laboratory_id, computer_no, action, performed_by, notes, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
+        """, (computer[3] or 'ADMIN', computer[0], computer[1], action, admin_id, notes))
+        
         conn.commit()
         return True, "Computer status updated successfully"
     except Exception as e:
         print(f"Error updating computer status: {e}")
-        return False, "Failed to update computer status"
+        return False, str(e)
+    finally:
+        conn.close()
+
+def check_user_has_pending_reservation(student_id):
+    """Check if a user has any pending or approved reservations."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT COUNT(*) 
+            FROM reservations 
+            WHERE student_id = ? 
+            AND status IN ('pending', 'approved')
+            AND datetime >= date('now')
+        """, (student_id,))
+        
+        count = cursor.fetchone()[0]
+        return count > 0
+    except Exception as e:
+        print(f"Error checking user reservations: {e}")
+        return False
+    finally:
+        conn.close()
+
+def ensure_lab_points_column():
+    """Ensure the lab_points column exists in USERS table."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Check if lab_points column exists
+        cursor.execute("PRAGMA table_info(USERS)")
+        columns = cursor.fetchall()
+        column_names = [column[1] for column in columns]
+        
+        # Add lab_points column if it doesn't exist
+        if 'lab_points' not in column_names:
+            print("Adding lab_points column to USERS table")
+            cursor.execute("ALTER TABLE USERS ADD COLUMN lab_points INTEGER DEFAULT 0")
+            conn.commit()
+            return True
+        return False
+    except Exception as e:
+        print(f"Error ensuring lab_points column: {e}")
+        return False
+    finally:
+        conn.close()
+
+def ensure_reservation_logs_table():
+    """Ensure the reservation_logs table has the correct schema."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Drop the existing table if it exists
+        cursor.execute("DROP TABLE IF EXISTS reservation_logs")
+        
+        # Create the table with the new schema
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS reservation_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                student_id TEXT NOT NULL,
+                laboratory_id INTEGER NOT NULL,
+                computer_no INTEGER NOT NULL,
+                action TEXT NOT NULL,
+                performed_by TEXT NOT NULL,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        conn.commit()
+        print("Reservation logs table recreated successfully")
+        return True
+    except Exception as e:
+        print(f"Error ensuring reservation_logs table: {e}")
+        return False
     finally:
         conn.close()
 
@@ -849,6 +1075,12 @@ def initialize_database():
         with open('schema.sql', 'r') as f:
             schema = f.read()
             cursor.executescript(schema)
+
+        # Ensure lab_points column exists
+        ensure_lab_points_column()
+        
+        # Ensure reservation_logs table has correct schema
+        ensure_reservation_logs_table()
 
         conn.commit()
         print("Database initialized successfully")
@@ -908,35 +1140,48 @@ def create_reservation_log(reservation_id, action, performed_by, notes=None):
     conn.commit()
     conn.close()
 
-def get_reservation_logs(reservation_id=None):
-    """Get reservation logs, optionally filtered by reservation_id."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    if reservation_id:
+def get_reservation_logs():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
         cursor.execute("""
-            SELECT rl.*, r.student_id, r.laboratory_id, r.computer_no,
-                   u.fname || ' ' || u.lastname as performed_by_name
+            SELECT 
+                rl.created_at,
+                rl.student_id,
+                rl.laboratory_id,
+                rl.computer_no,
+                rl.action,
+                rl.performed_by as performed_by_name,
+                rl.notes
             FROM reservation_logs rl
-            JOIN reservations r ON r.id = rl.reservation_id
-            JOIN USERS u ON u.idno = rl.performed_by
-            WHERE rl.reservation_id = ?
-            ORDER BY rl.created_at DESC
-        """, (reservation_id,))
-    else:
-        cursor.execute("""
-            SELECT rl.*, r.student_id, r.laboratory_id, r.computer_no,
-                   u.fname || ' ' || u.lastname as performed_by_name
-            FROM reservation_logs rl
-            JOIN reservations r ON r.id = rl.reservation_id
-            JOIN USERS u ON u.idno = rl.performed_by
             ORDER BY rl.created_at DESC
             LIMIT 100
         """)
-    
-    logs = cursor.fetchall()
-    conn.close()
-    return logs
+        logs = cursor.fetchall()
+        # Convert rows to dictionaries
+        return [dict(row) for row in logs] if logs else []
+    except Exception as e:
+        print(f"Error getting reservation logs: {e}")
+        return []
+    finally:
+        conn.close()
+
+def log_reservation_action(student_id, laboratory_id, computer_no, action, performed_by, notes=None):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO reservation_logs 
+            (student_id, laboratory_id, computer_no, action, performed_by, notes, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
+        """, (student_id, laboratory_id, computer_no, action, performed_by, notes))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error logging reservation action: {e}")
+        return False
+    finally:
+        conn.close()
 
 def get_reservation_by_id(reservation_id):
     """Get a reservation by its ID."""
@@ -974,6 +1219,26 @@ def get_reservation_by_id(reservation_id):
     except Exception as e:
         print(f"Error getting reservation: {e}")
         return None
+    finally:
+        conn.close()
+
+def reset_all_points():
+    """Reset all students' lab points to 0."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            UPDATE USERS 
+            SET lab_points = 0 
+            WHERE username NOT IN (SELECT username FROM ADMIN)
+        """)
+        
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error resetting points: {e}")
+        return False
     finally:
         conn.close()
 

@@ -44,14 +44,17 @@ CREATE TABLE IF NOT EXISTS announcements (
 -- Reservation logs table
 CREATE TABLE IF NOT EXISTS reservation_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    reservation_id INTEGER NOT NULL,
-    action TEXT CHECK(action IN ('created', 'approved', 'rejected')) NOT NULL,
-    performed_by TEXT NOT NULL,
+    student_id TEXT NOT NULL,
+    laboratory_id INTEGER NOT NULL,
+    computer_no INTEGER NOT NULL,
+    action TEXT NOT NULL,  -- 'approved', 'rejected', etc.
+    performed_by TEXT NOT NULL,  -- admin username who performed the action
     notes TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (reservation_id) REFERENCES reservations(id),
-    FOREIGN KEY (performed_by) REFERENCES USERS(idno)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Add an index for lab_points to improve leaderboard query performance
+CREATE INDEX IF NOT EXISTS idx_users_lab_points ON USERS(lab_points);
 
 -- Insert initial laboratory data
 INSERT OR IGNORE INTO laboratories (number) VALUES 

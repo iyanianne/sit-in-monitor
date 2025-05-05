@@ -508,7 +508,13 @@
                             <td>{{ record.time_in }}</td>
                             <td>{{ record.time_out if record.time_out else 'Ongoing' }}</td>
                             <td class="purpose">{{ record.purpose }}</td>
-                            <td class="laboratory">{{ record.laboratory }}</td>
+                            <td>
+                                {% if record.laboratory.startswith('Laboratory') %}
+                                    {{ record.laboratory }}
+                                {% else %}
+                                    Laboratory {{ record.laboratory }}
+                                {% endif %}
+                            </td>
                             <td>
                                 {% if record.time_in == record.time_out %}
                                     <button class="w3-button w3-gray w3-round" disabled title="Session is still ongoing">

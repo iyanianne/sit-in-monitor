@@ -357,6 +357,37 @@
                 margin: 5% auto;
             }
         }
+
+        .disabled {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        .disabled input,
+        .disabled select,
+        .disabled button {
+            background-color: #f5f5f5;
+            cursor: not-allowed;
+        }
+
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+        }
+
+        .alert-warning {
+            color: #856404;
+            background-color: #fff3cd;
+            border-color: #ffeeba;
+        }
+
+        .alert-info {
+            color: #0c5460;
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+        }
     </style>
 </head>
 <body>
@@ -704,6 +735,43 @@
                 alert('Error submitting reservation. Please try again.');
             });
         });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check reservation status on page load
+            checkReservationStatus();
+            
+            // Load laboratories
+            loadLaboratories();
+        });
+
+        function checkReservationStatus() {
+            fetch('/check_reservation_status')
+                .then(response => response.json())
+                .then(data => {
+                    const form = document.getElementById('reservationForm');
+                    const submitBtn = document.querySelector('button[type="submit"]');
+                    
+                    if (!data.can_reserve) {
+                        form.classList.add('disabled');
+                        submitBtn.disabled = true;
+                        showMessage(data.message, 'warning');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking reservation status:', error);
+                });
+        }
+
+        function showMessage(message, type = 'info') {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `alert alert-${type}`;
+            messageDiv.textContent = message;
+            
+            const container = document.querySelector('.container');
+            container.insertBefore(messageDiv, container.firstChild);
+            
+            setTimeout(() => messageDiv.remove(), 5000);
+        }
     </script>
 </body>
 </html>

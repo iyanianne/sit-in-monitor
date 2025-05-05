@@ -145,6 +145,8 @@
       border-radius: 4px;
       font-size: 12px;
       font-weight: 500;
+      display: inline-block;
+      text-transform: capitalize;
     }
 
     .status-pending {
@@ -287,6 +289,88 @@
       background: #e74c3c;
       color: white;
     }
+
+    /* Add some spacing between tables */
+    .table-container + .table-container {
+      margin-top: 30px;
+    }
+
+    /* Style for the logs section */
+    .table-container tbody tr:hover {
+      background-color: rgba(52, 152, 219, 0.05);
+    }
+
+    .table-container td {
+      vertical-align: middle;
+      line-height: 1.4;
+    }
+
+    /* Improve readability of timestamps */
+    .table-container td:first-child {
+      white-space: nowrap;
+      font-family: monospace;
+      font-size: 13px;
+    }
+
+    /* Style for notes column */
+    .table-container td:last-child {
+      max-width: 300px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Tab Styles */
+    .tab-container {
+      margin: 20px 0;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #e0e0e0;
+      padding-bottom: 10px;
+    }
+
+    .tab-button {
+      padding: 10px 20px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 500;
+      color: #666;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    .tab-button:hover {
+      color: #2c3e50;
+    }
+
+    .tab-button.active {
+      color: #3498db;
+    }
+
+    .tab-button.active::after {
+      content: '';
+      position: absolute;
+      bottom: -12px;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background-color: #3498db;
+      border-radius: 3px;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
   </style>
 </head>
 <body>
@@ -321,85 +405,152 @@
   </div>
     
   <div class="dashboard-container">
-    <!-- Computer Management Section -->
-    <div class="computer-management">
-      <div class="filter-section-title">
-        <i class="fas fa-desktop"></i> Computer Management
+    <!-- Tab Navigation -->
+    <div class="tab-container">
+      <div class="tabs">
+        <button class="tab-button active" onclick="showTab('reservations')">
+          <i class="fas fa-calendar-check"></i> Reservations
+        </button>
+        <button class="tab-button" onclick="showTab('computers')">
+          <i class="fas fa-desktop"></i> Computer Management
+        </button>
+        <button class="tab-button" onclick="showTab('logs')">
+          <i class="fas fa-history"></i> Reservation Logs
+        </button>
       </div>
-      <div class="filter-container">
-        <div class="form-group">
-          <label>Select Laboratory:</label>
-          <select id="lab-select" class="select-filter" title="Select Laboratory">
-            <option value="">Choose a laboratory...</option>
-          </select>
+
+      <!-- Reservations Tab -->
+      <div id="reservations" class="tab-content active">
+        <div class="search-container">
+          <input type="text" id="searchReservations" placeholder="Search reservations..." 
+                 onkeyup="searchReservations(this.value)" title="Search reservations">
+        </div>
+        
+        <div class="table-container">
+          <div class="table-header">
+            <i class="fas fa-calendar-check"></i> Reservation Requests
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Student Name</th>
+                <th>Course</th>
+                <th>Laboratory</th>
+                <th>Computer No.</th>
+                <th>Date & Time</th>
+                <th>Purpose</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+            {% if reservations %}
+              {% for reservation in reservations %}
+              <tr>
+                <td>{{ reservation.student_name }}</td>
+                <td>{{ reservation.course }}</td>
+                <td>Laboratory {{ reservation.laboratory }}</td>
+                <td>PC-{{ reservation.computer_no }}</td>
+                <td>{{ reservation.datetime }}</td>
+                <td>{{ reservation.purpose }}</td>
+                <td>
+                  <span class="status-badge status-{{ reservation.status }}">
+                    {{ reservation.status|title }}
+                  </span>
+                </td>
+                <td class="action-buttons">
+                  {% if reservation.status == 'pending' %}
+                    <button class="btn btn-approve" onclick="approveReservation('{{ reservation.id }}')">
+                      <i class="fas fa-check"></i> Approve
+                    </button>
+                    <button class="btn btn-reject" onclick="rejectReservation('{{ reservation.id }}')">
+                      <i class="fas fa-times"></i> Reject
+                    </button>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="8" style="text-align: center; padding: 30px;">
+                  <i class="fas fa-calendar-times" style="font-size: 48px; color: #ccc; margin-bottom: 10px;"></i>
+                  <p>No reservation requests found</p>
+                </td>
+              </tr>
+            {% endif %}
+            </tbody>
+          </table>
         </div>
       </div>
-      
-      <div class="computer-grid" id="computerGrid">
-        <!-- Computers will be populated here -->
-      </div>
-    </div>
 
-    <!-- Reservations Section -->
-    <div class="search-container">
-      <input type="text" id="searchReservations" placeholder="Search reservations..." 
-             onkeyup="searchReservations(this.value)" title="Search reservations">
-    </div>
-    
-    <div class="table-container">
-      <div class="table-header">
-        <i class="fas fa-calendar-check"></i> Reservation Requests
+      <!-- Computer Management Tab -->
+      <div id="computers" class="tab-content">
+        <div class="computer-management">
+          <div class="filter-section-title">
+            <i class="fas fa-desktop"></i> Computer Management
+          </div>
+          <div class="filter-container">
+            <div class="form-group">
+              <label>Select Laboratory:</label>
+              <select id="lab-select" class="select-filter" title="Select Laboratory">
+                <option value="">Choose a laboratory...</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="computer-grid" id="computerGrid">
+            <!-- Computers will be populated here -->
+          </div>
+        </div>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Student Name</th>
-            <th>Course</th>
-            <th>Laboratory</th>
-            <th>Computer No.</th>
-            <th>Date & Time</th>
-            <th>Purpose</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-        {% if reservations %}
-          {% for reservation in reservations %}
-          <tr>
-            <td>{{ reservation.student_name }}</td>
-            <td>{{ reservation.course }}</td>
-            <td>Laboratory {{ reservation.laboratory }}</td>
-            <td>PC-{{ reservation.computer_no }}</td>
-            <td>{{ reservation.datetime }}</td>
-            <td>{{ reservation.purpose }}</td>
-            <td>
-              <span class="status-badge status-{{ reservation.status }}">
-                {{ reservation.status|title }}
-              </span>
-            </td>
-            <td class="action-buttons">
-              {% if reservation.status == 'pending' %}
-                <button class="btn btn-approve" onclick="approveReservation('{{ reservation.id }}')">
-                  <i class="fas fa-check"></i> Approve
-                </button>
-                <button class="btn btn-reject" onclick="rejectReservation('{{ reservation.id }}')">
-                  <i class="fas fa-times"></i> Reject
-                </button>
-              {% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        {% else %}
-          <tr>
-            <td colspan="8" style="text-align: center; padding: 30px;">
-              <i class="fas fa-calendar-times" style="font-size: 48px; color: #ccc; margin-bottom: 10px;"></i>
-              <p>No reservation requests found</p>
-            </td>
-          </tr>
-        {% endif %}
-        </tbody>
-      </table>
+
+      <!-- Logs Tab -->
+      <div id="logs" class="tab-content">
+        <div class="table-container">
+          <div class="table-header">
+            <i class="fas fa-history"></i> Reservation Logs
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Date & Time</th>
+                <th>Student ID</th>
+                <th>Laboratory</th>
+                <th>Computer No.</th>
+                <th>Action</th>
+                <th>Performed By</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+            {% if logs %}
+              {% for log in logs %}
+              <tr>
+                <td>{{ log.created_at }}</td>
+                <td>{{ log.student_id }}</td>
+                <td>Laboratory {{ log.laboratory_id }}</td>
+                <td>PC-{{ log.computer_no }}</td>
+                <td>
+                  <span class="status-badge status-{{ log.action }}">
+                    {{ log.action|title }}
+                  </span>
+                </td>
+                <td>{{ log.performed_by_name }}</td>
+                <td>{{ log.notes }}</td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="7" style="text-align: center; padding: 30px;">
+                  <i class="fas fa-history" style="font-size: 48px; color: #ccc; margin-bottom: 10px;"></i>
+                  <p>No reservation logs found</p>
+                </td>
+              </tr>
+            {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -547,6 +698,25 @@
         });
       }
     });
+
+    // Tab functionality
+    function showTab(tabId) {
+      // Hide all tab contents
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      
+      // Deactivate all tab buttons
+      document.querySelectorAll('.tab-button').forEach(button => {
+        button.classList.remove('active');
+      });
+      
+      // Show selected tab content
+      document.getElementById(tabId).classList.add('active');
+      
+      // Activate selected tab button
+      document.querySelector(`button[onclick="showTab('${tabId}')"]`).classList.add('active');
+    }
   </script>
 </body>
 </html>

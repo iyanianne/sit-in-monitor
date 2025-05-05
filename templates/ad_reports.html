@@ -346,7 +346,13 @@
             <td>{{ report.time_out }}</td>
             <td>{{ report.duration }}</td>
             <td>{{ report.purpose }}</td>
-            <td>Laboratory {{ report.laboratory }}</td>
+            <td>
+              {% if report.laboratory.startswith('Laboratory') %}
+                {{ report.laboratory }}
+              {% else %}
+                Laboratory {{ report.laboratory }}
+              {% endif %}
+            </td>
             <td>{{ report.remaining_sessions }}/{{ report.total_sessions }}</td>
           </tr>
           {% endfor %}

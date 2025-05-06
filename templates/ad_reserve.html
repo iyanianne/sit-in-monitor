@@ -290,6 +290,25 @@
       color: white;
     }
 
+    /* Form Controls for Lab Schedule */
+    .form-control {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    .btn-primary {
+      background-color: #3498db;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background-color: #2980b9;
+    }
+
     /* Add some spacing between tables */
     .table-container + .table-container {
       margin-top: 30px;
@@ -308,7 +327,7 @@
     /* Improve readability of timestamps */
     .table-container td:first-child {
       white-space: nowrap;
-      font-family: monospace;
+      font-family: 'Inter';
       font-size: 13px;
     }
 
@@ -414,6 +433,9 @@
         <button class="tab-button" onclick="showTab('computers')">
           <i class="fas fa-desktop"></i> Computer Management
         </button>
+        <button class="tab-button" onclick="showTab('labschedule')">
+          <i class="fas fa-clock"></i> Lab Schedule
+        </button>
         <button class="tab-button" onclick="showTab('logs')">
           <i class="fas fa-history"></i> Reservation Logs
         </button>
@@ -428,8 +450,29 @@
         
         <div class="table-container">
           <div class="table-header">
-            <i class="fas fa-calendar-check"></i> Reservation Requests
+            <i class="fas fa-calendar-check"></i> All Reservation Requests
           </div>
+          
+          <!-- Status Filter -->
+          <div style="padding: 15px; display: flex; align-items: center; background-color: #f8f9fa; border-bottom: 1px solid #e0e0e0;">
+            <label for="statusFilter" style="margin-right: 10px; font-weight: 500;">Filter by Status:</label>
+            <select id="statusFilter" class="form-control" style="width: 200px; margin-right: 20px;" onchange="filterReservationsByStatus()">
+              <option value="all">All Reservations</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+            
+            <label for="sortOptions" style="margin-right: 10px; font-weight: 500;">Sort by:</label>
+            <select id="sortOptions" class="form-control" style="width: 200px;" onchange="sortReservations()">
+              <option value="date-desc">Date (Newest First)</option>
+              <option value="date-asc">Date (Oldest First)</option>
+              <option value="student">Student Name</option>
+              <option value="laboratory">Laboratory</option>
+              <option value="status">Status</option>
+            </select>
+          </div>
+          
           <table>
             <thead>
               <tr>
@@ -449,7 +492,25 @@
               <tr>
                 <td>{{ reservation.student_name }}</td>
                 <td>{{ reservation.course }}</td>
-                <td>Laboratory {{ reservation.laboratory }}</td>
+                <td>
+                  {% set lab_numbers = {
+                    '0': '517', 
+                    '1': '524', 
+                    '2': '526', 
+                    '3': '528', 
+                    '4': '530', 
+                    '5': '542', 
+                    '6': '544',
+                    0: '517', 
+                    1: '524', 
+                    2: '526', 
+                    3: '528', 
+                    4: '530', 
+                    5: '542', 
+                    6: '544'
+                  } %}
+                  Laboratory {{ lab_numbers[reservation.laboratory]|default(reservation.laboratory) }}
+                </td>
                 <td>PC-{{ reservation.computer_no }}</td>
                 <td>{{ reservation.datetime }}</td>
                 <td>{{ reservation.purpose }}</td>
@@ -504,6 +565,103 @@
         </div>
       </div>
 
+      <!-- Laboratory Schedule Management Tab -->
+      <div id="labschedule" class="tab-content">
+        <div class="table-container">
+          <div class="table-header">
+            <i class="fas fa-clock"></i> Laboratory Schedule Management
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Laboratory</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>517</td>
+                <td id="status-517">
+                  <span class="status-badge status-available">Available</span>
+                </td>
+                <td>
+                  <button onclick="toggleLabStatus('517')" class="btn btn-primary">
+                    <i class="fas fa-toggle-on"></i> Disable
+                  </button>
+                </td>
+              </tr>
+              <tr>
+                <td>524</td>
+                <td id="status-524">
+                  <span class="status-badge status-available">Available</span>
+                </td>
+                <td>
+                  <button onclick="toggleLabStatus('524')" class="btn btn-primary">
+                    <i class="fas fa-toggle-on"></i> Disable
+                  </button>
+                </td>
+              </tr>
+              <tr>
+                <td>526</td>
+                <td id="status-526">
+                  <span class="status-badge status-available">Available</span>
+                </td>
+                <td>
+                  <button onclick="toggleLabStatus('526')" class="btn btn-primary">
+                    <i class="fas fa-toggle-on"></i> Disable
+                  </button>
+                </td>
+              </tr>
+              <tr>
+                <td>528</td>
+                <td id="status-528">
+                  <span class="status-badge status-available">Available</span>
+                </td>
+                <td>
+                  <button onclick="toggleLabStatus('528')" class="btn btn-primary">
+                    <i class="fas fa-toggle-on"></i> Disable
+                  </button>
+                </td>
+              </tr>
+              <tr>
+                <td>530</td>
+                <td id="status-530">
+                  <span class="status-badge status-available">Available</span>
+                </td>
+                <td>
+                  <button onclick="toggleLabStatus('530')" class="btn btn-primary">
+                    <i class="fas fa-toggle-on"></i> Disable
+                  </button>
+                </td>
+              </tr>
+              <tr>
+                <td>542</td>
+                <td id="status-542">
+                  <span class="status-badge status-available">Available</span>
+                </td>
+                <td>
+                  <button onclick="toggleLabStatus('542')" class="btn btn-primary">
+                    <i class="fas fa-toggle-on"></i> Disable
+                  </button>
+                </td>
+              </tr>
+              <tr>
+                <td>544</td>
+                <td id="status-544">
+                  <span class="status-badge status-available">Available</span>
+                </td>
+                <td>
+                  <button onclick="toggleLabStatus('544')" class="btn btn-primary">
+                    <i class="fas fa-toggle-on"></i> Disable
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- Logs Tab -->
       <div id="logs" class="tab-content">
         <div class="table-container">
@@ -528,7 +686,25 @@
               <tr>
                 <td>{{ log.created_at }}</td>
                 <td>{{ log.student_id }}</td>
-                <td>Laboratory {{ log.laboratory_id }}</td>
+                <td>
+                  {% set lab_numbers = {
+                    '0': '517', 
+                    '1': '524', 
+                    '2': '526', 
+                    '3': '528', 
+                    '4': '530', 
+                    '5': '542', 
+                    '6': '544',
+                    0: '517', 
+                    1: '524', 
+                    2: '526', 
+                    3: '528', 
+                    4: '530', 
+                    5: '542', 
+                    6: '544'
+                  } %}
+                  Laboratory {{ lab_numbers[log.laboratory_id]|default(log.laboratory_id) }}
+                </td>
                 <td>PC-{{ log.computer_no }}</td>
                 <td>
                   <span class="status-badge status-{{ log.action }}">
@@ -629,7 +805,7 @@
       });
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
       // Fetch laboratories for the dropdown
       fetch('/api/laboratories')
         .then(response => response.json())
@@ -644,12 +820,27 @@
         });
 
       // Handle laboratory selection
-      document.getElementById('lab-select').addEventListener('change', function() {
+      document.getElementById('lab-select').addEventListener('change', function () {
         const labId = this.value;
-        if (labId) {
-          fetchComputers(labId);
+        const computerGrid = document.getElementById('computerGrid');
+        
+        if (!labId) {
+            computerGrid.innerHTML = '<p style="text-align: center;">Please select a laboratory</p>';
+            return;
+        }
+        
+        const labStatusElem = document.getElementById(`status-${labId}`);
+        const statusBadge = labStatusElem?.querySelector('.status-badge');
+        const isLabUnavailable = statusBadge?.textContent.trim() === 'Unavailable';
+
+        if (isLabUnavailable) {
+            computerGrid.innerHTML = '<p style="text-align: center; color: #e74c3c;">Laboratory is currently unavailable</p>';
+            computerGrid.style.pointerEvents = 'none';
+            computerGrid.style.opacity = '0.5';
         } else {
-          document.getElementById('computerGrid').innerHTML = '';
+            fetchComputers(labId);
+            computerGrid.style.pointerEvents = 'auto';
+            computerGrid.style.opacity = '1';
         }
       });
 
@@ -683,19 +874,18 @@
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            is_available: !currentStatus
-          })
+            is_available: !currentStatus,
+          }),
         })
-        .then(response => response.json())
-        .then(data => {
-          if (data.status === 'success') {
-            // Refresh the computer grid
-            const labId = document.getElementById('lab-select').value;
-            fetchComputers(labId);
-          } else {
-            alert('Error updating computer status: ' + data.message);
-          }
-        });
+          .then(response => response.json())
+          .then(data => {
+            if (data.status === 'success') {
+              const labId = document.getElementById('lab-select').value;
+              fetchComputers(labId);
+            } else {
+              alert('Error updating computer status: ' + data.message);
+            }
+          });
       }
     });
 
@@ -717,6 +907,190 @@
       // Activate selected tab button
       document.querySelector(`button[onclick="showTab('${tabId}')"]`).classList.add('active');
     }
+
+    // Lab Schedule Management Functions
+    function toggleLabStatus(labNumber) {
+      const statusElem = document.getElementById(`status-${labNumber}`);
+      const buttonElem = document.querySelector(`button[onclick="toggleLabStatus('${labNumber}')"]`);
+      
+      // Get current lab statuses
+      let labStatuses = JSON.parse(localStorage.getItem('laboratoryStatuses')) || {};
+      
+      // Check current status (default to available if not set)
+      const currentStatus = labStatuses[labNumber] || { available: true };
+      const isCurrentlyAvailable = currentStatus.available;
+      
+      // Toggle the status
+      const newStatus = {
+        labNumber: labNumber,
+        available: !isCurrentlyAvailable,
+        className: isCurrentlyAvailable ? 'Class in Session' : '',
+        timeSlot: ''
+      };
+      
+      // Update the status badge
+      statusElem.innerHTML = `
+        <span class="status-badge ${newStatus.available ? 'status-available' : 'status-unavailable'}">
+          ${newStatus.available ? 'Available' : 'Unavailable'}
+        </span>
+      `;
+      
+      // Update button text and icon
+      buttonElem.innerHTML = `
+        <i class="fas fa-toggle-${newStatus.available ? 'on' : 'off'}"></i> 
+        ${newStatus.available ? 'Disable' : 'Enable'}
+      `;
+      
+      // Save to localStorage
+      saveLaboratoryStatus(newStatus);
+      
+      // Show notification
+      showFlashMessage(`Laboratory ${labNumber} ${newStatus.available ? 'enabled' : 'disabled'} successfully!`);
+      
+      // Update API endpoint to save status to database
+      fetch('/update_lab_status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newStatus)
+      })
+      .then(response => response.json())
+      .catch(error => {
+        console.error('Error updating lab status:', error);
+      });
+    }
+    
+    function saveLaboratoryStatus(labStatus) {
+      // Get existing lab statuses from localStorage
+      let labStatuses = JSON.parse(localStorage.getItem('laboratoryStatuses')) || {};
+      
+      // Update the status for this lab
+      labStatuses[labStatus.labNumber] = labStatus;
+      
+      // Save back to localStorage
+      localStorage.setItem('laboratoryStatuses', JSON.stringify(labStatuses));
+    }
+    
+    function loadLaboratoryStatuses() {
+      // Load all lab statuses from localStorage
+      const labStatuses = JSON.parse(localStorage.getItem('laboratoryStatuses')) || {};
+      
+      // Update UI for each lab
+      Object.keys(labStatuses).forEach(labNumber => {
+        const status = labStatuses[labNumber];
+        const statusElem = document.getElementById(`status-${labNumber}`);
+        const buttonElem = document.querySelector(`button[onclick="toggleLabStatus('${labNumber}')"]`);
+        
+        if (statusElem && buttonElem) {
+          // Update status badge
+          statusElem.innerHTML = `
+            <span class="status-badge ${status.available ? 'status-available' : 'status-unavailable'}">
+              ${status.available ? 'Available' : 'Unavailable'}
+            </span>
+          `;
+          
+          // Update button text
+          buttonElem.innerHTML = `
+            <i class="fas fa-toggle-${status.available ? 'on' : 'off'}"></i> 
+            ${status.available ? 'Disable' : 'Enable'}
+          `;
+        }
+      });
+      
+      // Also initialize buttons for labs not in storage
+      const defaultLabs = ['524', '526', '528', '530', '542', '544'];
+      defaultLabs.forEach(labNumber => {
+        if (!labStatuses[labNumber]) {
+          const buttonElem = document.querySelector(`button[onclick="toggleLabStatus('${labNumber}')"]`);
+          if (buttonElem) {
+            buttonElem.innerHTML = `<i class="fas fa-toggle-on"></i> Disable`;
+          }
+        }
+      });
+    }
+
+    function filterReservationsByStatus() {
+      const statusFilter = document.getElementById('statusFilter').value;
+      const rows = document.querySelectorAll('tbody tr');
+      
+      rows.forEach(row => {
+        const statusCell = row.querySelector('td:nth-child(7)');
+        if (!statusCell) return; // Skip if no status cell (e.g., "No reservations" row)
+        
+        const statusBadge = statusCell.querySelector('.status-badge');
+        if (!statusBadge) return;
+        
+        // Extract the status class from the badge (e.g., 'status-pending' -> 'pending')
+        const statusClass = Array.from(statusBadge.classList)
+          .find(cls => cls.startsWith('status-'))
+          ?.replace('status-', '') || '';
+        
+        if (statusFilter === 'all' || statusFilter === statusClass) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    }
+
+    function sortReservations() {
+      const sortOption = document.getElementById('sortOptions').value;
+      const tbody = document.querySelector('tbody');
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      
+      // Skip the "No reservations" row if present
+      const dataRows = rows.filter(row => row.cells && row.cells.length > 1);
+      
+      if (dataRows.length === 0) return;
+      
+      dataRows.sort((rowA, rowB) => {
+        switch (sortOption) {
+          case 'date-desc':
+            // Sort by date, newest first (column 4)
+            const dateA = new Date(rowA.cells[4].textContent.trim());
+            const dateB = new Date(rowB.cells[4].textContent.trim());
+            return dateB - dateA;
+            
+          case 'date-asc':
+            // Sort by date, oldest first (column 4)
+            const dateAsc_A = new Date(rowA.cells[4].textContent.trim());
+            const dateAsc_B = new Date(rowB.cells[4].textContent.trim());
+            return dateAsc_A - dateAsc_B;
+            
+          case 'student':
+            // Sort by student name (column 0)
+            return rowA.cells[0].textContent.localeCompare(rowB.cells[0].textContent);
+            
+          case 'laboratory':
+            // Sort by laboratory (column 2)
+            return rowA.cells[2].textContent.localeCompare(rowB.cells[2].textContent);
+            
+          case 'status':
+            // Sort by status (column 6)
+            return rowA.cells[6].textContent.localeCompare(rowB.cells[6].textContent);
+            
+          default:
+            return 0;
+        }
+      });
+      
+      // Remove all rows and append in sorted order
+      rows.forEach(row => row.remove());
+      dataRows.forEach(row => tbody.appendChild(row));
+      
+      // Apply current filter after sorting
+      filterReservationsByStatus();
+    }
+
+    window.onload = function() {
+      // Set initial filter to show all requests by default
+      document.getElementById('statusFilter').value = 'all';
+      
+      // Sort by newest first on page load
+      document.getElementById('sortOptions').value = 'date-desc';
+      sortReservations();
+    };
   </script>
 </body>
 </html>

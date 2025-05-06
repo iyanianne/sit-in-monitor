@@ -593,8 +593,14 @@
   {% block scripts %}
   <script>
   function loadAnnouncements() {
+      // First try to fetch from server
       fetch('/api/announcements')
-          .then(response => response.json())
+          .then(response => {
+              if (!response.ok) {
+                  throw new Error('Network response was not ok');
+              }
+              return response.json();
+          })
           .then(announcements => {
               const container = document.getElementById('announcements-container');
               if (announcements.length === 0) {
@@ -602,14 +608,11 @@
                   return;
               }
               
-              container.innerHTML = announcements.map(announcement => `
-                  <div class="alert alert-${announcement.type} ${announcement.is_read ? 'opacity-75' : ''}" role="alert">
-                      <div class="d-flex justify-content-between align-items-center">
-                          <div>${announcement.message}</div>
-                          <small class="text-muted">${new Date(announcement.created_at).toLocaleString()}</small>
-                      </div>
-                  </div>
-              `).join('');
+              // Save to localStorage first
+              saveAnnouncementsToLocalStorage(announcements);
+              
+              // Then display them
+              displayAnnouncements(announcements);
               
               // Mark unread announcements as read
               announcements.forEach(announcement => {
@@ -623,14 +626,127 @@
                   }
               });
           })
-          .catch(error => console.error('Error loading announcements:', error));
+          .catch(error => {
+              console.error('Error loading announcements from server:', error);
+              // If server fetch fails, try to load from localStorage
+              loadAnnouncementsFromLocalStorage();
+          });
   }
 
-  // Load announcements when page loads
-  document.addEventListener('DOMContentLoaded', loadAnnouncements);
+  function displayAnnouncements(announcements) {
+      const container = document.querySelector('.an-info');
+      if (!container) return;
+      
+      if (announcements.length === 0) {
+          container.innerHTML = '<p>No announcements available.</p>';
+          return;
+      }
+      
+      let html = '';
+      announcements.forEach(announcement => {
+          html += `
+              <div class="announcement-card">
+                  <h4>${announcement.title || 'Announcement'}</h4>
+                  <p>${announcement.content || announcement.message}</p>
+                  <small>${announcement.date || new Date(announcement.created_at).toLocaleString()}</small>
+              </div>
+          `;
+      });
+      
+      container.innerHTML = html;
+  }
 
-  // Refresh announcements every 30 seconds
-  setInterval(loadAnnouncements, 30000);
+  function saveAnnouncementsToLocalStorage(announcements) {
+      if (!announcements || announcements.length === 0) return;
+      
+      const studentId = "{{ username.idno }}";
+      if (!studentId) return;
+      
+      // Convert announcements to a standard format
+      const formattedAnnouncements = announcements.map(announcement => {
+          return {
+              title: announcement.title || 'Announcement',
+              content: announcement.content || announcement.message,
+              date: announcement.date || new Date(announcement.created_at).toLocaleString()
+          };
+      });
+      
+      // Save to localStorage
+      localStorage.setItem(`announcements_${studentId}`, JSON.stringify(formattedAnnouncements));
+  }
+
+  function loadAnnouncementsFromLocalStorage() {
+      const studentId = "{{ username.idno }}";
+      if (!studentId) return;
+      
+      // Try to get user-specific announcements
+      const storedData = localStorage.getItem(`announcements_${studentId}`);
+      // Try to get global announcements from admin
+      const globalData = localStorage.getItem('global_announcements');
+      
+      if (!storedData && !globalData) {
+          // If no stored announcements, display empty message
+          const container = document.querySelector('.an-info');
+          if (container) {
+              container.innerHTML = '<p>No announcements available.</p>';
+          }
+          return;
+      }
+      
+      try {
+          // Parse and combine both types of announcements
+          let announcements = [];
+          
+          if (storedData) {
+              announcements = announcements.concat(JSON.parse(storedData));
+          }
+          
+          if (globalData) {
+              announcements = announcements.concat(JSON.parse(globalData));
+          }
+          
+          // Sort by date in descending order (newest first)
+          announcements.sort((a, b) => {
+              const dateA = new Date(a.date);
+              const dateB = new Date(b.date);
+              return dateB - dateA;
+          });
+          
+          displayAnnouncements(announcements);
+      } catch (e) {
+          console.error('Error parsing announcements from localStorage:', e);
+      }
+  }
+
+  // Check if we already have announcements on the page
+  document.addEventListener('DOMContentLoaded', function() {
+      const container = document.querySelector('.an-info');
+      if (!container) return;
+      
+      // Save any existing announcements in the HTML to localStorage
+      const announcementCards = container.querySelectorAll('.announcement-card');
+      if (announcementCards.length > 0) {
+          const announcements = [];
+          announcementCards.forEach(card => {
+              const title = card.querySelector('h4')?.textContent || 'Announcement';
+              const content = card.querySelector('p')?.textContent || '';
+              const date = card.querySelector('small')?.textContent || new Date().toLocaleString();
+              
+              announcements.push({ title, content, date });
+          });
+          
+          saveAnnouncementsToLocalStorage(announcements);
+      } else {
+          // If no announcements on the page, try to load from localStorage
+          loadAnnouncementsFromLocalStorage();
+      }
+      
+      // Then try to load from server
+      loadAnnouncements();
+  });
+
+  // Refresh announcements every 60 seconds
+  setInterval(loadAnnouncements, 60000);
   </script>
   {% endblock %}
 </body>

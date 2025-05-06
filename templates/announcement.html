@@ -329,6 +329,49 @@
         font-size: 18px;
       }
     }
+
+    /* Add styles for refresh button and loading indicator */
+    .refresh-btn {
+      background-color: #2c3e50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 12px;
+      margin-left: 15px;
+      cursor: pointer;
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      transition: all 0.3s ease;
+    }
+    
+    .refresh-btn i {
+      margin-right: 6px;
+    }
+    
+    .refresh-btn:hover {
+      background-color: #34495e;
+      transform: translateY(-2px);
+    }
+    
+    .loading-announcements {
+      text-align: center;
+      padding: 40px 20px;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    
+    .loading-announcements i {
+      font-size: 30px;
+      color: #3498db;
+      margin-bottom: 15px;
+    }
+    
+    .loading-announcements p {
+      color: #7f8c8d;
+      font-size: 16px;
+    }
   </style>
 </head>
 <body>
@@ -411,6 +454,194 @@
       document.getElementById("mainContent").classList.add("sidebar-closed");
       document.getElementById("topNav").classList.add("sidebar-closed");
       document.getElementById("announcementContainer").classList.add("sidebar-closed");
+    }
+
+    // Save announcements to localStorage when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      saveAnnouncementsToLocalStorage();
+    });
+
+    // Function to save announcements to localStorage
+    function saveAnnouncementsToLocalStorage() {
+      const studentId = "{{ username.idno }}";
+      if (!studentId) return;
+      
+      // Check if there are any announcements on the page
+      const announcementItems = document.querySelectorAll('.announcement-item');
+      if (announcementItems.length === 0) {
+        // Check if we already have stored announcements before overwriting
+        if (!localStorage.getItem(`announcements_${studentId}`)) {
+          return;
+        }
+      }
+      
+      // Parse the announcements from the HTML
+      const announcements = [];
+      announcementItems.forEach(item => {
+        const title = item.querySelector('.announcement-title').textContent.trim().replace('', '');
+        const content = item.querySelector('.announcement-content').textContent.trim();
+        const dateText = item.querySelector('.announcement-date').textContent.trim().replace('', '');
+        
+        announcements.push({
+          title: title,
+          content: content,
+          date: dateText
+        });
+      });
+      
+      // Save to localStorage
+      if (announcements.length > 0) {
+        localStorage.setItem(`announcements_${studentId}`, JSON.stringify(announcements));
+      }
+    }
+
+    // Function to load announcements from localStorage
+    function loadAnnouncementsFromLocalStorage() {
+      const studentId = "{{ username.idno }}";
+      if (!studentId) return;
+      
+      // Try to get user-specific announcements first
+      const storedData = localStorage.getItem(`announcements_${studentId}`);
+      // Then try to get global announcements from admin
+      const globalData = localStorage.getItem('global_announcements');
+      
+      if (!storedData && !globalData) {
+        return false;
+      }
+      
+      try {
+        // Parse and combine both types of announcements if available
+        let announcements = [];
+        
+        if (storedData) {
+          announcements = announcements.concat(JSON.parse(storedData));
+        }
+        
+        if (globalData) {
+          announcements = announcements.concat(JSON.parse(globalData));
+        }
+        
+        // Sort by date in descending order (newest first)
+        announcements.sort((a, b) => {
+          const dateA = new Date(a.date);
+          const dateB = new Date(b.date);
+          return dateB - dateA;
+        });
+        
+        const container = document.getElementById('announcementContainer');
+        
+        if (announcements.length > 0) {
+          // Create header
+          let html = `
+            <div class="announcement-header">
+              <h2><i class="fas fa-bullhorn"></i> Announcements</h2>
+            </div>
+            <div class="announcement-list">
+          `;
+          
+          // Add each announcement
+          announcements.forEach(announcement => {
+            html += `
+              <div class="announcement-item">
+                <div class="announcement-title">
+                  <i class="fas fa-bullhorn"></i>
+                  ${announcement.title}
+                </div>
+                <div class="announcement-content">
+                  ${announcement.content}
+                </div>
+                <div class="announcement-meta">
+                  <div class="announcement-date">
+                    <i class="far fa-calendar-alt"></i>
+                    ${announcement.date}
+                  </div>
+                </div>
+              </div>
+            `;
+          });
+          
+          html += '</div>';
+          
+          // Insert into container after clearing previous content
+          const headerElement = container.querySelector('.announcement-header');
+          if (headerElement) {
+            // If container already has content, replace everything after the header
+            headerElement.nextElementSibling.remove();
+            headerElement.insertAdjacentHTML('afterend', html.split('</div>')[1]);
+          } else {
+            // Otherwise replace the entire content
+            container.innerHTML = html;
+          }
+          
+          return true;
+        }
+      } catch (e) {
+        console.error('Error parsing announcements:', e);
+      }
+      
+      return false;
+    }
+
+    // Check if we need to load from localStorage when the page initially has no announcements
+    document.addEventListener('DOMContentLoaded', function() {
+      const noAnnouncements = document.querySelector('.no-announcements');
+      if (noAnnouncements) {
+        loadAnnouncementsFromLocalStorage();
+      }
+    });
+
+    // Add a refresh button to reload announcements
+    document.addEventListener('DOMContentLoaded', function() {
+      const header = document.querySelector('.announcement-header');
+      if (header) {
+        const refreshButton = document.createElement('button');
+        refreshButton.className = 'refresh-btn';
+        refreshButton.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
+        refreshButton.onclick = refreshAnnouncements;
+        header.appendChild(refreshButton);
+      }
+    });
+
+    function refreshAnnouncements() {
+      const container = document.getElementById('announcementContainer');
+      const loadingHTML = `
+        <div class="announcement-header">
+          <h2><i class="fas fa-bullhorn"></i> Announcements</h2>
+        </div>
+        <div class="loading-announcements">
+          <i class="fas fa-spinner fa-spin"></i>
+          <p>Loading announcements...</p>
+        </div>
+      `;
+      
+      // Show loading indicator
+      container.innerHTML = loadingHTML;
+      
+      // First try to refresh from server
+      fetch(window.location.href)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          window.location.href = '/announcement';
+        })
+        .catch(error => {
+          console.error('Error fetching from server:', error);
+          // If server fetch fails, try to load from localStorage
+          const loaded = loadAnnouncementsFromLocalStorage();
+          
+          if (!loaded) {
+            container.innerHTML = `
+              <div class="announcement-header">
+                <h2><i class="fas fa-bullhorn"></i> Announcements</h2>
+              </div>
+              <div class="no-announcements">
+                <i class="fas fa-bullhorn"></i>
+                <p>No announcements available at the moment.</p>
+              </div>
+            `;
+          }
+        });
     }
   </script>
 </body>

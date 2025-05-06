@@ -297,14 +297,21 @@
 
         .alert {
             padding: 15px;
-            border-radius: 4px;
             margin-bottom: 20px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+        }
+
+        .alert-warning {
+            color: #856404;
+            background-color: #fff3cd;
+            border-color: #ffeeba;
         }
 
         .alert-info {
-            background-color: #d1ecf1;
-            border: 1px solid #bee5eb;
             color: #0c5460;
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
         }
 
         /* Modal Styles */
@@ -370,23 +377,105 @@
             cursor: not-allowed;
         }
 
-        .alert {
-            padding: 15px;
-            margin-bottom: 20px;
-            border: 1px solid transparent;
+        /* Styling for unavailable labs */
+        select option:disabled {
+            color: #e74c3c !important;
+            font-style: italic;
+            background-color: #f8f9fa;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
             border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            display: inline-block;
+            text-transform: capitalize;
         }
 
-        .alert-warning {
-            color: #856404;
-            background-color: #fff3cd;
-            border-color: #ffeeba;
+        .status-pending {
+            background-color: #ffd700;
+            color: #000;
         }
 
-        .alert-info {
-            color: #0c5460;
-            background-color: #d1ecf1;
-            border-color: #bee5eb;
+        .status-approved {
+            background-color: #2ecc71;
+            color: white;
+        }
+
+        .status-rejected {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            white-space: nowrap;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background-color: #2c3e50;
+            color: white;
+            font-weight: 500;
+        }
+
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .reservation-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .search-container {
+            position: relative;
+            width: 300px;
+        }
+
+        .search-container input {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .search-container input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        .btn-refresh {
+            background-color: #2c3e50;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-refresh:hover {
+            background-color: #34495e;
+            transform: translateY(-2px);
         }
     </style>
 </head>
@@ -447,18 +536,18 @@
                         <label class="form-label" for="purpose">Lab Purpose</label>
                         <select class="form-control" id="purpose" name="purpose" required title="Select Lab Purpose">
                             <option value="">Select Purpose</option>
-                            <option value="C">C Programming</option>
-                            <option value="Java">Java Programming</option>
-                            <option value="Python">Python Programming</option>
-                            <option value="C#">C# programming</option>
+                            <option value="C Programming">C Programming</option>
+                            <option value="Java Programming">Java Programming</option>
+                            <option value="Python Programming">Python Programming</option>
+                            <option value="C# programming">C# programming</option>
                             <option value="Database">Database</option>
-                            <option value="Digilog">Digital Logic & Design</option>
-                            <option value="IoT">Embedded Systems & IoT</option>
-                            <option value="Sysarch">System Integration & Architecture</option>
-                            <option value="ComApp">Computer Application</option>
-                            <option value="PM">project Management</option>
-                            <option value="ITtrends">IT Trends</option>
-                            <option value="Techno">Technopreneurship</option>
+                            <option value="Digital Logic & Design">Digital Logic & Design</option>
+                            <option value="Embedded Systems & IoT">Embedded Systems & IoT</option>
+                            <option value="System Integration & Architecture">System Integration & Architecture</option>
+                            <option value="Computer Application">Computer Application</option>
+                            <option value="Project Management">Project Management</option>
+                            <option value="IT Trends">IT Trends</option>
+                            <option value="Technopreneurship">Technopreneurship</option>
                             <option value="Capstone">Capstone</option>
                         </select>                    
                     </div>
@@ -468,13 +557,6 @@
                         <label class="form-label" for="laboratory">Select Laboratory</label>
                         <select class="form-control" id="laboratory" name="laboratory" required title="Select Laboratory">
                             <option value="">Choose a laboratory...</option>
-                                <option value="524">524</option>
-                                <option value="526">526</option>
-                                <option value="528">528</option>
-                                <option value="530">530</option>
-                                <option value="542">542</option>
-                                <option value="544">544</option>
-                                <option value="517">517</option>
                         </select>
                     </div>
 
@@ -531,6 +613,69 @@
                 </div>
             </form>
         </div>
+
+        <!-- Reservation History Container -->
+        <div class="reservation-container">
+            <div class="reservation-header">
+                <h2><i class="fas fa-history"></i> Reservation History</h2>
+            </div>
+
+            <div class="reservation-card">
+                <div class="reservation-controls">
+                    <div class="search-container">
+                        <input type="text" id="searchReservation" placeholder="Search reservations..." onkeyup="searchReservationHistory()">
+                    </div>
+                    <button class="btn-refresh" onclick="refreshReservationHistory()"><i class="fas fa-sync-alt"></i> Refresh</button>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date & Time</th>
+                                <th>Laboratory</th>
+                                <th>Computer</th>
+                                <th>Purpose</th>
+                                <th>Status</th>
+                                <th>Requested On</th>
+                                <th>Rejection Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reservationHistoryTable">
+                            {% if reservation_history %}
+                                {% for reservation in reservation_history %}
+                                <tr>
+                                    <td>{{ reservation.datetime }}</td>
+                                    <td>{{ reservation.laboratory }}</td>
+                                    <td>PC {{ reservation.computer_no }}</td>
+                                    <td>{{ reservation.purpose }}</td>
+                                    <td>
+                                        <span class="status-badge status-{{ reservation.status }}">
+                                            {{ reservation.status }}
+                                        </span>
+                                    </td>
+                                    <td>{{ reservation.created_at }}</td>
+                                    <td>
+                                        {% if reservation.status == 'rejected' %}
+                                            {{ reservation.rejection_reason|default('No reason provided', true) }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="7" style="text-align: center; padding: 30px;">
+                                        <i class="fas fa-calendar-times" style="font-size: 48px; color: #ccc; margin-bottom: 10px;"></i>
+                                        <p>No reservation history found</p>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Scripts -->
@@ -547,6 +692,33 @@
             document.getElementById("mainContent").classList.add("sidebar-closed");
             document.getElementById("topNav").classList.add("sidebar-closed");
         }
+
+        // Format dates for better readability
+        document.addEventListener('DOMContentLoaded', function() {
+            // Format dates in reservation history table
+            const dateElements = document.querySelectorAll('tbody td:first-child, tbody td:last-child');
+            dateElements.forEach(element => {
+                const dateString = element.textContent.trim();
+                if (dateString && dateString.includes('-')) {
+                    try {
+                        // Parse the date
+                        const date = new Date(dateString);
+                        if (!isNaN(date)) {
+                            // Format as more readable date
+                            element.textContent = date.toLocaleString('en-US', {
+                                year: 'numeric', 
+                                month: 'short', 
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            });
+                        }
+                    } catch (e) {
+                        console.log('Error formatting date:', e);
+                    }
+                }
+            });
+        });
 
         // Initialize date picker
         flatpickr("#reservationDate", {
@@ -579,22 +751,43 @@
                 });
         }
 
-        // Fetch laboratories on page load
+        // Fetch laboratories and update dropdown with availability
+        function loadLaboratories() {
         fetch('/api/laboratories')
             .then(response => response.json())
             .then(data => {
                 const labSelect = document.getElementById('laboratory');
                 labSelect.innerHTML = '<option value="">Choose a laboratory...</option>';
+                    
+                    // Get lab statuses from localStorage (set by admin)
+                    const labStatuses = JSON.parse(localStorage.getItem('laboratoryStatuses')) || {};
+                    
                 data.forEach(lab => {
                     const option = document.createElement('option');
                     option.value = lab.id;
-                    option.textContent = `Laboratory ${lab.number}`;
+                        
+                        // Check if lab is available based on admin settings
+                        const labStatus = labStatuses[lab.number] || { available: true };
+                        
+                        // Set the option text with availability status
+                        option.textContent = `Laboratory ${lab.number} ${!labStatus.available ? '(Unavailable)' : ''}`;
+                        
+                        // If lab is unavailable, disable the option
+                        if (!labStatus.available) {
+                            option.disabled = true;
+                            option.style.color = '#e74c3c';
+                            option.innerHTML = `<span>⛔ Laboratory ${lab.number} (Currently Unavailable)</span>`;
+                        } else {
+                            option.innerHTML = `<span>✅ Laboratory ${lab.number} (Available)</span>`;
+                        }
+                        
                     labSelect.appendChild(option);
                 });
             })
             .catch(error => {
                 console.error('Error fetching laboratories:', error);
             });
+        }
 
         // Computer selection modal functions
         function openComputerModal() {
@@ -604,6 +797,12 @@
             
             if (!labId) {
                 alert('Please select a laboratory first');
+                return;
+            }
+            
+            // Check if the selected lab is available (not marked as unavailable in the dropdown)
+            if (laboratory.options[laboratory.selectedIndex].disabled) {
+                alert('This laboratory is currently unavailable for reservations');
                 return;
             }
 
@@ -737,11 +936,23 @@
         });
 
         document.addEventListener('DOMContentLoaded', function() {
+            // Format dates in reservation history table
+            formatDates();
+            
             // Check reservation status on page load
             checkReservationStatus();
             
             // Load laboratories
             loadLaboratories();
+            
+            // Check for lab availability updates
+            refreshLabAvailability();
+            
+            // Set up interval to check for lab availability changes
+            setInterval(refreshLabAvailability, 60000); // Check every minute
+            
+            // Save reservation history to localStorage when it's loaded from server
+            saveReservationHistoryToLocalStorage();
         });
 
         function checkReservationStatus() {
@@ -771,6 +982,203 @@
             container.insertBefore(messageDiv, container.firstChild);
             
             setTimeout(() => messageDiv.remove(), 5000);
+        }
+
+        // Function to refresh lab availability from server and localStorage
+        function refreshLabAvailability() {
+            // Try to get updated lab statuses from server
+            fetch('/api/lab_statuses')
+                .then(response => response.json())
+                .then(data => {
+                    // If we received valid data from server, update localStorage
+                    if (Array.isArray(data) && data.length > 0) {
+                        let labStatuses = {};
+                        data.forEach(status => {
+                            labStatuses[status.labNumber] = status;
+                        });
+                        localStorage.setItem('laboratoryStatuses', JSON.stringify(labStatuses));
+                    }
+                    
+                    // Reload laboratories with new status data
+                    loadLaboratories();
+                })
+                .catch(error => {
+                    console.log('Using locally stored lab statuses');
+                    // Still reload laboratories with local data on error
+                    loadLaboratories();
+                });
+        }
+
+        function searchReservationHistory() {
+            const input = document.getElementById('searchReservation');
+            const filter = input.value.toUpperCase();
+            const table = document.getElementById('reservationHistoryTable');
+            const tr = table.getElementsByTagName('tr');
+
+            for (let i = 0; i < tr.length; i++) {
+                // Skip placeholder row when no history
+                if (tr[i].getElementsByTagName('td').length === 1 && tr[i].getElementsByTagName('td')[0].colSpan === 7) {
+                    continue;
+                }
+
+                let txtValue = '';
+                const td = tr[i].getElementsByTagName('td');
+                for (let j = 0; j < td.length; j++) {
+                    txtValue += td[j].textContent || td[j].innerText;
+                }
+                
+                if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                    tr[i].style.display = '';
+                } else {
+                    tr[i].style.display = 'none';
+                }
+            }
+            
+            // Save the current state to localStorage if not already saved
+            if (filter === '') {
+                saveReservationHistoryToLocalStorage();
+            }
+        }
+
+        function refreshReservationHistory() {
+            // Show loading indicator
+            const table = document.getElementById('reservationHistoryTable');
+            table.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 30px;"><i class="fas fa-spinner fa-spin" style="font-size: 24px; color: #3498db;"></i><p>Refreshing reservation history...</p></td></tr>';
+            
+            // First try to refresh from the server
+            fetch(window.location.href)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    // Refresh the page to get the latest data
+                    window.location.href = '/reservations';
+                })
+                .catch(error => {
+                    console.error('Error fetching from server:', error);
+                    // If server fetch fails, try to load from localStorage
+                    loadReservationHistoryFromLocalStorage();
+                });
+        }
+
+        // Function to load reservation history from localStorage
+        function loadReservationHistoryFromLocalStorage() {
+            const studentId = document.getElementById('idno')?.value;
+            if (!studentId) return;
+            
+            const storedData = localStorage.getItem(`reservation_history_${studentId}`);
+            if (!storedData) {
+                // If no stored data, show empty message
+                const table = document.getElementById('reservationHistoryTable');
+                table.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 30px;"><i class="fas fa-calendar-times" style="font-size: 48px; color: #ccc; margin-bottom: 10px;"></i><p>No reservation history found</p></td></tr>';
+                return;
+            }
+            
+            try {
+                const reservations = JSON.parse(storedData);
+                const table = document.getElementById('reservationHistoryTable');
+                let html = '';
+                
+                reservations.forEach(reservation => {
+                    html += `
+                        <tr>
+                            <td>${reservation.datetime}</td>
+                            <td>${reservation.laboratory}</td>
+                            <td>PC ${reservation.computer_no}</td>
+                            <td>${reservation.purpose}</td>
+                            <td>
+                                <span class="status-badge status-${reservation.status.toLowerCase()}">
+                                    ${reservation.status}
+                                </span>
+                            </td>
+                            <td>${reservation.created_at}</td>
+                            <td>
+                                ${reservation.status.toLowerCase() === 'rejected' ? 
+                                    (reservation.rejection_reason || 'No reason provided') : '-'}
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                if (html) {
+                    table.innerHTML = html;
+                    formatDates(); // Format the dates after loading
+                } else {
+                    table.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 30px;"><i class="fas fa-calendar-times" style="font-size: 48px; color: #ccc; margin-bottom: 10px;"></i><p>No reservation history found</p></td></tr>';
+                }
+            } catch (e) {
+                console.error('Error parsing reservation history:', e);
+                // Show error message
+                const table = document.getElementById('reservationHistoryTable');
+                table.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 30px;"><i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #e74c3c; margin-bottom: 10px;"></i><p>Error loading reservation history</p></td></tr>';
+            }
+        }
+
+        // Extract date formatting to a separate function for reuse
+        function formatDates() {
+            // Format dates in reservation history table
+            const dateElements = document.querySelectorAll('tbody td:first-child, tbody td:nth-child(6)');
+            dateElements.forEach(element => {
+                const dateString = element.textContent.trim();
+                if (dateString && dateString.includes('-')) {
+                    try {
+                        // Parse the date
+                        const date = new Date(dateString);
+                        if (!isNaN(date)) {
+                            // Format as more readable date
+                            element.textContent = date.toLocaleString('en-US', {
+                                year: 'numeric', 
+                                month: 'short', 
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            });
+                        }
+                    } catch (e) {
+                        console.log('Error formatting date:', e);
+                    }
+                }
+            });
+        }
+
+        // Function to save reservation history to localStorage
+        function saveReservationHistoryToLocalStorage() {
+            const studentId = document.getElementById('idno')?.value;
+            if (!studentId) return;
+            
+            // Get the reservation history table rows (skip header row)
+            const table = document.getElementById('reservationHistoryTable');
+            const rows = table.getElementsByTagName('tr');
+            
+            // Check if we have no data (placeholder message) - in this case don't save to localStorage
+            if (rows.length === 1 && rows[0].getElementsByTagName('td')[0]?.colSpan === 7) {
+                return;
+            }
+            
+            // Parse the reservation data from the table rows
+            const reservations = [];
+            for (let i = 0; i < rows.length; i++) {
+                const cells = rows[i].getElementsByTagName('td');
+                if (cells.length >= 7) {
+                    const statusElement = cells[4].querySelector('.status-badge');
+                    const status = statusElement ? statusElement.textContent.trim() : '';
+                    
+                    reservations.push({
+                        datetime: cells[0].textContent.trim(),
+                        laboratory: cells[1].textContent.trim(),
+                        computer_no: cells[2].textContent.trim().replace('PC ', ''),
+                        purpose: cells[3].textContent.trim(),
+                        status: status,
+                        created_at: cells[5].textContent.trim(),
+                        rejection_reason: cells[6].textContent.trim() === '-' ? '' : cells[6].textContent.trim()
+                    });
+                }
+            }
+            
+            // Save to localStorage
+            if (reservations.length > 0) {
+                localStorage.setItem(`reservation_history_${studentId}`, JSON.stringify(reservations));
+            }
         }
     </script>
 </body>

@@ -389,6 +389,26 @@
             background-color: #f8f9fa;
         }
         
+        /* Status badge styles */
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            display: inline-block;
+            text-transform: capitalize;
+        }
+        
+        .status-available {
+            background-color: #2ecc71;
+            color: white;
+        }
+        
+        .status-unavailable {
+            background-color: #e74c3c;
+            color: white;
+        }
+        
         /* Resources container */
         .resources-container {
             flex: 1;
@@ -560,39 +580,22 @@
                     <i class="fas fa-calendar-alt"></i> Laboratory Schedule
                 </div>
                 <div class="schedule-content">
+                    <div class="schedule-controls" style="margin-bottom: 15px; display: flex; align-items: center;">
+                        <label class="toggle-container" style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="checkbox" id="showOccupiedLabs" checked style="margin-right: 8px;">
+                            <span>Show labs with ongoing classes</span>
+                        </label>
+                    </div>
                     <table class="schedule-table">
                         <thead>
                             <tr>
                                 <th>Laboratory</th>
                                 <th>Monday - Saturday</th>
-                                
+                                <th>Status</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <tr>
-                                <td>524</td>
-                                <td>8:00 AM - 5:00 PM</td>
-                            </tr>
-                            <tr>
-                                <td>526</td>
-                                <td>8:00 AM - 5:00 PM</td>
-                            </tr>
-                            <tr>
-                                <td>528</td>
-                                <td>8:00 AM - 5:00 PM</td>
-                            </tr>
-                            <tr>
-                                <td>530</td>
-                                <td>8:00 AM - 5:00 PM</td>
-                            </tr>
-                            <tr>
-                                <td>542</td>
-                                <td>8:00 AM - 5:00 PM</td>
-                            </tr>
-                            <tr>
-                                <td>544</td>
-                                <td>8:00 AM - 5:00 PM</td>
-                            </tr>
+                        <tbody id="labScheduleBody">
+                            <!-- Labs will be dynamically populated based on availability -->
                         </tbody>
                     </table>
                 </div>
@@ -661,6 +664,91 @@
             document.getElementById("mainContent").classList.add("sidebar-closed");
             document.getElementById("topNav").classList.add("sidebar-closed");
             document.getElementById("rulesContainer").classList.add("sidebar-closed");
+        }
+        
+        // Load laboratory schedule and check availability
+        document.addEventListener('DOMContentLoaded', function() {
+            loadLabSchedule();
+            
+            // Add event listener for the toggle checkbox
+            document.getElementById('showOccupiedLabs').addEventListener('change', function() {
+                loadLabSchedule();
+            });
+        });
+        
+        function loadLabSchedule() {
+            const labScheduleBody = document.getElementById('labScheduleBody');
+            const showOccupiedLabs = document.getElementById('showOccupiedLabs').checked;
+            
+            // Default lab information
+            const defaultLabs = [
+                { number: '517', hours: '8:00 AM - 5:00 PM' },
+                { number: '524', hours: '8:00 AM - 5:00 PM' },
+                { number: '526', hours: '8:00 AM - 5:00 PM' },
+                { number: '528', hours: '8:00 AM - 5:00 PM' },
+                { number: '530', hours: '8:00 AM - 5:00 PM' },
+                { number: '542', hours: '8:00 AM - 5:00 PM' },
+                { number: '544', hours: '8:00 AM - 5:00 PM' }
+            ];
+            
+            // Get lab statuses from localStorage (set by admin)
+            const labStatuses = JSON.parse(localStorage.getItem('laboratoryStatuses')) || {};
+            
+            // Clear the table
+            labScheduleBody.innerHTML = '';
+            
+            // Add each lab to the table, checking status
+            let visibleLabCount = 0;
+            
+            defaultLabs.forEach(lab => {
+                const labStatus = labStatuses[lab.number] || { available: true };
+                
+                // Skip labs that are unavailable if the toggle is unchecked
+                if (!labStatus.available && !showOccupiedLabs) {
+                    return; // Skip this lab
+                }
+                
+                // Otherwise, show the lab with its status
+                const row = document.createElement('tr');
+                
+                if (!labStatus.available) {
+                    // Lab is unavailable
+                    row.innerHTML = `
+                        <td>${lab.number}</td>
+                        <td>${lab.hours}</td>
+                        <td>
+                            <span class="status-badge status-unavailable">
+                                Unavailable (Class in Session)
+                            </span>
+                        </td>
+                    `;
+                } else {
+                    // Available lab
+                    row.innerHTML = `
+                        <td>${lab.number}</td>
+                        <td>${lab.hours}</td>
+                        <td>
+                            <span class="status-badge status-available">
+                                Available
+                            </span>
+                        </td>
+                    `;
+                }
+                
+                labScheduleBody.appendChild(row);
+                visibleLabCount++;
+            });
+            
+            // If no labs are shown, display a message
+            if (visibleLabCount === 0) {
+                const noLabsRow = document.createElement('tr');
+                noLabsRow.innerHTML = `
+                    <td colspan="3" style="text-align: center; padding: 20px;">
+                        No laboratories are currently available for sit-in.
+                    </td>
+                `;
+                labScheduleBody.appendChild(noLabsRow);
+            }
         }
     </script>
 </body>

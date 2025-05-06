@@ -499,6 +499,187 @@
     .reset-points-btn i {
       font-size: 12px;
     }
+
+    .refresh-btn {
+      background-color: transparent;
+      border: none;
+      color: #3498db;
+      cursor: pointer;
+      font-size: 16px;
+      margin-left: 10px;
+      padding: 5px 10px;
+      border-radius: 3px;
+      transition: all 0.2s ease;
+    }
+
+    .refresh-btn:hover {
+      background-color: rgba(52, 152, 219, 0.1);
+      transform: rotate(30deg);
+    }
+
+    .announcement-card.new {
+      animation: highlight 2s ease-in-out;
+      border-left: 4px solid #27ae60;
+    }
+
+    @keyframes highlight {
+      0% { background-color: rgba(39, 174, 96, 0.2); }
+      100% { background-color: white; }
+    }
+
+    /* Resource Management Styles */
+    .resource-management {
+      padding: 20px;
+      height: calc(100% - 50px);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    
+    .resource-form {
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .resource-form label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+      color: #2c3e50;
+    }
+    
+    .file-hint {
+      color: #7f8c8d;
+      font-size: 12px;
+      margin-top: 5px;
+    }
+    
+    .upload-btn {
+      background-color: #3498db;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    
+    .upload-btn:hover {
+      background-color: #2980b9;
+      transform: translateY(-2px);
+    }
+    
+    .resource-list h3 {
+      color: #2c3e50;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .resource-items {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    
+    .resource-item {
+      display: flex;
+      background: #fff;
+      border-radius: 8px;
+      padding: 15px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      transition: all 0.3s ease;
+    }
+    
+    .resource-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .resource-icon {
+      font-size: 24px;
+      color: #3498db;
+      margin-right: 15px;
+      display: flex;
+      align-items: center;
+    }
+    
+    .resource-details {
+      flex: 1;
+    }
+    
+    .resource-details h4 {
+      margin: 0 0 5px 0;
+      color: #2c3e50;
+    }
+    
+    .resource-details p {
+      color: #7f8c8d;
+      margin: 0 0 10px 0;
+      font-size: 14px;
+    }
+    
+    .resource-meta {
+      display: flex;
+      gap: 15px;
+      font-size: 12px;
+    }
+    
+    .resource-category {
+      color: #e67e22;
+      font-weight: 500;
+    }
+    
+    .resource-date {
+      color: #95a5a6;
+    }
+    
+    .resource-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .resource-download-btn,
+    .resource-delete-btn {
+      background: transparent;
+      border: none;
+      color: #3498db;
+      font-size: 16px;
+      cursor: pointer;
+      padding: 5px;
+      border-radius: 4px;
+      transition: all 0.3s ease;
+    }
+    
+    .resource-download-btn:hover {
+      background-color: rgba(52, 152, 219, 0.1);
+      color: #2980b9;
+    }
+    
+    .resource-delete-btn {
+      color: #e74c3c;
+    }
+    
+    .resource-delete-btn:hover {
+      background-color: rgba(231, 76, 60, 0.1);
+      color: #c0392b;
+    }
+    
+    .no-resources {
+      color: #7f8c8d;
+      font-style: italic;
+      text-align: center;
+      padding: 20px;
+    }
   </style>
 
   <div class="topnav">
@@ -561,10 +742,13 @@
       <div class="column" style="width: 48%;">
         <div class="col-head">
           <i class="fas fa-bullhorn"></i> Announcements
+          <button class="refresh-btn" onclick="refreshAnnouncements()" title="Refresh announcements">
+            <i class="fas fa-sync-alt"></i>
+          </button>
         </div>
 
         <div class="announcement-form">
-          <form action="/add_announcement" method="POST">
+          <form action="/add_announcement" method="POST" id="announcementForm">
             <div class="form-group">
               <input type="text" name="title" placeholder="Announcement Title" required>
             </div>
@@ -630,6 +814,127 @@
             {% endif %}
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="column" style="flex: 1;">
+        <div class="col-head">
+          <i class="fas fa-file-upload"></i> Resource Files
+        </div>
+        <div class="resource-management">
+          <div class="resource-form">
+            <form action="/upload_resource" method="POST" enctype="multipart/form-data">
+              <div class="form-group">
+                <label for="resource_title">Resource Title</label>
+                <input type="text" name="resource_title" id="resource_title" placeholder="Enter resource title" required>
+              </div>
+              <div class="form-group">
+                <label for="resource_category">Category</label>
+                <select name="resource_category" id="resource_category" required>
+                  <option value="c_resources">C Programming Resources</option>
+                  <option value="java_resources">Java Resources</option>
+                  <option value="python_resources">Python Resources</option>
+                  <option value="csharp_resources">C# Resources</option>
+                  <option value="database_resources">Database Resources</option>
+                  <option value="digilog_resources">Digital Logic & Design Resources</option>
+                  <option value="iot_resources">Embedded Systems & IoT Resources</option>
+                  <option value="computer_resources">Computer Application Resources</option>
+                  <option value="pm_resources">Project Management Resources</option>
+                  <option value="itrends_resources">IT Trends Resources</option>
+                  <option value="techno_resources">Technopreneurship Resources</option>
+                  <option value="capstone_resources">Capstone Resources</option>
+                  <option value="lab_manuals">Laboratory Manuals</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="resource_description">Description (Optional)</label>
+                <textarea name="resource_description" id="resource_description" placeholder="Brief description of the resource"></textarea>
+              </div>
+              <div class="form-group">
+                <label for="resource_file">File</label>
+                <input type="file" name="resource_file" id="resource_file" required>
+                <p class="file-hint">Allowed file types: PDF, DOC, DOCX, PPT, PPTX, ZIP, RAR (Max 25MB)</p>
+              </div>
+              <button type="submit" class="upload-btn">
+                <i class="fas fa-upload"></i> Upload Resource
+              </button>
+            </form>
+          </div>
+          
+          <div class="resource-list">
+            <h3>Uploaded Resources</h3>
+            <div class="resource-items">
+              {% if resources %}
+                {% for resource in resources %}
+                  <div class="resource-item">
+                    <div class="resource-icon">
+                      {% if resource.file_type == 'pdf' %}
+                        <i class="far fa-file-pdf"></i>
+                      {% elif resource.file_type in ['doc', 'docx'] %}
+                        <i class="far fa-file-word"></i>
+                      {% elif resource.file_type in ['ppt', 'pptx'] %}
+                        <i class="far fa-file-powerpoint"></i>
+                      {% elif resource.file_type in ['zip', 'rar'] %}
+                        <i class="far fa-file-archive"></i>
+                      {% else %}
+                        <i class="far fa-file"></i>
+                      {% endif %}
+                    </div>
+                    <div class="resource-details">
+                      <h4>{{ resource.title }}</h4>
+                      <p>{{ resource.description }}</p>
+                      <div class="resource-meta">
+                        <span class="resource-category">
+                          {% if resource.category == 'c_resources' %}
+                            C Programming
+                          {% elif resource.category == 'java_resources' %}
+                            Java
+                          {% elif resource.category == 'python_resources' %}
+                            Python
+                          {% elif resource.category == 'csharp_resources' %}
+                            C#
+                          {% elif resource.category == 'database_resources' %}
+                            Database
+                          {% elif resource.category == 'digilog_resources' %}
+                            Digital Logic &amp; Design
+                          {% elif resource.category == 'iot_resources' %}
+                            Embedded Systems &amp; IoT
+                          {% elif resource.category == 'computer_resources' %}
+                            Computer Applications
+                          {% elif resource.category == 'pm_resources' %}
+                            Project Management
+                          {% elif resource.category == 'itrends_resources' %}
+                            IT Trends
+                          {% elif resource.category == 'techno_resources' %}
+                            Technopreneurship
+                          {% elif resource.category == 'capstone_resources' %}
+                            Capstone
+                          {% elif resource.category == 'lab_manuals' %}
+                            Laboratory Manuals
+                          {% else %}
+                            {{ resource.category }}
+                          {% endif %}
+                        </span>
+                        <span class="resource-date">{{ resource.upload_date }}</span>
+                      </div>
+                    </div>
+                    <div class="resource-actions">
+                      <a href="/download_resource/{{ resource.id }}" class="resource-download-btn" title="Download">
+                        <i class="fas fa-download"></i>
+                      </a>
+                      <button class="resource-delete-btn" onclick="deleteResource({{ resource.id }})" title="Delete">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </div>
+                  </div>
+                {% endfor %}
+              {% else %}
+                <p class="no-resources">No resources have been uploaded yet.</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -775,6 +1080,124 @@
           console.error('Error:', error);
           alert('An error occurred while resetting points.');
         }
+      }
+    }
+
+    // Store announcements in localStorage to make them available for students
+    document.addEventListener('DOMContentLoaded', function() {
+      // Listen for form submission
+      const announcementForm = document.getElementById('announcementForm');
+      if (announcementForm) {
+        announcementForm.addEventListener('submit', function(e) {
+          // Let the normal form submission happen, but also store in localStorage
+          setTimeout(function() {
+            saveAllAnnouncementsToLocalStorage();
+          }, 100);
+        });
+      }
+      
+      // Also save existing announcements when page loads
+      saveAllAnnouncementsToLocalStorage();
+    });
+    
+    function saveAllAnnouncementsToLocalStorage() {
+      // Get all announcements from the DOM
+      const announcementCards = document.querySelectorAll('.announcement-card');
+      if (announcementCards.length === 0) return;
+      
+      const announcements = [];
+      announcementCards.forEach(card => {
+        const title = card.querySelector('h4').textContent;
+        const content = card.querySelector('p').textContent;
+        const date = card.querySelector('.announcement-date').textContent;
+        
+        announcements.push({
+          title: title,
+          content: content,
+          date: date
+        });
+      });
+      
+      // Save to localStorage using special key for global announcements
+      if (announcements.length > 0) {
+        localStorage.setItem('global_announcements', JSON.stringify(announcements));
+        
+        // Show visual feedback
+        console.log('Saved ' + announcements.length + ' announcements to localStorage');
+      }
+    }
+    
+    // Add support for highlighting new announcements
+    document.addEventListener('DOMContentLoaded', function() {
+      const announcementForm = document.getElementById('announcementForm');
+      if (announcementForm) {
+        announcementForm.addEventListener('submit', function(e) {
+          // Store values before submission
+          const title = announcementForm.querySelector('input[name="title"]').value;
+          const content = announcementForm.querySelector('textarea[name="content"]').value;
+          
+          // Store for later use with a unique key
+          localStorage.setItem('last_announcement_title', title);
+          localStorage.setItem('last_announcement_content', content);
+        });
+      }
+    });
+    
+    // Function to highlight the newest announcement after page reload
+    window.addEventListener('load', function() {
+      const lastTitle = localStorage.getItem('last_announcement_title');
+      const lastContent = localStorage.getItem('last_announcement_content');
+      
+      if (lastTitle && lastContent) {
+        // Find and highlight the new announcement
+        const cards = document.querySelectorAll('.announcement-card');
+        cards.forEach(card => {
+          const cardTitle = card.querySelector('h4').textContent;
+          const cardContent = card.querySelector('p').textContent;
+          
+          if (cardTitle === lastTitle && cardContent === lastContent) {
+            card.classList.add('new');
+            
+            // Clear the stored values after using them
+            setTimeout(() => {
+              localStorage.removeItem('last_announcement_title');
+              localStorage.removeItem('last_announcement_content');
+            }, 2000);
+          }
+        });
+      }
+    });
+
+    function refreshAnnouncements() {
+      window.location.reload();
+    }
+
+    function deleteResource(resourceId) {
+      if (confirm('Are you sure you want to delete this resource?')) {
+        fetch(`/delete_resource/${resourceId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            // Remove the resource item from the DOM
+            const resourceElement = document.querySelector(`[data-resource-id="${resourceId}"]`);
+            if (resourceElement) {
+              resourceElement.remove();
+            }
+            // Or reload the page
+            window.location.reload();
+          } else {
+            alert('Error deleting resource: ' + data.message);
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('An error occurred while deleting the resource.');
+        });
       }
     }
   </script>

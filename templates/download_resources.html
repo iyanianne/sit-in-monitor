@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie-edge">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" type="image/x-icon" href="../static/favicon/ccslogo.png">
+  <title>Download Resources - SIT IN MONITORING</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background-color: #f8f9fa;
+    }
+    
+    .topnav {
+      overflow: hidden;
+      background-color: #2c3e50;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+    
+    .topnav a {
+      color: #ecf0f1;
+      text-align: center;
+      padding: 8px 16px;
+      text-decoration: none;
+      font-size: 14px;
+      border-radius: 4px;
+      transition: 0.3s;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .topnav a:hover {
+      background-color: #34495e;
+      color: #ecf0f1;
+    }
+    
+    .topnav a.active {
+      background-color: #3498db;
+      color: white;
+    }
+
+    .head {
+      color: #ecf0f1;
+      font-size: 20px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .w3-sidebar {
+      background-color: #2c3e50 !important;
+      box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+      height: 100vh;
+      position: fixed;
+      left: 0;
+      top: 0;
+      overflow-y: auto;
+      transition: all 0.3s ease;
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+      transform: translateX(0);
+    }
+
+    .w3-sidebar a {
+      padding: 15px 20px;
+      text-decoration: none;
+      font-size: 14px;
+      color: white;
+      display: flex;
+      align-items: center;
+      transition: all 0.3s ease;
+      border-left: 3px solid transparent;
+      margin: 4px 0;
+      border-radius: 0 8px 8px 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .w3-sidebar a:hover {
+      background-color: #34495e;
+      border-left: 3px solid #fff;
+      padding-left: 25px;
+      transform: translateX(5px);
+    }
+
+    .w3-sidebar a i {
+      margin-right: 15px;
+      width: 20px;
+      text-align: center;
+      font-size: 16px;
+      transition: all 0.3s ease;
+    }
+
+    .w3-sidebar a:hover i {
+      transform: scale(1.1);
+    }
+
+    .w3-sidebar a.active {
+      background-color: #3498db;
+      border-left: 3px solid #fff;
+      font-weight: 500;
+    }
+
+    .main-content {
+      margin-left: 200px;
+      transition: margin-left 0.3s ease;
+      padding: 20px;
+    }
+
+    .main-content.sidebar-closed {
+      margin-left: 0;
+    }
+
+    .top-nav {
+      background-color: #2c3e50;
+      padding: 15px 25px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      position: fixed;
+      top: 0;
+      right: 0;
+      left: 200px;
+      z-index: 900;
+      transition: left 0.3s ease;
+      color: #ecf0f1;
+    }
+
+    .top-nav.sidebar-closed {
+      left: 0;
+    }
+
+    .btn {
+      background-color: transparent;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      margin-left: 5px;
+      font-size: 20px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border-radius: 6px;
+    }
+
+    .btn:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+      transform: scale(1.05);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 80px auto 20px;
+      padding: 20px;
+    }
+
+    .page-header {
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #3498db;
+    }
+
+    .page-header h2 {
+      font-size: 24px;
+      color: #2c3e50;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .resources-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .resource-card {
+      background-color: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .resource-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .resource-header {
+      padding: 15px;
+      border-bottom: 1px solid #f1f1f1;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .resource-icon {
+      width: 40px;
+      height: 40px;
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      color: #3498db;
+    }
+
+    .resource-title {
+      font-weight: 600;
+      color: #2c3e50;
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.3;
+    }
+
+    .resource-body {
+      padding: 15px;
+    }
+
+    .resource-description {
+      color: #7f8c8d;
+      font-size: 14px;
+      margin-bottom: 15px;
+      min-height: 40px;
+    }
+
+    .resource-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #95a5a6;
+      font-size: 12px;
+      margin-top: 10px;
+    }
+
+    .resource-upload-date {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .resource-size {
+      background-color: #f8f9fa;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+    .download-btn {
+      background-color: #3498db;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      margin-top: 10px;
+    }
+
+    .download-btn:hover {
+      background-color: #2980b9;
+      transform: translateY(-2px);
+    }
+
+    .back-btn {
+      background-color: #7f8c8d;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 4px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 14px;
+      transition: all 0.3s ease;
+      margin-bottom: 20px;
+    }
+
+    .back-btn:hover {
+      background-color: #95a5a6;
+      transform: translateY(-2px);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      background-color: white;
+      border-radius: 8px;
+    }
+
+    .empty-state i {
+      font-size: 48px;
+      color: #95a5a6;
+      margin-bottom: 20px;
+    }
+
+    .empty-state h3 {
+      color: #2c3e50;
+      margin-bottom: 10px;
+    }
+
+    .empty-state p {
+      color: #7f8c8d;
+    }
+
+    .sub-div {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 15px;
+      color: white;
+      position: sticky;
+      bottom: 0;
+      width: 100%;
+      background-color: rgba(0, 0, 0, 0.1);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .sub-div a {
+      display: flex;
+      align-items: center;
+      padding: 10px 20px;
+      border-radius: 6px;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      color: white;
+    }
+
+    .sub-div a:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .sub-div i {
+      margin-right: 10px;
+      font-size: 16px;
+    }
+
+    .category-title {
+      text-transform: capitalize;
+      position: relative;
+    }
+
+    .category-title::after {
+      content: '';
+      display: block;
+      width: 30px;
+      height: 3px;
+      background-color: #3498db;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <div class="w3-sidebar w3-bar-block" style="display: block; width: 200px;" id="mySidebar">
+    <button onclick="w3_close()" class="btn w3-bar-item"> 
+      <p>&times;</p> 
+    </button>
+    <div>
+      <a href="/dashboard" class="w3-bar-item w3-button"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+      <a href="/information" class="w3-bar-item w3-button"><i class="fas fa-user"></i> Profile</a>
+      <a href="/edit" class="w3-bar-item w3-button"><i class="fas fa-edit"></i> Edit</a>
+      <a href="/announcement" class="w3-bar-item w3-button"><i class="fas fa-bullhorn"></i> Announcement</a>
+      <a href="/sit-in" class="w3-bar-item w3-button"><i class="fas fa-book"></i> Sit-in Rules</a>
+      <a href="/labrules" class="w3-bar-item w3-button active"><i class="fas fa-book-open"></i> Lab Rules</a>
+      <a href="/sessions" class="w3-bar-item w3-button"><i class="fas fa-clock"></i> Sessions</a>
+      <a href="/history" class="w3-bar-item w3-button"><i class="fas fa-history"></i> History</a>
+      <a href="/reservations" class="w3-bar-item w3-button"><i class="fas fa-calendar-check"></i> Reservation</a>
+    </div>
+
+    <div class="sub-div">
+      <a href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </div>
+  </div>
+
+  <!-- Page content -->
+  <div class="main-content" id="mainContent">
+    <div class="top-nav" id="topNav">
+      <button class="btn" onclick="w3_open()">☰ Laboratory Resources</button>
+      <h5 class="welcome-text">Welcome, {{ username.fname }}!</h5>
+    </div>
+
+    <div class="container">
+      <a href="/labrules" class="back-btn">
+        <i class="fas fa-arrow-left"></i> Back to Lab Rules
+      </a>
+
+      <div class="page-header">
+        <h2>
+          <i class="fas fa-download"></i> 
+          {% if category == 'c_resources' %}
+            C Programming Resources
+          {% elif category == 'java_resources' %}
+            Java Resources
+          {% elif category == 'python_resources' %}
+            Python Resources
+          {% elif category == 'csharp_resources' %}
+            C# Resources
+          {% elif category == 'database_resources' %}
+            Database Resources
+          {% elif category == 'digilog_resources' %}
+            Digital Logic & Design Resources
+          {% elif category == 'iot_resources' %}
+            Embedded Systems & IoT Resources
+          {% elif category == 'computer_resources' %}
+            Computer Application Resources
+          {% elif category == 'pm_resources' %}
+            Project Management Resources
+          {% elif category == 'itrends_resources' %}
+            IT Trends Resources
+          {% elif category == 'techno_resources' %}
+            Technopreneurship Resources
+          {% elif category == 'capstone_resources' %}
+            Capstone Resources
+          {% elif category == 'lab_manuals' %}
+            Laboratory Manuals
+          {% else %}
+            Resources
+          {% endif %}
+        </h2>
+      </div>
+
+      {% if resources and resources|length > 0 %}
+        <div class="resources-container">
+          {% for resource in resources %}
+            <div class="resource-card">
+              <div class="resource-header">
+                <div class="resource-icon">
+                  {% if resource.file_type == 'pdf' %}
+                    <i class="far fa-file-pdf"></i>
+                  {% elif resource.file_type in ['doc', 'docx'] %}
+                    <i class="far fa-file-word"></i>
+                  {% elif resource.file_type in ['ppt', 'pptx'] %}
+                    <i class="far fa-file-powerpoint"></i>
+                  {% elif resource.file_type in ['zip', 'rar'] %}
+                    <i class="far fa-file-archive"></i>
+                  {% else %}
+                    <i class="far fa-file"></i>
+                  {% endif %}
+                </div>
+                <h3 class="resource-title">{{ resource.title }}</h3>
+              </div>
+              <div class="resource-body">
+                <div class="resource-description">
+                  {{ resource.description or 'No description available.' }}
+                </div>
+                <a href="/download_resource/{{ resource.id }}" class="download-btn">
+                  <i class="fas fa-download"></i> Download
+                </a>
+                <div class="resource-meta">
+                  <div class="resource-upload-date">
+                    <i class="far fa-calendar-alt"></i> {{ resource.upload_date }}
+                  </div>
+                  <div class="resource-size">
+                    {% if resource.file_size < 1024 %}
+                      {{ resource.file_size }} B
+                    {% elif resource.file_size < 1048576 %}
+                      {{ (resource.file_size / 1024)|round(1) }} KB
+                    {% else %}
+                      {{ (resource.file_size / 1048576)|round(1) }} MB
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <i class="far fa-folder-open"></i>
+          <h3>No resources available</h3>
+          <p>There are no resources available for download in this category yet.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <script>
+    function w3_open() {
+      document.getElementById("mySidebar").style.display = "block";
+      document.getElementById("mainContent").classList.remove("sidebar-closed");
+      document.getElementById("topNav").classList.remove("sidebar-closed");
+    }
+
+    function w3_close() {
+      document.getElementById("mySidebar").style.display = "none";
+      document.getElementById("mainContent").classList.add("sidebar-closed");
+      document.getElementById("topNav").classList.add("sidebar-closed");
+    }
+  </script>
+</body>
+</html> 

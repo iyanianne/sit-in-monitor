@@ -1,15 +1,102 @@
-from flask import Flask, render_template, request, redirect, session, flash, url_for, jsonify
+from flask import Flask, render_template, request, redirect, session, flash, url_for, jsonify, send_file
 import sqlite3  
 import os
 from werkzeug.utils import secure_filename
 import dbhelper
 from datetime import datetime
 from functools import wraps
+import uuid
+import shutil
 
 app = Flask(__name__)
 app.secret_key = "database1234!"
 app.config['UPLOAD_FOLDER'] = 'static/images/uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+app.config['RESOURCE_FOLDER'] = 'static/resources'
+app.config['MAX_CONTENT_LENGTH'] = 25 * 1024 * 1024  # 25 MB max file size
+
+# Allowed file extensions
+ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'ppt', 'pptx', 'zip', 'rar', 'txt'}
+
+# Helper function to check allowed file extensions
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# Create upload folder if it doesn't exist
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+# Initialize the database tables
+def init_db():
+    conn = sqlite3.connect('sitinmonitor.db')
+    cursor = conn.cursor()
+    
+    # Create users table if not exists
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        idno TEXT UNIQUE NOT NULL,
+        fname TEXT NOT NULL,
+        lname TEXT NOT NULL,
+        sectionname TEXT,
+        password TEXT NOT NULL
+    )
+    ''')
+    
+    # Create sit_in table if not exists
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS sit_in (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        idno TEXT NOT NULL,
+        student_fname TEXT,
+        student_lname TEXT,
+        laboratory TEXT NOT NULL,
+        machine_no TEXT NOT NULL,
+        purpose TEXT,
+        time_in TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        time_out TIMESTAMP,
+        FOREIGN KEY (idno) REFERENCES users(idno)
+    )
+    ''')
+    
+    # Create resources table if not exists
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS resources (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        description TEXT,
+        category TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        original_filename TEXT NOT NULL,
+        file_type TEXT NOT NULL,
+        file_size INTEGER NOT NULL,
+        uploaded_by TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    ''')
+    
+    # Create settings table if not exists
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS settings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        setting_name TEXT UNIQUE NOT NULL,
+        setting_value TEXT NOT NULL
+    )
+    ''')
+    
+    # Insert default settings
+    try:
+        cursor.execute("INSERT OR IGNORE INTO settings (setting_name, setting_value) VALUES ('resources_enabled', 'true')")
+    except:
+        pass
+    
+    conn.commit()
+    conn.close()
+    
+    # Create resource upload directory if it doesn't exist
+    os.makedirs(app.config['RESOURCE_FOLDER'], exist_ok=True)
+
+# Initialize the database
+init_db()
 
 # Initialize database on startup
 dbhelper.initialize_database()
@@ -292,6 +379,17 @@ def admin_dashboard():
     # Get resource status
     resources_enabled = dbhelper.get_resources_enabled()
     
+    # Get uploaded resources with error handling
+    try:
+        resources = dbhelper.get_all_resources()
+    except Exception as e:
+        print(f"Error retrieving resources: {e}")
+        resources = []
+    
+    # Make sure we have access to announcements
+    if 'announcements' not in session:
+        session['announcements'] = []
+    
     return render_template('admin_dashboard.html',
                          students_registered=students_registered,
                          currently_sit_in=currently_sit_in,
@@ -299,7 +397,9 @@ def admin_dashboard():
                          purposes_labels=purposes_labels,
                          purposes_data=purposes_counts,
                          students=leaderboard_students,
-                         resources_enabled=resources_enabled)
+                         resources_enabled=resources_enabled,
+                         resources=resources,
+                         announcements=session.get('announcements', []))
 
 # Announcement route
 @app.route('/add_announcement', methods=['POST'])
@@ -315,12 +415,15 @@ def add_announcement():
         if 'announcements' not in session:
             session['announcements'] = []
         
-        # Add new announcement to the list
-        session['announcements'].append({
+        # Create the new announcement with a timestamp
+        new_announcement = {
             "title": title,
             "content": content,
             "date": datetime.now().strftime("%Y-%m-%d %H:%M")
-        })
+        }
+        
+        # Add new announcement to the list
+        session['announcements'].append(new_announcement)
         
         # Keep only the last 10 announcements
         if len(session['announcements']) > 10:
@@ -595,9 +698,13 @@ def reservations():
         'total': total_sessions
     }
     
+    # Get user reservation history
+    reservation_history = dbhelper.get_user_reservations(idno)
+    
     return render_template('reservations.html', 
                          username=user,
-                         sessions=sessions_data)
+                         sessions=sessions_data,
+                         reservation_history=reservation_history)
 
 # Reset Sessions route
 @app.route('/reset_sessions/<string:idno>', methods=['POST'])
@@ -772,8 +879,18 @@ def reject_reservation(reservation_id):
     if not reservation:
         return jsonify({'error': 'Reservation not found'}), 404
     
-    reason = request.form.get('reason', 'No reason provided')
-    success = dbhelper.reject_reservation(reservation_id)
+    # Get reason from JSON data or form data
+    data = request.get_json()
+    reason = None
+    if data and 'reason' in data:
+        reason = data.get('reason')
+    else:
+        reason = request.form.get('reason')
+        
+    if not reason:
+        reason = 'No reason provided'
+        
+    success, message = dbhelper.reject_reservation(reservation_id, reason)
     if success:
         # Log the rejection action
         dbhelper.log_reservation_action(
@@ -917,6 +1034,201 @@ def reset_all_points():
         return jsonify({'success': False, 'message': 'Failed to reset points'}), 500
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
+
+# Laboratory Status API Routes
+@app.route('/update_lab_status', methods=['POST'])
+def update_lab_status():
+    if 'username' not in session:
+        return jsonify({'error': 'Not authorized'}), 401
+    
+    try:
+        data = request.json
+        
+        # Save lab status in database (you would need to implement this in dbhelper)
+        # dbhelper.update_lab_status(data)
+        
+        # For now, just return success
+        return jsonify({
+            'status': 'success',
+            'message': 'Laboratory status updated'
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+@app.route('/api/lab_statuses', methods=['GET'])
+def get_lab_statuses():
+    if 'username' not in session:
+        return jsonify({'error': 'Not authorized'}), 401
+    
+    try:
+        # Get lab statuses from database (you would need to implement this in dbhelper)
+        # lab_statuses = dbhelper.get_lab_statuses()
+        
+        # For now, return empty array (statuses will be loaded from localStorage)
+        return jsonify([])
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+# Resource routes
+@app.route('/upload_resource', methods=['POST'])
+@admin_required
+def upload_resource():
+    if 'resource_file' not in request.files:
+        flash('No file part', 'danger')
+        return redirect(url_for('admin_dashboard'))
+    
+    file = request.files['resource_file']
+    
+    if file.filename == '':
+        flash('No file selected', 'danger')
+        return redirect(url_for('admin_dashboard'))
+    
+    if file and allowed_file(file.filename):
+        # Securely generate filename
+        original_filename = secure_filename(file.filename)
+        file_extension = original_filename.rsplit('.', 1)[1].lower()
+        unique_filename = f"{uuid.uuid4().hex}.{file_extension}"
+        
+        # Get form data
+        title = request.form.get('resource_title')
+        category = request.form.get('resource_category')
+        description = request.form.get('resource_description', '')
+        
+        # Create category folder if it doesn't exist
+        category_folder = os.path.join(app.config['RESOURCE_FOLDER'], category)
+        os.makedirs(category_folder, exist_ok=True)
+        
+        # Save the file to the category folder
+        file_path = os.path.join(category_folder, original_filename)
+        file.save(file_path)
+        
+        # Get relative path from RESOURCE_FOLDER for database storage
+        relative_path = os.path.join(category, original_filename)
+        
+        # Save metadata to database
+        resource_id = dbhelper.add_resource(
+            title=title,
+            description=description,
+            category=category,
+            file_path=relative_path,  # Store the relative path within the resources folder
+            original_filename=original_filename,
+            file_type=file_extension,
+            file_size=os.path.getsize(file_path),
+            uploaded_by=session.get('username', 'admin')
+        )
+        
+        if resource_id:
+            flash('Resource uploaded successfully!', 'success')
+        else:
+            # Delete the file if database insert failed
+            os.remove(file_path)
+            flash('Failed to upload resource', 'danger')
+    else:
+        flash('File type not allowed', 'danger')
+    
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/download_resource/<int:resource_id>')
+def download_resource(resource_id):
+    # Get resource info from database
+    resource = dbhelper.get_resource_by_id(resource_id)
+    
+    if not resource:
+        flash('Resource not found', 'danger')
+        return redirect(url_for('labrules'))
+    
+    # Full path to the file
+    file_path = os.path.join(app.config['RESOURCE_FOLDER'], resource['file_path'])
+    
+    # Debug information
+    print(f"Trying to access file: {file_path}")
+    print(f"Does file exist? {os.path.exists(file_path)}")
+    
+    # Check if file exists
+    if not os.path.exists(file_path):
+        flash('Resource file not found', 'danger')
+        return redirect(url_for('labrules'))
+    
+    try:
+        # Return the file as an attachment (for download)
+        return send_file(
+            file_path,
+            as_attachment=True,
+            download_name=resource['original_filename']
+        )
+    except Exception as e:
+        print(f"Error sending file: {e}")
+        flash('Error downloading file', 'danger')
+        return redirect(url_for('labrules'))
+
+@app.route('/delete_resource/<int:resource_id>', methods=['POST'])
+@admin_required
+def delete_resource(resource_id):
+    try:
+        # Get resource info from database
+        resource = dbhelper.get_resource_by_id(resource_id)
+        
+        if not resource:
+            return jsonify({'success': False, 'message': 'Resource not found'})
+        
+        # Delete the file
+        file_path = os.path.join(app.config['RESOURCE_FOLDER'], resource['file_path'])
+        print(f"Attempting to delete: {file_path}")
+        
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            print(f"Successfully deleted file: {file_path}")
+        else:
+            print(f"File not found for deletion: {file_path}")
+        
+        # Delete from database
+        success = dbhelper.delete_resource(resource_id)
+        
+        if success:
+            return jsonify({'success': True})
+        return jsonify({'success': False, 'message': 'Failed to delete from database'})
+    
+    except Exception as e:
+        print(f"Error deleting resource: {e}")
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/download/<category>')
+@login_required
+def download_category_resources(category):
+    # Get resources for the specific category
+    try:
+        resources = dbhelper.get_resources_by_category(category)
+    except Exception as e:
+        print(f"Error retrieving resources by category: {e}")
+        resources = []
+    
+    # Check if resources are enabled
+    resources_enabled = dbhelper.get_resources_enabled()
+    if not resources_enabled:
+        flash('Resource downloads are currently disabled', 'warning')
+        return redirect(url_for('labrules'))
+    
+    # Get user data safely
+    try:
+        username = dbhelper.get_user_by_id(session['idno'])
+    except Exception as e:
+        print(f"Error retrieving user data: {e}")
+        flash('Error loading user data', 'error')
+        return redirect(url_for('labrules'))
+    
+    return render_template('download_resources.html', 
+                          resources=resources, 
+                          category=category,
+                          username=username)
+
+# Make sure the resource directory exists
+os.makedirs(app.config['RESOURCE_FOLDER'], exist_ok=True)
 
 if __name__ == "__main__":
     app.run(debug=True)

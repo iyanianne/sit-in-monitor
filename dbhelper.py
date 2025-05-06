@@ -848,16 +848,24 @@ def approve_reservation(reservation_id):
     finally:
         conn.close()
 
-def reject_reservation(reservation_id):
+def reject_reservation(reservation_id, reason=None):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         
+        # Update the database schema if the column doesn't exist
+        cursor.execute("PRAGMA table_info(reservations)")
+        columns = cursor.fetchall()
+        column_names = [column[1] for column in columns]
+        
+        if 'rejection_reason' not in column_names:
+            cursor.execute("ALTER TABLE reservations ADD COLUMN rejection_reason TEXT")
+        
         cursor.execute("""
             UPDATE reservations
-            SET status = 'rejected'
+            SET status = 'rejected', rejection_reason = ?
             WHERE id = ?
-        """, (reservation_id,))
+        """, (reason, reservation_id))
         
         conn.commit()
         return True, "Reservation rejected successfully"
@@ -1066,30 +1074,149 @@ def ensure_reservation_logs_table():
         conn.close()
 
 def initialize_database():
-    """Initialize the database with required tables and initial data."""
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        # Read and execute the schema.sql file
-        with open('schema.sql', 'r') as f:
-            schema = f.read()
-            cursor.executescript(schema)
-
-        # Ensure lab_points column exists
-        ensure_lab_points_column()
+    """Set up the database tables if they don't exist."""
+    print("Initializing database...")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Create the users table if it doesn't exist
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        idno TEXT UNIQUE,
+        lastname TEXT,
+        firstname TEXT,
+        middlename TEXT,
+        course TEXT,
+        yrlvl TEXT,
+        email TEXT,
+        avatar TEXT,
+        username TEXT UNIQUE,
+        password TEXT,
+        remaining_sessions INTEGER DEFAULT 30,
+        total_sessions INTEGER DEFAULT 30,
+        lab_points INTEGER DEFAULT 0
+    )
+    """)
+    
+    # Create admin table if it doesn't exist
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS admin (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE,
+        password TEXT
+    )
+    """)
+    
+    # Create sit-in table if it doesn't exist
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS sit_in (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id TEXT,
+        purpose TEXT,
+        laboratory TEXT,
+        start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        end_time TIMESTAMP,
+        status TEXT DEFAULT 'active',
+        FOREIGN KEY (student_id) REFERENCES users (idno)
+    )
+    """)
+    
+    # Create the laboratory table if it doesn't exist
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS laboratories (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        number TEXT UNIQUE,
+        name TEXT,
+        capacity INTEGER,
+        description TEXT,
+        hours TEXT
+    )
+    """)
+    
+    # Create the computer table if it doesn't exist
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS computers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        laboratory_id INTEGER,
+        computer_no INTEGER,
+        status TEXT DEFAULT 'available',
+        FOREIGN KEY (laboratory_id) REFERENCES laboratories (id)
+    )
+    """)
+    
+    # Create the resources table if it doesn't exist
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS resources (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        description TEXT,
+        category TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        original_filename TEXT NOT NULL,
+        file_type TEXT NOT NULL,
+        file_size INTEGER NOT NULL,
+        uploaded_by TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+    
+    # Add a default admin user if none exists
+    cursor.execute("SELECT COUNT(*) FROM admin")
+    count = cursor.fetchone()[0]
+    if count == 0:
+        cursor.execute("INSERT INTO admin (username, password) VALUES (?, ?)", ("admin", "admin123"))
+    
+    # Add default laboratories if none exist
+    cursor.execute("SELECT COUNT(*) FROM laboratories")
+    count = cursor.fetchone()[0]
+    if count == 0:
+        labs = [
+            ("524", "Programming Laboratory 1", 30, "Main programming lab for CS students", "8:00 AM - 5:00 PM"),
+            ("526", "Programming Laboratory 2", 30, "Secondary programming lab", "8:00 AM - 5:00 PM"),
+            ("528", "Database Laboratory", 30, "Database and systems lab", "8:00 AM - 5:00 PM"),
+            ("530", "Hardware Laboratory", 25, "Computer hardware and networking lab", "8:00 AM - 5:00 PM"),
+            ("542", "Multimedia Laboratory", 25, "Graphics and multimedia lab", "8:00 AM - 5:00 PM"),
+            ("544", "Special Projects Laboratory", 20, "Research and capstone projects lab", "8:00 AM - 5:00 PM"),
+            ("517", "Advanced Programming Laboratory", 30, "Advanced programming and software engineering lab", "8:00 AM - 5:00 PM")
+        ]
         
-        # Ensure reservation_logs table has correct schema
-        ensure_reservation_logs_table()
-
-        conn.commit()
-        print("Database initialized successfully")
-        return True
-    except Exception as e:
-        print(f"Error initializing database: {e}")
-        return False
-    finally:
-        conn.close()
+        for lab in labs:
+            cursor.execute("""
+            INSERT OR IGNORE INTO laboratories (number, name, capacity, description, hours)
+            VALUES (?, ?, ?, ?, ?)
+            """, lab)
+            
+            # Get the laboratory ID
+            cursor.execute("SELECT id FROM laboratories WHERE number = ?", (lab[0],))
+            lab_id = cursor.fetchone()[0]
+            
+            # Add computers for this laboratory
+            for i in range(1, lab[2] + 1):  # Add computers based on capacity
+                cursor.execute("""
+                INSERT OR IGNORE INTO computers (laboratory_id, computer_no, status)
+                VALUES (?, ?, 'available')
+                """, (lab_id, i))
+    
+    # Create settings table if it doesn't exist
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS settings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        key TEXT UNIQUE,
+        value TEXT,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+    
+    # Add resources_enabled setting if it doesn't exist
+    cursor.execute("SELECT COUNT(*) FROM settings WHERE key = 'resources_enabled'")
+    count = cursor.fetchone()[0]
+    if count == 0:
+        cursor.execute("INSERT INTO settings (key, value) VALUES (?, ?)", ("resources_enabled", "true"))
+    
+    conn.commit()
+    conn.close()
+    print("Database initialization complete.")
 
 def create_announcement(student_id, message, type='info'):
     """Create a new announcement for a student."""
@@ -1238,6 +1365,230 @@ def reset_all_points():
         return True
     except Exception as e:
         print(f"Error resetting points: {e}")
+        return False
+    finally:
+        conn.close()
+
+def get_user_reservations(student_id):
+    """Get reservation history for a specific student."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Check if rejection_reason column exists
+        cursor.execute("PRAGMA table_info(reservations)")
+        columns = cursor.fetchall()
+        column_names = [column[1] for column in columns]
+        
+        # Set up the query based on whether the rejection_reason column exists
+        if 'rejection_reason' in column_names:
+            query = """
+                SELECT 
+                    r.id,
+                    r.laboratory_id,
+                    r.computer_no,
+                    r.purpose,
+                    r.datetime,
+                    r.status,
+                    r.created_at,
+                    r.rejection_reason
+                FROM reservations r
+                WHERE r.student_id = ?
+                ORDER BY r.created_at DESC
+            """
+        else:
+            query = """
+                SELECT 
+                    r.id,
+                    r.laboratory_id,
+                    r.computer_no,
+                    r.purpose,
+                    r.datetime,
+                    r.status,
+                    r.created_at
+                FROM reservations r
+                WHERE r.student_id = ?
+                ORDER BY r.created_at DESC
+            """
+        
+        cursor.execute(query, (student_id,))
+        
+        reservations = []
+        for row in cursor.fetchall():
+            reservation = {
+                'id': row[0],
+                'laboratory': f"Laboratory {row[1]}",
+                'computer_no': row[2],
+                'purpose': row[3],
+                'datetime': row[4],
+                'status': row[5],
+                'created_at': row[6]
+            }
+            
+            # Add rejection_reason if available
+            if 'rejection_reason' in column_names and len(row) > 7:
+                reservation['rejection_reason'] = row[7]
+            
+            reservations.append(reservation)
+        
+        return reservations
+    except Exception as e:
+        print(f"Error fetching user reservations: {e}")
+        return []
+    finally:
+        conn.close()
+
+# Resource management functions
+def get_all_resources():
+    """Get all uploaded resources."""
+    conn = sqlite3.connect("sitinmonitor.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    try:
+        # Create table if it doesn't exist
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS resources (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                description TEXT,
+                category TEXT NOT NULL,
+                file_path TEXT NOT NULL,
+                original_filename TEXT NOT NULL,
+                file_type TEXT NOT NULL,
+                file_size INTEGER NOT NULL,
+                uploaded_by TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        conn.commit()
+        
+        cursor.execute("""
+            SELECT id, title, description, category, file_path, original_filename, 
+                file_type, file_size, uploaded_by, strftime('%Y-%m-%d %H:%M', created_at) as upload_date 
+            FROM resources 
+            ORDER BY created_at DESC
+        """)
+        
+        resources = cursor.fetchall()
+        return resources
+    except Exception as e:
+        print(f"Error getting resources: {e}")
+        return []
+    finally:
+        conn.close()
+
+def get_resources_by_category(category):
+    """Get resources filtered by category."""
+    conn = sqlite3.connect("sitinmonitor.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    try:
+        # Create table if it doesn't exist
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS resources (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                description TEXT,
+                category TEXT NOT NULL,
+                file_path TEXT NOT NULL,
+                original_filename TEXT NOT NULL,
+                file_type TEXT NOT NULL,
+                file_size INTEGER NOT NULL,
+                uploaded_by TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        conn.commit()
+        
+        cursor.execute("""
+            SELECT id, title, description, category, file_path, original_filename, 
+                file_type, file_size, uploaded_by, strftime('%Y-%m-%d %H:%M', created_at) as upload_date 
+            FROM resources 
+            WHERE category = ?
+            ORDER BY created_at DESC
+        """, (category,))
+        
+        resources = cursor.fetchall()
+        return resources
+    except Exception as e:
+        print(f"Error getting resources by category: {e}")
+        return []
+    finally:
+        conn.close()
+
+def get_resource_by_id(resource_id):
+    """Get resource by its ID."""
+    conn = sqlite3.connect("sitinmonitor.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("""
+            SELECT id, title, description, category, file_path, original_filename, 
+                file_type, file_size, uploaded_by, strftime('%Y-%m-%d %H:%M', created_at) as upload_date 
+            FROM resources 
+            WHERE id = ?
+        """, (resource_id,))
+        
+        resource = cursor.fetchone()
+        return resource
+    except Exception as e:
+        print(f"Error getting resource by ID: {e}")
+        return None
+    finally:
+        conn.close()
+
+def add_resource(title, description, category, file_path, original_filename, file_type, file_size, uploaded_by):
+    """Add a new resource to the database."""
+    conn = sqlite3.connect("sitinmonitor.db")
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS resources (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                description TEXT,
+                category TEXT NOT NULL,
+                file_path TEXT NOT NULL,
+                original_filename TEXT NOT NULL,
+                file_type TEXT NOT NULL,
+                file_size INTEGER NOT NULL,
+                uploaded_by TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        cursor.execute("""
+            INSERT INTO resources (title, description, category, file_path, original_filename, file_type, file_size, uploaded_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (title, description, category, file_path, original_filename, file_type, file_size, uploaded_by))
+        
+        conn.commit()
+        resource_id = cursor.lastrowid
+        return resource_id
+    except Exception as e:
+        print(f"Error adding resource: {e}")
+        conn.rollback()
+        return None
+    finally:
+        conn.close()
+
+def delete_resource(resource_id):
+    """Delete a resource from the database."""
+    conn = sqlite3.connect("sitinmonitor.db")
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("DELETE FROM resources WHERE id = ?", (resource_id,))
+        conn.commit()
+        success = cursor.rowcount > 0
+        return success
+    except Exception as e:
+        print(f"Error deleting resource: {e}")
+        conn.rollback()
         return False
     finally:
         conn.close()

@@ -111,7 +111,7 @@ def get_all_students():
                 COALESCE(total_sessions, 30) as total_sessions
             FROM USERS
             WHERE username NOT IN (SELECT username FROM ADMIN)
-            ORDER BY lab_points DESC, lastname, fname
+            ORDER BY idno ASC
         """)
         
         students = cursor.fetchall()
@@ -1168,6 +1168,30 @@ def check_user_has_pending_reservation(student_id):
         return count > 0
     except Exception as e:
         print(f"Error checking user reservations: {e}")
+        return False
+    finally:
+        conn.close()
+
+def check_user_has_active_sitin(student_id):
+    """Check if a user has an active sit-in session."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        current_date = datetime.now().strftime("%Y-%m-%d")
+        
+        # Active sit-in is when time_in equals time_out (end time not set)
+        cursor.execute("""
+            SELECT COUNT(*) 
+            FROM SIT_IN_HISTORY 
+            WHERE idno = ? AND date = ? AND time_in = time_out
+        """, (student_id, current_date))
+        
+        count = cursor.fetchone()[0]
+        result = count > 0
+        print(f"Student {student_id} has active sit-in: {result} (count={count})")
+        return result
+    except Exception as e:
+        print(f"Error checking active sit-in: {e}")
         return False
     finally:
         conn.close()

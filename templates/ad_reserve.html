@@ -491,6 +491,38 @@
       font-size: 13px;
       color: #666;
     }
+
+    /* Notification Bubble Styles */
+    .notification-bubble {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background-color: #e74c3c;
+      color: white;
+      border-radius: 50%;
+      min-width: 20px;
+      height: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 4px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      animation: pulse 1.5s infinite;
+    }
+    
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.1);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
   </style>
 </head>
 <body>
@@ -530,6 +562,7 @@
       <div class="tabs">
         <button class="tab-button active" onclick="showTab('reservations')">
           <i class="fas fa-calendar-check"></i> Reservations
+          <span id="reservation-notification" class="notification-bubble" style="display: none;"></span>
         </button>
         <button class="tab-button" onclick="showTab('computers')">
           <i class="fas fa-desktop"></i> Computer Management
@@ -916,6 +949,9 @@
             }
           }
           
+          // Update notification count
+          updateReservationNotification();
+          
           // Refresh the page after a short delay to show the message
           setTimeout(() => {
             location.reload();
@@ -946,6 +982,8 @@
       .then(data => {
         if (data.success) {
           showFlashMessage('Reservation rejected successfully!');
+          // Update notification count
+          updateReservationNotification();
           // Refresh the page or update the UI
           location.reload();
         } else {
@@ -969,13 +1007,30 @@
       fetch('/api/laboratories')
         .then(response => response.json())
         .then(data => {
+          console.log("Laboratories from API:", data);
+          
           const labSelect = document.getElementById('lab-select');
           data.forEach(lab => {
+            console.log(`Processing lab: id=${lab.id}, number=${lab.number}`);
+            
             const option = document.createElement('option');
+            // Map the lab ID to the correct lab number using our mapping
+            let labNumber = labMappingByIndex[lab.id] || lab.id;
+            
+            // Special handling for Laboratory 517 (sometimes appears as 7)
+            if (lab.id === 7 || lab.number === 7 || lab.number === '7') {
+              labNumber = '517';
+            }
+            
+            console.log(`Mapped ${lab.id} to laboratory number ${labNumber}`);
+            
             option.value = lab.id;
-            option.textContent = `Laboratory ${lab.number}`;
+            option.textContent = `Laboratory ${labNumber}`;
             labSelect.appendChild(option);
           });
+          
+          // Update lab options to show availability status
+          updateLabSelectOptions();
         });
 
       // Handle laboratory selection
@@ -1006,79 +1061,16 @@
           // Update UI
           loadLaboratoryStatuses();
           loadLabSchedules();
+          
+          // Update lab select options to show availability
+          updateLabSelectOptions();
         })
         .catch(error => {
           console.log('Using locally stored lab statuses');
         });
 
-      function fetchComputers(labId) {
-        const computerGrid = document.getElementById('computerGrid');
-        computerGrid.innerHTML = '<div class="loading">Loading computers...</div>';
-
-        // Add debugging info
-        console.log(`Original labId parameter: ${labId}`);
-        
-        // Ensure we're using the correct lab number
-        const labNumber = labMappingByIndex[labId] || labId;
-        console.log(`Fetching computers for lab number: ${labNumber}`);
-
-        fetch(`/api/computers/${labNumber}`)
-          .then(response => response.json())
-          .then(computers => {
-            computerGrid.innerHTML = '';
-            console.log(`Received ${computers.length} computers for lab ${labNumber}`);
-            
-            // Log detailed computer statuses
-            if (labNumber === '542') {
-              console.log("LAB 542 COMPUTER STATUSES:");
-              computers.forEach(computer => {
-                console.log(`PC ${computer.number}: ${computer.is_available ? 'AVAILABLE' : 'IN USE'} (is_available=${computer.is_available})`);
-              });
-            }
-            
-            computers.forEach(computer => {
-              const div = document.createElement('div');
-              div.className = `computer-item ${computer.is_available ? 'available' : 'unavailable'}`;
-              
-              // Add a more prominent label for computers that are in use from reservations
-              div.innerHTML = `
-                <div class="computer-number">PC ${computer.number}</div>
-                <span class="computer-status ${computer.is_available ? 'status-available' : 'status-unavailable'}">
-                  ${computer.is_available ? 'Available' : 'In Use'}
-                </span>
-                ${!computer.is_available ? '<div class="reserved-label">Reserved</div>' : ''}
-              `;
-              div.onclick = () => toggleComputerStatus(computer.id, computer.is_available);
-              computerGrid.appendChild(div);
-            });
-          })
-          .catch(error => {
-            console.error('Error fetching computers:', error);
-            computerGrid.innerHTML = '<div class="error">Error loading computers</div>';
-          });
-      }
-
-      function toggleComputerStatus(computerId, currentStatus) {
-        fetch(`/update_computer_status/${computerId}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            is_available: !currentStatus
-          })
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.status === 'success') {
-            // Refresh the computer grid
-            const labId = document.getElementById('lab-select').value;
-            fetchComputers(labId);
-          } else {
-            alert('Error updating computer status: ' + data.message);
-          }
-        });
-      }
+      // Check for pending reservations and update notification bubble
+      updateReservationNotification();
     });
 
     // Tab functionality
@@ -1282,6 +1274,9 @@
       // Sort by newest first on page load
       document.getElementById('sortOptions').value = 'date-desc';
       sortReservations();
+      
+      // Update notification bubble
+      updateReservationNotification();
     };
 
     // Lab Schedule Modal Functions
@@ -1437,6 +1432,9 @@
       saveLaboratoryStatus(labStatus);
       updateLabScheduleDisplay(labStatus);
       
+      // Update lab select options to reflect the new status
+      updateLabSelectOptions();
+      
       // Close the modal
       closeLabScheduleModal();
       
@@ -1543,6 +1541,9 @@
           saveLaboratoryStatus(currentStatus);
           updateLabScheduleDisplay(currentStatus);
           
+          // Update lab select options to reflect the new status
+          updateLabSelectOptions();
+          
           // Update API endpoint
           fetch('/update_lab_schedule', {
             method: 'POST',
@@ -1593,6 +1594,173 @@
       });
     }
 
+    // Function to update reservation notification bubble
+    function updateReservationNotification() {
+      // Count the pending reservations
+      const rows = document.querySelectorAll('tbody tr');
+      let pendingCount = 0;
+      
+      rows.forEach(row => {
+        const statusCell = row.querySelector('td:nth-child(7)');
+        if (statusCell) {
+          const statusBadge = statusCell.querySelector('.status-badge');
+          if (statusBadge && statusBadge.classList.contains('status-pending')) {
+            pendingCount++;
+          }
+        }
+      });
+      
+      // Update the notification bubble
+      const notificationBubble = document.getElementById('reservation-notification');
+      if (pendingCount > 0) {
+        notificationBubble.textContent = pendingCount;
+        notificationBubble.style.display = 'flex';
+      } else {
+        notificationBubble.style.display = 'none';
+      }
+    }
+
+    function fetchComputers(labId) {
+      const computerGrid = document.getElementById('computerGrid');
+      computerGrid.innerHTML = '<div class="loading">Loading computers...</div>';
+
+      // Add debugging info
+      console.log(`Original labId parameter: ${labId}`);
+      
+      // Ensure we're using the correct lab number
+      let labNumber = labMappingByIndex[labId] || labId;
+      
+      // Special handling for Laboratory 517 (sometimes appears as 7)
+      if (labId === 7 || labId === '7') {
+        labNumber = '517';
+      }
+      
+      console.log(`Fetching computers for lab number: ${labNumber}`);
+      
+      // Check if the laboratory is unavailable
+      const labStatuses = JSON.parse(localStorage.getItem('laboratoryStatuses')) || {};
+      const labStatus = labStatuses[labNumber] || { available: true };
+      
+      if (!labStatus.available) {
+        // Display message that lab is unavailable
+        computerGrid.innerHTML = `
+          <div style="grid-column: 1 / -1; text-align: center; padding: 40px; background-color: #fef2f2; border-radius: 8px; color: #e74c3c;">
+            <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 20px;"></i>
+            <h3 style="margin-bottom: 10px;">Laboratory ${labNumber} is Currently Unavailable</h3>
+            <p>${labStatus.reason === 'class' ? 'Class in Session' : 
+                labStatus.reason === 'maintenance' ? 'Under Maintenance' : 
+                labStatus.reason === 'event' ? 'Special Event' : 
+                labStatus.otherReason || 'Unavailable for use'}</p>
+            ${labStatus.endDate ? `<p>Available again after: ${formatDateForDisplay(labStatus.endDate)}</p>` : ''}
+          </div>
+        `;
+        return;
+      }
+
+      fetch(`/api/computers/${labNumber}`)
+        .then(response => response.json())
+        .then(computers => {
+          computerGrid.innerHTML = '';
+          console.log(`Received ${computers.length} computers for lab ${labNumber}`);
+          
+          // Log detailed computer statuses
+          if (labNumber === '542') {
+            console.log("LAB 542 COMPUTER STATUSES:");
+            computers.forEach(computer => {
+              console.log(`PC ${computer.number}: ${computer.is_available ? 'AVAILABLE' : 'IN USE'} (is_available=${computer.is_available})`);
+            });
+          }
+          
+          // Create a map of existing computers by number
+          const computerMap = {};
+          computers.forEach(computer => {
+            computerMap[computer.number] = computer;
+          });
+          
+          // Generate all 50 computers, using data from API when available
+          for (let i = 1; i <= 50; i++) {
+            const computerNumber = i.toString();
+            const computer = computerMap[computerNumber] || {
+              id: `${labNumber}-${computerNumber}`,
+              number: computerNumber,
+              is_available: true
+            };
+            
+            const div = document.createElement('div');
+            div.className = `computer-item ${computer.is_available ? 'available' : 'unavailable'}`;
+            
+            // Add a more prominent label for computers that are in use from reservations
+            div.innerHTML = `
+              <div class="computer-number">PC ${computer.number}</div>
+              <span class="computer-status ${computer.is_available ? 'status-available' : 'status-unavailable'}">
+                ${computer.is_available ? 'Available' : 'In Use'}
+              </span>
+              ${!computer.is_available ? '<div class="reserved-label">Reserved</div>' : ''}
+            `;
+            div.onclick = () => toggleComputerStatus(computer.id, computer.is_available);
+            computerGrid.appendChild(div);
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching computers:', error);
+          computerGrid.innerHTML = '<div class="error">Error loading computers</div>';
+        });
+    }
+
+    function toggleComputerStatus(computerId, currentStatus) {
+      fetch(`/update_computer_status/${computerId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          is_available: !currentStatus
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === 'success') {
+          // Refresh the computer grid
+          const labId = document.getElementById('lab-select').value;
+          fetchComputers(labId);
+        } else {
+          alert('Error updating computer status: ' + data.message);
+        }
+      });
+    }
+
+    // Update the lab select dropdown to reflect lab availability status
+    function updateLabSelectOptions() {
+      const labSelect = document.getElementById('lab-select');
+      if (!labSelect) return;
+      
+      const labStatuses = JSON.parse(localStorage.getItem('laboratoryStatuses')) || {};
+      
+      // Update each option to show availability
+      Array.from(labSelect.options).forEach(option => {
+        if (option.value) {
+          const labId = option.value;
+          let labNumber = labMappingByIndex[labId] || labId;
+          
+          // Special handling for Laboratory 517 (sometimes appears as 7)
+          if (labId === 7 || labId === '7') {
+            labNumber = '517';
+          }
+          
+          const labStatus = labStatuses[labNumber] || { available: true };
+          
+          // Mark unavailable labs in the dropdown
+          if (!labStatus.available) {
+            option.text = `Laboratory ${labNumber} (Unavailable)`;
+            option.style.color = '#e74c3c';
+          } else {
+            option.text = `Laboratory ${labNumber}`;
+            option.style.color = '';
+          }
+        }
+      });
+    }
+
     // Laboratory dropdown data
     const labMappingByIndex = {
         '0': '517', 
@@ -1602,6 +1770,7 @@
         '4': '530', 
         '5': '542', 
         '6': '544',
+        '7': '517',
         0: '517', 
         1: '524', 
         2: '526', 
@@ -1609,6 +1778,7 @@
         4: '530', 
         5: '542', 
         6: '544',
+        7: '517',
         '517': '517',
         '524': '524',
         '526': '526',

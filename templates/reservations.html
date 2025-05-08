@@ -825,8 +825,8 @@
 
         function generateComputersForLab(labId, containerElement) {
             containerElement.innerHTML = '';
-            // Default to 30 computers per lab based on schema
-            const computerCount = 30;
+            // Changed from 30 to 50 computers per lab
+            const computerCount = 50;
             
             console.log(`Manually generating ${computerCount} computers for lab ${labId}`);
             
@@ -892,20 +892,20 @@
         function renderGeneratedComputers(computerCount, containerElement) {
             containerElement.innerHTML = '';
             for (let i = 1; i <= computerCount; i++) {
-                        const div = document.createElement('div');
-                        div.className = 'computer-item';
-                        div.innerHTML = `
-                            <label class="computer-checkbox-label">
-                        <input type="checkbox" 
-                            class="computer-checkbox" 
-                            name="computers" 
-                            value="PC ${i}" 
-                            data-computer-id="gen_${i}"
-                            data-generated="true"
-                            onchange="updateSelectedComputers(this)">
-                                <span class="computer-name">PC ${i}</span>
-                            </label>
-                        `;
+                const div = document.createElement('div');
+                div.className = 'computer-item';
+                div.innerHTML = `
+                    <label class="computer-checkbox-label">
+                <input type="checkbox" 
+                    class="computer-checkbox" 
+                    name="computers" 
+                    value="PC ${i}" 
+                    data-computer-id="gen_${i}"
+                    data-generated="true"
+                    onchange="updateSelectedComputers(this)">
+                    <span class="computer-name">PC ${i}</span>
+                </label>
+            `;
                 containerElement.appendChild(div);
             }
             
@@ -1121,6 +1121,16 @@
             saveReservationHistoryToLocalStorage();
         });
 
+        // Function to forcibly enable the reservation form for debugging
+        function forceEnableForm() {
+            const form = document.getElementById('reservationForm');
+            const submitBtn = document.querySelector('button[type="submit"]');
+            form.classList.remove('disabled');
+            submitBtn.disabled = false;
+            showMessage('Form has been manually enabled for testing. You can now make a reservation.', 'info');
+            console.log('Form manually enabled');
+        }
+
         function checkReservationStatus() {
             fetch('/check_reservation_status')
                 .then(response => response.json())
@@ -1128,14 +1138,39 @@
                     const form = document.getElementById('reservationForm');
                     const submitBtn = document.querySelector('button[type="submit"]');
                     
-                    if (!data.can_reserve) {
+                    // Add debug output to console to help diagnose issues
+                    console.log('Detailed reservation status:', data);
+                    
+                    if (data.has_pending_reservation) {
+                        // Disable form if there's a pending reservation
                         form.classList.add('disabled');
                         submitBtn.disabled = true;
-                        showMessage(data.message, 'warning');
+                        showMessage('You have a pending reservation request. Please wait for approval.', 'warning');
+                    } else if (data.in_active_session) {
+                        // Disable form if user is in an active sit-in session
+                        form.classList.add('disabled');
+                        submitBtn.disabled = true;
+                        showMessage('You are currently in an active sit-in session. You cannot make a reservation while in an active session.', 'warning');
+                    } else {
+                        // User can reserve normally - this covers both cases:
+                        // 1. Never had a sit-in session
+                        // 2. Had a session that was ended by admin (was_logged_out=true)
+                        form.classList.remove('disabled');
+                        submitBtn.disabled = false;
+                        
+                        // Show informational message if they were previously logged out
+                        if (data.was_logged_out && data.completed_sessions > 0) {
+                            showMessage('Your previous session was ended. You can now make a new reservation.', 'info');
+                        }
                     }
                 })
                 .catch(error => {
                     console.error('Error checking reservation status:', error);
+                    // If there's an error, default to enabling the form
+                    const form = document.getElementById('reservationForm');
+                    const submitBtn = document.querySelector('button[type="submit"]');
+                    form.classList.remove('disabled');
+                    submitBtn.disabled = false;
                 });
         }
 

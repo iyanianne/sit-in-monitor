@@ -1071,10 +1071,45 @@ def update_computer_status_route(computer_id):
 @login_required
 def check_reservation_status():
     student_id = session.get('idno')
+    
+    # Check for pending reservations
     has_pending = dbhelper.check_user_has_pending_reservation(student_id)
+    
+    # Check for active sit-in directly using the helper function
+    active_sitin = dbhelper.check_user_has_active_sitin(student_id)
+    
+    # Debug output
+    print(f"Checking reservation status for student {student_id}")
+    print(f"Has pending reservation: {has_pending}")
+    print(f"In active sit-in session: {active_sitin}")
+    
+    # Check for any completed sessions
+    conn = sqlite3.connect('sitinmonitor.db')
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT COUNT(*) FROM SIT_IN_HISTORY 
+        WHERE idno = ? AND time_in != time_out
+    """, (student_id,))
+    completed_session_count = cursor.fetchone()[0]
+    was_logged_out = completed_session_count > 0 and not active_sitin
+    
+    # Debug output
+    print(f"Completed session count: {completed_session_count}")
+    print(f"Was logged out by admin: {was_logged_out}")
+    
+    conn.close()
+    
+    # User can reserve if they don't have pending reservations and aren't in an active sit-in
+    can_reserve = not has_pending and not active_sitin
+    
     return jsonify({
-        'can_reserve': not has_pending,
-        'message': 'You already have a pending or approved reservation' if has_pending else None
+        'can_reserve': can_reserve,
+        'has_pending_reservation': has_pending,
+        'in_active_session': active_sitin,
+        'was_logged_out': was_logged_out,
+        'completed_sessions': completed_session_count,
+        'message': 'You already have a pending or approved reservation' if has_pending else
+                  'You are currently in an active sit-in session' if active_sitin else None
     })
 
 # Student Reservation Routes

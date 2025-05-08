@@ -885,37 +885,7 @@
                       <h4>{{ resource.title }}</h4>
                       <p>{{ resource.description }}</p>
                       <div class="resource-meta">
-                        <span class="resource-category">
-                          {% if resource.category == 'c_resources' %}
-                            C Programming
-                          {% elif resource.category == 'java_resources' %}
-                            Java
-                          {% elif resource.category == 'python_resources' %}
-                            Python
-                          {% elif resource.category == 'csharp_resources' %}
-                            C#
-                          {% elif resource.category == 'database_resources' %}
-                            Database
-                          {% elif resource.category == 'digilog_resources' %}
-                            Digital Logic &amp; Design
-                          {% elif resource.category == 'iot_resources' %}
-                            Embedded Systems &amp; IoT
-                          {% elif resource.category == 'computer_resources' %}
-                            Computer Applications
-                          {% elif resource.category == 'pm_resources' %}
-                            Project Management
-                          {% elif resource.category == 'itrends_resources' %}
-                            IT Trends
-                          {% elif resource.category == 'techno_resources' %}
-                            Technopreneurship
-                          {% elif resource.category == 'capstone_resources' %}
-                            Capstone
-                          {% elif resource.category == 'lab_manuals' %}
-                            Laboratory Manuals
-                          {% else %}
-                            {{ resource.category }}
-                          {% endif %}
-                        </span>
+                        <span class="resource-category">{{ resource.category_display }}</span>
                         <span class="resource-date">{{ resource.upload_date }}</span>
                       </div>
                     </div>

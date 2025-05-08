@@ -198,9 +198,9 @@
 
         .reservation-card {
             background-color: #fff;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 25px;
             margin-bottom: 30px;
         }
 
@@ -229,54 +229,62 @@
 
         .computer-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-            gap: 0.8rem;
-            padding: 20px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+            max-height: 300px;
+            overflow-y: auto;
         }
 
         .computer-item {
-            background-color: #fff;
             border: 1px solid #ddd;
-            padding: 12px;
-            border-radius: 6px;
-            text-align: left;
-            transition: all 0.3s ease;
+            border-radius: 5px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            transition: all 0.2s;
         }
 
-        .computer-item:hover {
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        .computer-item:hover:not(.disabled) {
+            background-color: #e9f7fe;
+            border-color: #3498db;
         }
 
         .computer-item.disabled {
-            background-color: #f5f5f5;
+            background-color: #f1f1f1;
             opacity: 0.7;
+            cursor: not-allowed;
         }
 
-        .computer-checkbox {
-            margin-right: 10px;
+        .computer-checkbox-label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            width: 100%;
         }
 
         .computer-name {
-            font-weight: 500;
-            color: #2c3e50;
+            margin-left: 8px;
+            font-size: 14px;
         }
 
-        .modal-footer {
-            padding-top: 20px;
-            border-top: 1px solid #ddd;
-            text-align: right;
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #3498db;
+        }
+
+        .error {
+            text-align: center;
+            padding: 20px;
+            color: #e74c3c;
         }
 
         .selected-computers {
-            margin-top: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
             padding: 10px;
-            background-color: #f8f9fa;
-            border-radius: 4px;
             min-height: 40px;
-            max-height: 100px;
-            overflow-y: auto;
-            font-size: 14px;
-            line-height: 1.5;
+            background-color: #f9f9f9;
         }
 
         .btn-primary {
@@ -557,6 +565,13 @@
                         <label class="form-label" for="laboratory">Select Laboratory</label>
                         <select class="form-control" id="laboratory" name="laboratory" required title="Select Laboratory">
                             <option value="">Choose a laboratory...</option>
+                            <option value="517">517</option>
+                            <option value="524">524</option>
+                            <option value="526">526</option>
+                            <option value="528">528</option>
+                            <option value="530">530</option>
+                            <option value="542">542</option>
+                            <option value="544">544</option>
                         </select>
                     </div>
 
@@ -753,40 +768,33 @@
 
         // Fetch laboratories and update dropdown with availability
         function loadLaboratories() {
-        fetch('/api/laboratories')
-            .then(response => response.json())
-            .then(data => {
-                const labSelect = document.getElementById('laboratory');
-                labSelect.innerHTML = '<option value="">Choose a laboratory...</option>';
+            fetch('/api/laboratories')
+                .then(response => response.json())
+                .then(data => {
+                    const labSelect = document.getElementById('laboratory');
+                    labSelect.innerHTML = '<option value="">Choose a laboratory...</option>';
                     
-                    // Get lab statuses from localStorage (set by admin)
-                    const labStatuses = JSON.parse(localStorage.getItem('laboratoryStatuses')) || {};
-                    
-                data.forEach(lab => {
-                    const option = document.createElement('option');
-                    option.value = lab.id;
+                    data.forEach(lab => {
+                        const option = document.createElement('option');
+                        option.value = lab.number;
                         
-                        // Check if lab is available based on admin settings
-                        const labStatus = labStatuses[lab.number] || { available: true };
+                        // Check if lab is available from the API response
+                        const isAvailable = lab.is_available;
                         
                         // Set the option text with availability status
-                        option.textContent = `Laboratory ${lab.number} ${!labStatus.available ? '(Unavailable)' : ''}`;
-                        
-                        // If lab is unavailable, disable the option
-                        if (!labStatus.available) {
+                        if (!isAvailable) {
                             option.disabled = true;
-                            option.style.color = '#e74c3c';
                             option.innerHTML = `<span>⛔ Laboratory ${lab.number} (Currently Unavailable)</span>`;
                         } else {
                             option.innerHTML = `<span>✅ Laboratory ${lab.number} (Available)</span>`;
                         }
                         
-                    labSelect.appendChild(option);
+                        labSelect.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching laboratories:', error);
                 });
-            })
-            .catch(error => {
-                console.error('Error fetching laboratories:', error);
-            });
         }
 
         // Computer selection modal functions
@@ -815,15 +823,54 @@
             document.getElementById('computerModal').style.display = 'none';
         }
 
-        function fetchComputers(labId) {
-            const computerGrid = document.getElementById('computerGrid');
-            computerGrid.innerHTML = '<div class="loading">Loading computers...</div>';
+        function generateComputersForLab(labId, containerElement) {
+            containerElement.innerHTML = '';
+            // Default to 30 computers per lab based on schema
+            const computerCount = 30;
             
-            fetch(`/api/computers/${labId}`)
-                .then(response => response.json())
+            console.log(`Manually generating ${computerCount} computers for lab ${labId}`);
+            
+            // Create API request to create computers for this lab
+            fetch(`/api/create_lab_computers/${labId}`, { method: 'POST' })
+                .then(response => {
+                    console.log(`Create computers API response: ${response.status}`);
+                    if (response.ok) {
+                        return response.json();
+                    }
+                    // If creation fails, still generate UI computers
+                    throw new Error('API not available');
+                })
+                .then(data => {
+                    console.log('API created computers:', data);
+                    // Fetch the computers again after creation
+                    return fetch(`/api/computers/${labId}`);
+                })
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    }
+                    throw new Error('Could not fetch computers');
+                })
                 .then(computers => {
-                    computerGrid.innerHTML = '';
+                    if (computers && computers.length > 0) {
+                        console.log(`Retrieved ${computers.length} computers after creation`);
+                        // Display the computers from the API
+                        renderComputers(computers, containerElement);
+                        return;
+                    }
+                    throw new Error('No computers returned');
+                })
+                .catch(error => {
+                    console.error('Error in generate process:', error);
+                    // Fallback - generate UI computers
+                    renderGeneratedComputers(computerCount, containerElement);
+                });
+        }
+
+        function renderComputers(computers, containerElement) {
+            containerElement.innerHTML = '';
                     computers.forEach(computer => {
+                console.log(`Rendering computer: ${JSON.stringify(computer)}`);
                         const div = document.createElement('div');
                         div.className = `computer-item ${computer.is_available ? '' : 'disabled'}`;
                         div.innerHTML = `
@@ -831,36 +878,105 @@
                                 <input type="checkbox" 
                                     class="computer-checkbox" 
                                     name="computers" 
-                                    value="PC${computer.number}"
+                                    value="PC ${computer.number}"
                                     ${computer.is_available ? '' : 'disabled'}
+                            data-computer-id="${computer.id}"
                                     onchange="updateSelectedComputers(this)">
                                 <span class="computer-name">PC ${computer.number}</span>
                             </label>
                         `;
-                        computerGrid.appendChild(div);
-                    });
+                containerElement.appendChild(div);
+            });
+        }
+
+        function renderGeneratedComputers(computerCount, containerElement) {
+            containerElement.innerHTML = '';
+            for (let i = 1; i <= computerCount; i++) {
+                        const div = document.createElement('div');
+                        div.className = 'computer-item';
+                        div.innerHTML = `
+                            <label class="computer-checkbox-label">
+                        <input type="checkbox" 
+                            class="computer-checkbox" 
+                            name="computers" 
+                            value="PC ${i}" 
+                            data-computer-id="gen_${i}"
+                            data-generated="true"
+                            onchange="updateSelectedComputers(this)">
+                                <span class="computer-name">PC ${i}</span>
+                            </label>
+                        `;
+                containerElement.appendChild(div);
+            }
+            
+            // Add a message about computer availability
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'alert alert-info';
+            messageDiv.style.marginTop = '20px';
+            messageDiv.textContent = 'Please select one computer for your reservation. These computers have been generated as a fallback.';
+            containerElement.appendChild(messageDiv);
+        }
+
+        function fetchComputers(labId) {
+            const computerGrid = document.getElementById('computerGrid');
+            computerGrid.innerHTML = '<div class="loading">Loading computers...</div>';
+            
+            // Log for debugging
+            console.log(`Fetching computers for lab: ${labId}`);
+            
+            // Check if we can get data from the API
+            fetch(`/api/computers/${labId}`)
+                .then(response => {
+                    console.log(`API response status: ${response.status}`);
+                    if (!response.ok) {
+                        throw new Error('API not available');
+                    }
+                    return response.json();
+                })
+                .then(computers => {
+                    console.log(`Received ${computers ? computers.length : 0} computers from API`);
+                    
+                    // If no computers returned, generate them
+                    if (!computers || computers.length === 0) {
+                        console.log(`Generating computers for lab ${labId}`);
+                        // Generate computers instead of showing error
+                        generateComputersForLab(labId, computerGrid);
+                return;
+            }
+
+                    // Display the computers from the API
+                    renderComputers(computers, computerGrid);
                 })
                 .catch(error => {
                     console.error('Error fetching computers:', error);
-                    computerGrid.innerHTML = '<div class="error">Error loading computers</div>';
+                    // Generate computers as fallback
+                    generateComputersForLab(labId, computerGrid);
                 });
         }
 
         let selectedComputers = new Set();
+        let computerData = {}; // Store computer data for later use
 
         function updateSelectedComputers(checkbox) {
-            // Uncheck all other checkboxes
-            document.querySelectorAll('.computer-checkbox').forEach(cb => {
-                if (cb !== checkbox) {
-                    cb.checked = false;
-                }
-            });
-
-            // Update selected computers set
-            selectedComputers.clear();
+            const computerName = checkbox.value;
+            
+            // Store the full computer data for later use
             if (checkbox.checked) {
-                const computerName = checkbox.nextElementSibling.textContent.trim();
+                const computerId = checkbox.getAttribute('data-computer-id');
+                const computerNumber = parseInt(computerName.replace('PC ', ''), 10);
+                
+                // Only store if we have a valid computer number
+                if (!isNaN(computerNumber)) {
+                    computerData[computerName] = {
+                        id: computerId,
+                        number: computerNumber
+                    };
+                }
+                
                 selectedComputers.add(computerName);
+            } else {
+                selectedComputers.delete(computerName);
+                delete computerData[computerName];
             }
         }
 
@@ -868,6 +984,7 @@
             const display = document.getElementById('selectedComputersDisplay');
             if (selectedComputers.size > 0) {
                 display.textContent = Array.from(selectedComputers).join(', ');
+                console.log('Selected computer data:', computerData);
             } else {
                 display.textContent = 'No computers selected';
             }
@@ -883,7 +1000,7 @@
         }
 
         // Form submission
-        document.getElementById('reservationForm').addEventListener('submit', function(e) {
+    document.getElementById('reservationForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
             // Validate form
@@ -906,7 +1023,46 @@
             const datetime = `${reservationDate} ${timeIn}:00`;
             
             // Get the first selected computer (since we're only allowing one computer per reservation)
-            const computerNo = Array.from(selectedComputers)[0].replace('PC ', '');
+            if (selectedComputers.size === 0) {
+                alert('Please select a computer for your reservation');
+                return;
+            }
+            
+            // Get the selected computer information
+            const computerName = Array.from(selectedComputers)[0];
+            let computerNo;
+            
+            // Try to get the saved computer data first
+            if (computerData[computerName]) {
+                computerNo = computerData[computerName].number;
+            } else {
+                // Fall back to parsing from the name
+                const computerNoStr = computerName.replace('PC ', '');
+                computerNo = parseInt(computerNoStr, 10);
+            }
+            
+            // Validate that we have a valid computer number
+            if (isNaN(computerNo) || computerNo <= 0) {
+                alert('Invalid computer selection. Please try again.');
+                return;
+            }
+            
+            // Use laboraory value as is - it's the lab number (e.g., "526")
+            const labId = laboratory;
+            
+            // Debug information
+            console.log('Reservation Data:', {
+                laboratory_id: labId,
+                computer_no: computerNo,
+                purpose: purpose,
+                datetime: datetime
+            });
+            
+            // Show a waiting message
+            const submitBtn = document.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Processing...';
             
             // Send reservation request
             fetch('/reserve_computer', {
@@ -915,15 +1071,23 @@
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
                 body: new URLSearchParams({
-                    'laboratory_id': parseInt(laboratory),
-                    'computer_no': parseInt(computerNo),
+                    'laboratory_id': labId,
+                    'computer_no': computerNo,
                     'purpose': purpose,
                     'datetime': datetime
                 })
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('Response status:', response.status);
+                return response.json();
+            })
             .then(data => {
+                console.log('Response data:', data);
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalBtnText;
+                
                 if (data.status === 'success') {
+                    alert('Reservation request submitted successfully!');
                     window.location.href = '/reservations';
                 } else {
                     alert(data.message || 'Error submitting reservation. Please try again.');
@@ -931,6 +1095,8 @@
             })
             .catch(error => {
                 console.error('Error:', error);
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalBtnText;
                 alert('Error submitting reservation. Please try again.');
             });
         });
@@ -984,14 +1150,14 @@
             setTimeout(() => messageDiv.remove(), 5000);
         }
 
-        // Function to refresh lab availability from server and localStorage
+        // Function to refresh lab availability from server
         function refreshLabAvailability() {
-            // Try to get updated lab statuses from server
+            // Get updated lab statuses from server
             fetch('/api/lab_statuses')
                 .then(response => response.json())
                 .then(data => {
-                    // If we received valid data from server, update localStorage
-                    if (Array.isArray(data) && data.length > 0) {
+                    // Store the statuses for other parts of the application
+                    if (Array.isArray(data)) {
                         let labStatuses = {};
                         data.forEach(status => {
                             labStatuses[status.labNumber] = status;
@@ -1003,8 +1169,8 @@
                     loadLaboratories();
                 })
                 .catch(error => {
-                    console.log('Using locally stored lab statuses');
-                    // Still reload laboratories with local data on error
+                    console.log('Error fetching lab statuses:', error);
+                    // Still reload laboratories with available data
                     loadLaboratories();
                 });
         }

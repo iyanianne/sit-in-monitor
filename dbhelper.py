@@ -466,7 +466,7 @@ def get_sit_in_leaderboard():
             WHERE u.username NOT IN (SELECT username FROM ADMIN)
             GROUP BY u.idno, u.lastname, u.fname, u.mname, u.course
             ORDER BY lab_points DESC, sit_in_count DESC
-            LIMIT 10
+            LIMIT 5
         """)
         
         results = cursor.fetchall()
@@ -715,6 +715,16 @@ def create_reservation(student_id, laboratory_id, computer_no, purpose, datetime
         conn = get_db_connection()
         cursor = conn.cursor()
         
+        # Determine if laboratory_id is a lab ID or a lab number 
+        # If it's a string that's not a number, it's a lab number
+        if isinstance(laboratory_id, str) and not laboratory_id.isdigit():
+            # Get the lab ID from the lab number
+            cursor.execute("SELECT id FROM laboratories WHERE number = ?", (laboratory_id,))
+            lab_result = cursor.fetchone()
+            if not lab_result:
+                return False, "Laboratory not found"
+            laboratory_id = lab_result[0]
+        
         # First check if the computer exists in the specified laboratory
         cursor.execute("""
             SELECT is_available FROM computers 
@@ -751,7 +761,7 @@ def create_reservation(student_id, laboratory_id, computer_no, purpose, datetime
         return True, "Reservation created successfully"
     except Exception as e:
         print(f"Error creating reservation: {e}")
-        return False, "Failed to create reservation"
+        return False, f"Failed to create reservation: {e}"
     finally:
         conn.close()
 
@@ -817,6 +827,19 @@ def approve_reservation(reservation_id):
         if not reservation:
             return False, "Reservation not found"
         
+        lab_id = reservation[0]
+        computer_no = reservation[1]
+        student_id = reservation[2]
+        
+        # Debug info
+        print(f"Approving reservation {reservation_id} for lab_id={lab_id}, computer={computer_no}, student={student_id}")
+        
+        # Check laboratory name
+        cursor.execute("SELECT number FROM laboratories WHERE id = ?", (lab_id,))
+        lab_result = cursor.fetchone()
+        lab_number = lab_result[0] if lab_result else "Unknown"
+        print(f"Laboratory number: {lab_number}")
+        
         # Update reservation status to approved
         cursor.execute("""
             UPDATE reservations
@@ -829,7 +852,19 @@ def approve_reservation(reservation_id):
             UPDATE computers
             SET is_available = 0
             WHERE laboratory_id = ? AND computer_no = ?
-        """, (reservation[0], reservation[1]))
+        """, (lab_id, computer_no))
+        
+        # Verify the update was successful
+        cursor.execute("""
+            SELECT is_available FROM computers
+            WHERE laboratory_id = ? AND computer_no = ?
+        """, (lab_id, computer_no))
+        
+        computer_status = cursor.fetchone()
+        if computer_status:
+            print(f"After update, computer {computer_no} in lab {lab_number} has is_available={computer_status[0]}")
+        else:
+            print(f"Warning: Could not verify status of computer {computer_no} in lab {lab_number}")
         
         # Create a sit-in session for the student
         current_date = datetime.now().strftime("%Y-%m-%d")
@@ -838,7 +873,7 @@ def approve_reservation(reservation_id):
         cursor.execute("""
             INSERT INTO SIT_IN_HISTORY (idno, date, time_in, time_out, purpose, laboratory)
             VALUES (?, ?, ?, ?, ?, ?)
-        """, (reservation[2], current_date, current_time, current_time, "Reservation", f"Laboratory {reservation[0]}"))
+        """, (student_id, current_date, current_time, current_time, "Reservation", f"Laboratory {lab_number}"))
         
         conn.commit()
         return True, "Reservation approved successfully"
@@ -880,13 +915,72 @@ def get_laboratories():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        cursor.execute("SELECT id, number FROM laboratories")
+        # Get schema info to check available columns
+        cursor.execute("PRAGMA table_info(laboratory_status)")
+        columns = cursor.fetchall()
+        column_names = [column[1] for column in columns]
+        
+        # Build the query dynamically based on available columns
+        select_clause = "SELECT l.id, l.number, COALESCE(s.is_available, 1) as is_available"
+        if 'reason' in column_names:
+            select_clause += ", s.reason"
+        else:
+            select_clause += ", NULL as reason"
+            
+        if 'start_date' in column_names:
+            select_clause += ", s.start_date"
+        else:
+            select_clause += ", NULL as start_date"
+            
+        if 'end_date' in column_names:
+            select_clause += ", s.end_date"
+        else:
+            select_clause += ", NULL as end_date"
+            
+        if 'notes' in column_names:
+            select_clause += ", s.notes"
+        else:
+            select_clause += ", NULL as notes"
+            
+        if 'other_reason' in column_names:
+            select_clause += ", s.other_reason"
+        else:
+            select_clause += ", NULL as other_reason"
+        
+        # Complete the query
+        query = f"""
+            {select_clause}
+            FROM laboratories l
+            LEFT JOIN laboratory_status s ON l.number = s.lab_number
+            ORDER BY l.number
+        """
+        
+        cursor.execute(query)
         
         laboratories = []
         for row in cursor.fetchall():
+            # Check if lab is scheduled to be unavailable based on date/time
+            is_available = bool(row[2])
+            start_date = row[4] if len(row) > 4 and row[4] is not None else None
+            end_date = row[5] if len(row) > 5 and row[5] is not None else None
+            
+            # If dates are set and lab is marked unavailable, check if we're in the time range
+            if not is_available and start_date and end_date:
+                now = datetime.now()
+                try:
+                    start = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+                    end = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+                    
+                    # If current time is before start or after end, lab should be available
+                    if now < start or now > end:
+                        is_available = True
+                except Exception as e:
+                    print(f"Error parsing dates in get_laboratories: {e}")
+            
             laboratories.append({
                 'id': row[0],
-                'number': row[1]
+                'number': row[1],
+                'is_available': is_available
             })
         
         return laboratories
@@ -901,21 +995,82 @@ def get_computers_by_lab(laboratory_id):
         conn = get_db_connection()
         cursor = conn.cursor()
         
+        # Check if laboratory_id is a number (lab id) or a string (lab number)
+        lab_id = None
+        is_lab_542 = False
+        
+        if isinstance(laboratory_id, int):
+            # It's a lab ID
+            lab_id = laboratory_id
+            # Check if this is lab 542
+            cursor.execute("SELECT number FROM laboratories WHERE id = ?", (laboratory_id,))
+            lab_number_result = cursor.fetchone()
+            if lab_number_result and lab_number_result[0] == '542':
+                is_lab_542 = True
+                print(f"PROCESSING LAB 542 (by ID {laboratory_id})")
+        else:
+            # It's a lab number
+            if laboratory_id == '542':
+                is_lab_542 = True
+                print(f"PROCESSING LAB 542 (by number)")
+                
+            cursor.execute("""
+                SELECT id FROM laboratories WHERE number = ?
+            """, (laboratory_id,))
+            lab = cursor.fetchone()
+            
+            if not lab:
+                print(f"Laboratory with number {laboratory_id} not found")
+                return []
+                
+            lab_id = lab[0]
+            
+            # Check if there are any computers for this lab
+            cursor.execute("""
+                SELECT COUNT(*) FROM computers WHERE laboratory_id = ?
+            """, (lab_id,))
+            computer_count = cursor.fetchone()[0]
+            
+            # If no computers exist for this lab, create them
+            if computer_count == 0:
+                print(f"No computers found for laboratory {laboratory_id}, creating them now")
+                # Create 30 computers for this lab
+                for i in range(1, 31):
+                    cursor.execute("""
+                        INSERT INTO computers (laboratory_id, computer_no, is_available)
+                        VALUES (?, ?, 1)
+                    """, (lab_id, i))
+                conn.commit()
+        
+        # Now get the computers
         cursor.execute("""
-            SELECT id, computer_no, is_available
-            FROM computers
-            WHERE laboratory_id = ?
-            ORDER BY computer_no
-        """, (laboratory_id,))
+            SELECT c.id, c.computer_no, c.is_available
+            FROM computers c
+            WHERE c.laboratory_id = ?
+            ORDER BY c.computer_no
+        """, (lab_id,))
         
         computers = []
-        for row in cursor.fetchall():
+        rows = cursor.fetchall()
+        
+        if is_lab_542:
+            print(f"LAB 542: Found {len(rows)} computers in database")
+            
+        for row in rows:
+            computer_id = row[0]
+            computer_no = row[1]
+            is_available = bool(row[2])  # Ensure it's a proper boolean
+            
+            if is_lab_542:
+                print(f"LAB 542 - PC {computer_no}: Status = {'AVAILABLE' if is_available else 'IN USE'} (raw value={row[2]})")
+            
             computers.append({
-                'id': row[0],
-                'number': row[1],
-                'is_available': bool(row[2])
+                'id': computer_id,
+                'number': computer_no,
+                'is_available': is_available
             })
         
+        print(f"Returning {len(computers)} computers for laboratory {laboratory_id}")
         return computers
     except Exception as e:
         print(f"Error fetching computers: {e}")
@@ -1047,25 +1202,48 @@ def ensure_reservation_logs_table():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Drop the existing table if it exists
-        cursor.execute("DROP TABLE IF EXISTS reservation_logs")
+        # Check if table exists
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='reservation_logs'")
+        table_exists = cursor.fetchone() is not None
         
-        # Create the table with the new schema
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS reservation_logs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                student_id TEXT NOT NULL,
-                laboratory_id INTEGER NOT NULL,
-                computer_no INTEGER NOT NULL,
-                action TEXT NOT NULL,
-                performed_by TEXT NOT NULL,
-                notes TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
+        if not table_exists:
+            # Create the table with the proper schema if it doesn't exist
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS reservation_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    student_id TEXT NOT NULL,
+                    laboratory_id INTEGER NOT NULL,
+                    computer_no INTEGER NOT NULL,
+                    action TEXT NOT NULL,
+                    performed_by TEXT NOT NULL,
+                    notes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            print("Reservation logs table created successfully")
+        else:
+            # Check if all required columns exist
+            cursor.execute("PRAGMA table_info(reservation_logs)")
+            columns = cursor.fetchall()
+            column_names = [column[1] for column in columns]
+            
+            # Check for required columns
+            required_columns = ['student_id', 'laboratory_id', 'computer_no', 'action', 'performed_by', 'notes', 'created_at']
+            missing_columns = [col for col in required_columns if col not in column_names]
+            
+            # Add any missing columns
+            for col in missing_columns:
+                data_type = "TEXT"
+                if col in ['laboratory_id', 'computer_no']:
+                    data_type = "INTEGER"
+                elif col == 'created_at':
+                    data_type = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+                    
+                cursor.execute(f"ALTER TABLE reservation_logs ADD COLUMN {col} {data_type}")
+                print(f"Added missing column {col} to reservation_logs table")
         
         conn.commit()
-        print("Reservation logs table recreated successfully")
+        print("Reservation logs table schema verified")
         return True
     except Exception as e:
         print(f"Error ensuring reservation_logs table: {e}")
@@ -1108,6 +1286,17 @@ def initialize_database():
     )
     """)
     
+    # Create laboratory_status table if it doesn't exist
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS laboratory_status (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        lab_number INTEGER UNIQUE,
+        is_available INTEGER DEFAULT 1,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_by TEXT
+    )
+    """)
+    
     # Create sit-in table if it doesn't exist
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS sit_in (
@@ -1140,7 +1329,8 @@ def initialize_database():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         laboratory_id INTEGER,
         computer_no INTEGER,
-        status TEXT DEFAULT 'available',
+        is_available BOOLEAN DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (laboratory_id) REFERENCES laboratories (id)
     )
     """)
@@ -1158,6 +1348,35 @@ def initialize_database():
         file_size INTEGER NOT NULL,
         uploaded_by TEXT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+    
+    # Create the reservations table if it doesn't exist
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS reservations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id TEXT NOT NULL,
+        laboratory_id TEXT NOT NULL,
+        computer_no INTEGER NOT NULL,
+        purpose TEXT NOT NULL,
+        datetime TEXT NOT NULL,
+        status TEXT DEFAULT 'pending',
+        rejection_reason TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (student_id) REFERENCES users(idno)
+    )
+    """)
+    
+    # Create the reservation_logs table if it doesn't exist
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS reservation_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        reservation_id INTEGER,
+        action TEXT NOT NULL,
+        performed_by TEXT NOT NULL,
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (reservation_id) REFERENCES reservations(id)
     )
     """)
     
@@ -1194,9 +1413,9 @@ def initialize_database():
             # Add computers for this laboratory
             for i in range(1, lab[2] + 1):  # Add computers based on capacity
                 cursor.execute("""
-                INSERT OR IGNORE INTO computers (laboratory_id, computer_no, status)
-                VALUES (?, ?, 'available')
-                """, (lab_id, i))
+                INSERT OR IGNORE INTO computers (laboratory_id, computer_no, is_available)
+                VALUES (?, ?, ?)
+                """, (lab_id, i, True))
     
     # Create settings table if it doesn't exist
     cursor.execute("""
@@ -1270,23 +1489,48 @@ def create_reservation_log(reservation_id, action, performed_by, notes=None):
 def get_reservation_logs():
     try:
         conn = get_db_connection()
+        conn.row_factory = sqlite3.Row  # Enable dictionary-like access
         cursor = conn.cursor()
+        
+        # Get the reservation logs with joined student and lab info
         cursor.execute("""
             SELECT 
+                rl.id,
                 rl.created_at,
                 rl.student_id,
+                COALESCE(u.fname || ' ' || u.lastname, rl.student_id) as student_name,
                 rl.laboratory_id,
                 rl.computer_no,
                 rl.action,
-                rl.performed_by as performed_by_name,
+                rl.performed_by,
                 rl.notes
             FROM reservation_logs rl
+            LEFT JOIN USERS u ON rl.student_id = u.idno
             ORDER BY rl.created_at DESC
-            LIMIT 100
+            LIMIT 1000
         """)
-        logs = cursor.fetchall()
-        # Convert rows to dictionaries
-        return [dict(row) for row in logs] if logs else []
+        
+        logs = []
+        for row in cursor.fetchall():
+            # Convert row to dictionary
+            log = dict(row)
+            
+            # Format the timestamp if it exists
+            if log.get('created_at'):
+                try:
+                    # Try to parse the timestamp into a more readable format
+                    dt = datetime.strptime(log['created_at'], '%Y-%m-%d %H:%M:%S')
+                    log['formatted_date'] = dt.strftime('%b %d, %Y')
+                    log['formatted_time'] = dt.strftime('%I:%M %p')
+                except Exception as e:
+                    print(f"Error formatting timestamp: {e}")
+                    log['formatted_date'] = log['created_at']
+                    log['formatted_time'] = ''
+            
+            logs.append(log)
+        
+        print(f"Retrieved {len(logs)} reservation logs")
+        return logs
     except Exception as e:
         print(f"Error getting reservation logs: {e}")
         return []
@@ -1297,11 +1541,19 @@ def log_reservation_action(student_id, laboratory_id, computer_no, action, perfo
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
+        
+        print(f"Logging reservation action: {action} for student {student_id}, lab {laboratory_id}, computer {computer_no}")
+        
         cursor.execute("""
             INSERT INTO reservation_logs 
             (student_id, laboratory_id, computer_no, action, performed_by, notes, created_at)
             VALUES (?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
         """, (student_id, laboratory_id, computer_no, action, performed_by, notes))
+        
+        # Get the ID of the newly inserted log
+        log_id = cursor.lastrowid
+        print(f"Created reservation log with ID: {log_id}")
+        
         conn.commit()
         return True
     except Exception as e:
@@ -1589,6 +1841,324 @@ def delete_resource(resource_id):
     except Exception as e:
         print(f"Error deleting resource: {e}")
         conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+def update_lab_status(lab_number, is_available, admin_username):
+    """Update the availability status of a laboratory."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Check if the lab already has a status
+        cursor.execute("SELECT id FROM laboratory_status WHERE lab_number = ?", (lab_number,))
+        result = cursor.fetchone()
+        
+        if result:
+            # Update existing status
+            cursor.execute("""
+                UPDATE laboratory_status
+                SET is_available = ?, updated_at = datetime('now', 'localtime'), updated_by = ?
+                WHERE lab_number = ?
+            """, (1 if is_available else 0, admin_username, lab_number))
+        else:
+            # Insert new status
+            cursor.execute("""
+                INSERT INTO laboratory_status (lab_number, is_available, updated_by)
+                VALUES (?, ?, ?)
+            """, (lab_number, 1 if is_available else 0, admin_username))
+        
+        conn.commit()
+        return True, "Laboratory status updated successfully"
+    except Exception as e:
+        print(f"Error updating laboratory status: {e}")
+        return False, str(e)
+    finally:
+        conn.close()
+
+def get_lab_statuses():
+    """Get the status of all laboratories."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Check if required columns exist
+        cursor.execute("PRAGMA table_info(laboratory_status)")
+        columns = cursor.fetchall()
+        column_names = [column[1] for column in columns]
+        
+        # Build the query dynamically based on available columns
+        select_clause = "SELECT lab_number, is_available, updated_at, updated_by"
+        
+        # Add optional columns if they exist
+        for col in ['reason', 'start_date', 'end_date', 'notes', 'other_reason']:
+            if col in column_names:
+                select_clause += f", {col}"
+            else:
+                select_clause += f", NULL as {col}"
+                
+                # Try to add the missing column
+                try:
+                    cursor.execute(f"ALTER TABLE laboratory_status ADD COLUMN {col} TEXT")
+                    print(f"Added missing column {col} to laboratory_status table")
+                except Exception as e:
+                    if "duplicate column name" not in str(e):
+                        print(f"Error adding column {col}: {e}")
+        
+        # Complete the query
+        query = f"""
+            {select_clause}
+            FROM laboratory_status
+            ORDER BY lab_number
+        """
+        
+        cursor.execute(query)
+        
+        statuses = []
+        for row in cursor.fetchall():
+            # Get the column indices based on the query we built
+            lab_number_idx = 0
+            is_available_idx = 1
+            updated_at_idx = 2
+            updated_by_idx = 3
+            reason_idx = 4
+            start_date_idx = 5
+            end_date_idx = 6
+            notes_idx = 7
+            other_reason_idx = 8
+            
+            # Get values safely
+            lab_number = row[lab_number_idx]
+            is_available = bool(row[is_available_idx]) if row[is_available_idx] is not None else True
+            updated_at = row[updated_at_idx]
+            updated_by = row[updated_by_idx]
+            reason = row[reason_idx] if len(row) > reason_idx else None
+            start_date = row[start_date_idx] if len(row) > start_date_idx else None
+            end_date = row[end_date_idx] if len(row) > end_date_idx else None
+            notes = row[notes_idx] if len(row) > notes_idx else None
+            other_reason = row[other_reason_idx] if len(row) > other_reason_idx else None
+            
+            # Check if lab is scheduled to be unavailable based on date/time
+            if not is_available and start_date and end_date:
+                now = datetime.now()
+                try:
+                    start = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+                    end = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+                    
+                    # If current time is before start or after end, lab should be available
+                    if now < start or now > end:
+                        is_available = True
+                except Exception as e:
+                    print(f"Error parsing dates: {e}")
+            
+            statuses.append({
+                'labNumber': lab_number,
+                'available': is_available,
+                'updatedAt': updated_at,
+                'updatedBy': updated_by,
+                'reason': reason or '',
+                'startDate': start_date or '',
+                'endDate': end_date or '',
+                'notes': notes or '',
+                'otherReason': other_reason or ''
+            })
+        
+        return statuses
+    except Exception as e:
+        print(f"Error fetching laboratory statuses: {e}")
+        return []
+    finally:
+        conn.close()
+
+def update_lab_schedule(lab_number, is_available, admin_username, reason='', start_date='', end_date='', notes='', other_reason=''):
+    """Update the laboratory schedule with detailed information."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Check if we need to update or create the table first
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS laboratory_status (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                lab_number TEXT NOT NULL,
+                is_available INTEGER NOT NULL DEFAULT 1,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_by TEXT NOT NULL
+            )
+        """)
+        
+        # Add any missing columns that might not exist in older versions
+        columns_to_check = [
+            ('reason', 'TEXT'),
+            ('start_date', 'TEXT'),
+            ('end_date', 'TEXT'),
+            ('notes', 'TEXT'),
+            ('other_reason', 'TEXT')
+        ]
+        
+        # Get existing columns
+        cursor.execute("PRAGMA table_info(laboratory_status)")
+        column_names = [column[1] for column in cursor.fetchall()]
+        
+        # Add missing columns
+        for column_name, column_type in columns_to_check:
+            if column_name not in column_names:
+                try:
+                    cursor.execute(f"ALTER TABLE laboratory_status ADD COLUMN {column_name} {column_type}")
+                    print(f"Added column {column_name} to laboratory_status table")
+                except Exception as e:
+                    print(f"Error adding column {column_name}: {e}")
+        
+        # Check if the lab already has a status
+        cursor.execute("SELECT id FROM laboratory_status WHERE lab_number = ?", (lab_number,))
+        result = cursor.fetchone()
+        
+        if result:
+            # Update existing status
+            cursor.execute("""
+                UPDATE laboratory_status
+                SET is_available = ?, 
+                    updated_at = datetime('now', 'localtime'), 
+                    updated_by = ?,
+                    reason = ?,
+                    start_date = ?,
+                    end_date = ?,
+                    notes = ?,
+                    other_reason = ?
+                WHERE lab_number = ?
+            """, (
+                1 if is_available else 0, 
+                admin_username, 
+                reason,
+                start_date, 
+                end_date,
+                notes,
+                other_reason,
+                lab_number
+            ))
+        else:
+            # Insert new status
+            cursor.execute("""
+                INSERT INTO laboratory_status 
+                (lab_number, is_available, updated_by, reason, start_date, end_date, notes, other_reason)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                lab_number, 
+                1 if is_available else 0, 
+                admin_username,
+                reason,
+                start_date, 
+                end_date,
+                notes,
+                other_reason
+            ))
+        
+        conn.commit()
+        return True, "Laboratory schedule updated successfully"
+    except Exception as e:
+        print(f"Error updating laboratory schedule: {e}")
+        return False, str(e)
+    finally:
+        conn.close()
+
+def refresh_lab_schedules():
+    """Check all scheduled lab unavailability and update status if needed"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Check if required columns exist
+        cursor.execute("PRAGMA table_info(laboratory_status)")
+        columns = cursor.fetchall()
+        column_names = [column[1] for column in columns]
+        
+        # If required columns don't exist, just return
+        required_columns = ['is_available', 'start_date', 'end_date']
+        if not all(col in column_names for col in required_columns):
+            print("Missing required columns for lab schedule refresh")
+            # Try to add them
+            for col in ['start_date', 'end_date']:
+                if col not in column_names:
+                    try:
+                        cursor.execute(f"ALTER TABLE laboratory_status ADD COLUMN {col} TEXT")
+                        print(f"Added missing column {col} to laboratory_status table")
+                    except Exception as e:
+                        print(f"Error adding column {col}: {e}")
+            conn.commit()
+            return False
+        
+        # Get all labs with scheduled unavailability
+        cursor.execute("""
+            SELECT lab_number, is_available, start_date, end_date
+            FROM laboratory_status
+            WHERE is_available = 0 
+              AND (start_date IS NOT NULL AND start_date != '')
+              AND (end_date IS NOT NULL AND end_date != '')
+        """)
+        
+        now = datetime.now()
+        for row in cursor.fetchall():
+            lab_number = row[0]
+            start_date = row[2]
+            end_date = row[3]
+            
+            try:
+                start = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+                end = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+                
+                # Check if we need to update the lab status
+                if now < start or now > end:
+                    # The scheduled unavailability is not currently active
+                    # Update the database to show as available
+                    print(f"Auto-enabling lab {lab_number} as schedule is not active")
+                    cursor.execute("""
+                        UPDATE laboratory_status
+                        SET is_available = 1, 
+                            updated_at = datetime('now', 'localtime'),
+                            updated_by = 'SYSTEM'
+                        WHERE lab_number = ?
+                    """, (lab_number,))
+            except Exception as e:
+                print(f"Error checking dates for lab {lab_number}: {e}")
+        
+        # Also check for labs that should now be unavailable
+        cursor.execute("""
+            SELECT lab_number, is_available, start_date, end_date
+            FROM laboratory_status
+            WHERE is_available = 1 
+              AND (start_date IS NOT NULL AND start_date != '')
+              AND (end_date IS NOT NULL AND end_date != '')
+        """)
+        
+        for row in cursor.fetchall():
+            lab_number = row[0]
+            start_date = row[2]
+            end_date = row[3]
+            
+            try:
+                start = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+                end = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+                
+                # Check if we need to update the lab status
+                if start <= now <= end:
+                    # The scheduled unavailability is currently active
+                    # Update the database to show as unavailable
+                    print(f"Auto-disabling lab {lab_number} as schedule is now active")
+                    cursor.execute("""
+                        UPDATE laboratory_status
+                        SET is_available = 0, 
+                            updated_at = datetime('now', 'localtime'),
+                            updated_by = 'SYSTEM'
+                        WHERE lab_number = ?
+                    """, (lab_number,))
+            except Exception as e:
+                print(f"Error checking dates for lab {lab_number}: {e}")
+        
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error refreshing lab schedules: {e}")
         return False
     finally:
         conn.close()

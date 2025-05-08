@@ -1,18 +1,20 @@
-{% extends "admin_base.html" %}
+n{% extends "admin_base.html" %}
 
 {% block content %}
 <div class="container mt-4">
     <h2>Reservation Logs</h2>
     <div class="card">
         <div class="card-body">
+            <div class="mb-3">
+                <p class="text-muted">Displaying the most recent {{ logs|length }} reservation logs. These logs persist across application restarts.</p>
+            </div>
             <div class="table-responsive">
                 <table class="table table-striped">
-                    <thead>
+                    <thead class="table-dark">
                         <tr>
                             <th>Date/Time</th>
-                            <th>Student ID</th>
-                            <th>Laboratory</th>
-                            <th>Computer</th>
+                            <th>Student</th>
+                            <th>Location</th>
                             <th>Action</th>
                             <th>Performed By</th>
                             <th>Notes</th>
@@ -22,26 +24,50 @@
                         {% if logs %}
                             {% for log in logs %}
                             <tr>
-                                <td>{{ log.created_at }}</td>
-                                <td>{{ log.student_id }}</td>
-                                <td>Laboratory {{ log.laboratory_id }}</td>
-                                <td>Computer {{ log.computer_no }}</td>
+                                <td>
+                                    {% if log.formatted_date %}
+                                        <div><strong>{{ log.formatted_date }}</strong></div>
+                                        <small class="text-muted">{{ log.formatted_time }}</small>
+                                    {% else %}
+                                        {{ log.created_at }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if log.student_name and log.student_name != log.student_id %}
+                                        <div>{{ log.student_name }}</div>
+                                        <small class="text-muted">{{ log.student_id }}</small>
+                                    {% else %}
+                                        {{ log.student_id }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div>Lab {{ log.laboratory_id }}</div>
+                                    <small class="text-muted">PC {{ log.computer_no }}</small>
+                                </td>
                                 <td>
                                     {% if log.action == 'approved' %}
                                     <span class="badge bg-success">Approved</span>
                                     {% elif log.action == 'rejected' %}
                                     <span class="badge bg-danger">Rejected</span>
+                                    {% elif log.action == 'logged_in' %}
+                                    <span class="badge bg-primary">Logged In</span>
+                                    {% elif log.action == 'logged_out' %}
+                                    <span class="badge bg-warning text-dark">Logged Out</span>
                                     {% else %}
                                     <span class="badge bg-info">{{ log.action|title }}</span>
                                     {% endif %}
                                 </td>
-                                <td>{{ log.performed_by_name }}</td>
-                                <td>{{ log.notes }}</td>
+                                <td>{{ log.performed_by }}</td>
+                                <td>{{ log.notes|default('', True) }}</td>
                             </tr>
                             {% endfor %}
                         {% else %}
                             <tr>
-                                <td colspan="7" class="text-center">No reservation logs found.</td>
+                                <td colspan="6" class="text-center py-4">
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-2"></i> No reservation logs found.
+                                    </div>
+                                </td>
                             </tr>
                         {% endif %}
                     </tbody>

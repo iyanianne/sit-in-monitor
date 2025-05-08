@@ -289,6 +289,19 @@
       background: #e74c3c;
       color: white;
     }
+    
+    .reserved-label {
+      margin-top: 5px;
+      font-weight: bold;
+      color: #e74c3c;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      background-color: rgba(231, 76, 60, 0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px dashed #e74c3c;
+    }
 
     /* Form Controls for Lab Schedule */
     .form-control {
@@ -389,6 +402,94 @@
 
     .tab-content.active {
       display: block;
+    }
+
+    /* Modal Styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1050;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.4);
+    }
+
+    .modal-content {
+      background-color: #fefefe;
+      margin: 10% auto;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+      width: 500px;
+      max-width: 90%;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #eee;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      color: #2c3e50;
+    }
+
+    .close-modal {
+      color: #aaa;
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .close-modal:hover {
+      color: #333;
+    }
+
+    .modal-form-group {
+      margin-bottom: 15px;
+    }
+
+    .modal-form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+      color: #2c3e50;
+    }
+
+    .modal-form-group input, 
+    .modal-form-group select, 
+    .modal-form-group textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    .modal-form-group textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .lab-schedule-details {
+      padding: 5px 0;
+      font-size: 13px;
+      color: #666;
     }
   </style>
 </head>
@@ -576,6 +677,7 @@
               <tr>
                 <th>Laboratory</th>
                 <th>Status</th>
+                <th>Current Schedule</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -585,9 +687,12 @@
                 <td id="status-517">
                   <span class="status-badge status-available">Available</span>
                 </td>
+                <td id="schedule-517" class="lab-schedule-details">
+                  No active schedule
+                </td>
                 <td>
-                  <button onclick="toggleLabStatus('517')" class="btn btn-primary">
-                    <i class="fas fa-toggle-on"></i> Disable
+                  <button onclick="openLabScheduleModal('517')" class="btn btn-primary">
+                    <i class="fas fa-calendar-alt"></i> Schedule
                   </button>
                 </td>
               </tr>
@@ -596,9 +701,12 @@
                 <td id="status-524">
                   <span class="status-badge status-available">Available</span>
                 </td>
+                <td id="schedule-524" class="lab-schedule-details">
+                  No active schedule
+                </td>
                 <td>
-                  <button onclick="toggleLabStatus('524')" class="btn btn-primary">
-                    <i class="fas fa-toggle-on"></i> Disable
+                  <button onclick="openLabScheduleModal('524')" class="btn btn-primary">
+                    <i class="fas fa-calendar-alt"></i> Schedule
                   </button>
                 </td>
               </tr>
@@ -607,9 +715,12 @@
                 <td id="status-526">
                   <span class="status-badge status-available">Available</span>
                 </td>
+                <td id="schedule-526" class="lab-schedule-details">
+                  No active schedule
+                </td>
                 <td>
-                  <button onclick="toggleLabStatus('526')" class="btn btn-primary">
-                    <i class="fas fa-toggle-on"></i> Disable
+                  <button onclick="openLabScheduleModal('526')" class="btn btn-primary">
+                    <i class="fas fa-calendar-alt"></i> Schedule
                   </button>
                 </td>
               </tr>
@@ -618,9 +729,12 @@
                 <td id="status-528">
                   <span class="status-badge status-available">Available</span>
                 </td>
+                <td id="schedule-528" class="lab-schedule-details">
+                  No active schedule
+                </td>
                 <td>
-                  <button onclick="toggleLabStatus('528')" class="btn btn-primary">
-                    <i class="fas fa-toggle-on"></i> Disable
+                  <button onclick="openLabScheduleModal('528')" class="btn btn-primary">
+                    <i class="fas fa-calendar-alt"></i> Schedule
                   </button>
                 </td>
               </tr>
@@ -629,9 +743,12 @@
                 <td id="status-530">
                   <span class="status-badge status-available">Available</span>
                 </td>
+                <td id="schedule-530" class="lab-schedule-details">
+                  No active schedule
+                </td>
                 <td>
-                  <button onclick="toggleLabStatus('530')" class="btn btn-primary">
-                    <i class="fas fa-toggle-on"></i> Disable
+                  <button onclick="openLabScheduleModal('530')" class="btn btn-primary">
+                    <i class="fas fa-calendar-alt"></i> Schedule
                   </button>
                 </td>
               </tr>
@@ -640,9 +757,12 @@
                 <td id="status-542">
                   <span class="status-badge status-available">Available</span>
                 </td>
+                <td id="schedule-542" class="lab-schedule-details">
+                  No active schedule
+                </td>
                 <td>
-                  <button onclick="toggleLabStatus('542')" class="btn btn-primary">
-                    <i class="fas fa-toggle-on"></i> Disable
+                  <button onclick="openLabScheduleModal('542')" class="btn btn-primary">
+                    <i class="fas fa-calendar-alt"></i> Schedule
                   </button>
                 </td>
               </tr>
@@ -651,9 +771,12 @@
                 <td id="status-544">
                   <span class="status-badge status-available">Available</span>
                 </td>
+                <td id="schedule-544" class="lab-schedule-details">
+                  No active schedule
+                </td>
                 <td>
-                  <button onclick="toggleLabStatus('544')" class="btn btn-primary">
-                    <i class="fas fa-toggle-on"></i> Disable
+                  <button onclick="openLabScheduleModal('544')" class="btn btn-primary">
+                    <i class="fas fa-calendar-alt"></i> Schedule
                   </button>
                 </td>
               </tr>
@@ -666,65 +789,79 @@
       <div id="logs" class="tab-content">
         <div class="table-container">
           <div class="table-header">
-            <i class="fas fa-history"></i> Reservation Logs
+            <h2>Recent Activity</h2>
           </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Date & Time</th>
-                <th>Student ID</th>
-                <th>Laboratory</th>
-                <th>Computer No.</th>
-                <th>Action</th>
-                <th>Performed By</th>
-                <th>Notes</th>
-              </tr>
-            </thead>
-            <tbody>
-            {% if logs %}
-              {% for log in logs %}
-              <tr>
-                <td>{{ log.created_at }}</td>
-                <td>{{ log.student_id }}</td>
-                <td>
-                  {% set lab_numbers = {
-                    '0': '517', 
-                    '1': '524', 
-                    '2': '526', 
-                    '3': '528', 
-                    '4': '530', 
-                    '5': '542', 
-                    '6': '544',
-                    0: '517', 
-                    1: '524', 
-                    2: '526', 
-                    3: '528', 
-                    4: '530', 
-                    5: '542', 
-                    6: '544'
-                  } %}
-                  Laboratory {{ lab_numbers[log.laboratory_id]|default(log.laboratory_id) }}
-                </td>
-                <td>PC-{{ log.computer_no }}</td>
-                <td>
-                  <span class="status-badge status-{{ log.action }}">
-                    {{ log.action|title }}
-                  </span>
-                </td>
-                <td>{{ log.performed_by_name }}</td>
-                <td>{{ log.notes }}</td>
-              </tr>
-              {% endfor %}
-            {% else %}
-              <tr>
-                <td colspan="7" style="text-align: center; padding: 30px;">
-                  <i class="fas fa-history" style="font-size: 48px; color: #ccc; margin-bottom: 10px;"></i>
-                  <p>No reservation logs found</p>
-                </td>
-              </tr>
-            {% endif %}
-            </tbody>
-          </table>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date/Time</th>
+                  <th>Student</th>
+                  <th>Location</th>
+                  <th>Action</th>
+                  <th>Performed By</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% if logs %}
+                  {% for log in logs %}
+                  <tr>
+                    <td>
+                      {% if log.formatted_date %}
+                        <div><strong>{{ log.formatted_date }}</strong></div>
+                        <small style="color: #6c757d;">{{ log.formatted_time }}</small>
+                      {% else %}
+                        {{ log.created_at }}
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if log.student_name and log.student_name != log.student_id %}
+                        <div>{{ log.student_name }}</div>
+                        <small style="color: #6c757d;">{{ log.student_id }}</small>
+                      {% else %}
+                        {{ log.student_id }}
+                      {% endif %}
+                    </td>
+                    <td>
+                      <div>Lab {{ log.laboratory_id }}</div>
+                      <small style="color: #6c757d;">PC {{ log.computer_no }}</small>
+                    </td>
+                    <td>
+                      {% if log.action == 'approved' %}
+                      <span class="status-badge status-approved">Approved</span>
+                      {% elif log.action == 'rejected' %}
+                      <span class="status-badge status-rejected">Rejected</span>
+                      {% elif log.action == 'logged_in' %}
+                      <span class="status-badge" style="background-color: #3498db; color: white;">Logged In</span>
+                      {% elif log.action == 'logged_out' %}
+                      <span class="status-badge" style="background-color: #f39c12; color: white;">Logged Out</span>
+                      {% else %}
+                      <span class="status-badge" style="background-color: #95a5a6; color: white;">{{ log.action|title }}</span>
+                      {% endif %}
+                    </td>
+                    <td>{{ log.performed_by }}</td>
+                    <td>{{ log.notes|default('', True) }}</td>
+                  </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr>
+                    <td colspan="6" style="text-align: center; padding: 30px;">
+                      <div style="color: #6c757d;">
+                        <i class="fas fa-info-circle" style="font-size: 24px; margin-bottom: 10px;"></i>
+                        <p>No reservation logs found.</p>
+                      </div>
+                    </td>
+                  </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+          <div style="padding: 15px; text-align: right;">
+            <a href="/reservation_logs" style="color: #3498db; text-decoration: none;">
+              <i class="fas fa-history"></i> View All Logs
+            </a>
+          </div>
         </div>
       </div>
     </div>
@@ -764,12 +901,28 @@
       })
       .then(response => response.json())
       .then(data => {
-        if (data.success) {
+        // Check if the response contains either success=true or a message
+        if (data.success || data.message) {
           showFlashMessage('Reservation approved successfully!');
-          // Refresh the page or update the UI
-          location.reload();
+          
+          // Refresh the current tab
+          const activeTabId = document.querySelector('.tab-content.active').id;
+          
+          // If computer management tab is active, update the computer status display
+          if (activeTabId === 'computers') {
+            const labId = document.getElementById('lab-select').value;
+            if (labId) {
+              fetchComputers(labId);
+            }
+          }
+          
+          // Refresh the page after a short delay to show the message
+          setTimeout(() => {
+            location.reload();
+          }, 1000);
         } else {
-          showFlashMessage(data.message || 'Error approving reservation', 'error');
+          // Handle error
+          showFlashMessage(data.error || 'Error approving reservation', 'error');
         }
       })
       .catch(error => {
@@ -805,7 +958,13 @@
       });
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', function() {
+      // Add event listener for the reason dropdown in the schedule modal
+      document.getElementById('scheduleReason').addEventListener('change', function() {
+        document.getElementById('otherReasonField').style.display = 
+          this.value === 'other' ? 'block' : 'none';
+      });
+      
       // Fetch laboratories for the dropdown
       fetch('/api/laboratories')
         .then(response => response.json())
@@ -820,50 +979,82 @@
         });
 
       // Handle laboratory selection
-      document.getElementById('lab-select').addEventListener('change', function () {
+      document.getElementById('lab-select').addEventListener('change', function() {
         const labId = this.value;
-        const computerGrid = document.getElementById('computerGrid');
-        
-        if (!labId) {
-            computerGrid.innerHTML = '<p style="text-align: center;">Please select a laboratory</p>';
-            return;
-        }
-        
-        const labStatusElem = document.getElementById(`status-${labId}`);
-        const statusBadge = labStatusElem?.querySelector('.status-badge');
-        const isLabUnavailable = statusBadge?.textContent.trim() === 'Unavailable';
-
-        if (isLabUnavailable) {
-            computerGrid.innerHTML = '<p style="text-align: center; color: #e74c3c;">Laboratory is currently unavailable</p>';
-            computerGrid.style.pointerEvents = 'none';
-            computerGrid.style.opacity = '0.5';
+        if (labId) {
+          fetchComputers(labId);
         } else {
-            fetchComputers(labId);
-            computerGrid.style.pointerEvents = 'auto';
-            computerGrid.style.opacity = '1';
+          document.getElementById('computerGrid').innerHTML = '';
         }
       });
+      
+      // Load laboratory statuses and schedules from localStorage
+      loadLaboratoryStatuses();
+      loadLabSchedules();
+      
+      // Fetch lab statuses from the server (if implemented)
+      fetch('/api/lab_statuses')
+        .then(response => response.json())
+        .then(data => {
+          // Update localStorage with server data
+          let labStatuses = {};
+          data.forEach(status => {
+            labStatuses[status.labNumber] = status;
+          });
+          localStorage.setItem('laboratoryStatuses', JSON.stringify(labStatuses));
+          
+          // Update UI
+          loadLaboratoryStatuses();
+          loadLabSchedules();
+        })
+        .catch(error => {
+          console.log('Using locally stored lab statuses');
+        });
 
       function fetchComputers(labId) {
         const computerGrid = document.getElementById('computerGrid');
         computerGrid.innerHTML = '<div class="loading">Loading computers...</div>';
 
-        fetch(`/api/computers/${labId}`)
+        // Add debugging info
+        console.log(`Original labId parameter: ${labId}`);
+        
+        // Ensure we're using the correct lab number
+        const labNumber = labMappingByIndex[labId] || labId;
+        console.log(`Fetching computers for lab number: ${labNumber}`);
+
+        fetch(`/api/computers/${labNumber}`)
           .then(response => response.json())
           .then(computers => {
             computerGrid.innerHTML = '';
+            console.log(`Received ${computers.length} computers for lab ${labNumber}`);
+            
+            // Log detailed computer statuses
+            if (labNumber === '542') {
+              console.log("LAB 542 COMPUTER STATUSES:");
+              computers.forEach(computer => {
+                console.log(`PC ${computer.number}: ${computer.is_available ? 'AVAILABLE' : 'IN USE'} (is_available=${computer.is_available})`);
+              });
+            }
+            
             computers.forEach(computer => {
               const div = document.createElement('div');
               div.className = `computer-item ${computer.is_available ? 'available' : 'unavailable'}`;
+              
+              // Add a more prominent label for computers that are in use from reservations
               div.innerHTML = `
                 <div class="computer-number">PC ${computer.number}</div>
                 <span class="computer-status ${computer.is_available ? 'status-available' : 'status-unavailable'}">
                   ${computer.is_available ? 'Available' : 'In Use'}
                 </span>
+                ${!computer.is_available ? '<div class="reserved-label">Reserved</div>' : ''}
               `;
               div.onclick = () => toggleComputerStatus(computer.id, computer.is_available);
               computerGrid.appendChild(div);
             });
+          })
+          .catch(error => {
+            console.error('Error fetching computers:', error);
+            computerGrid.innerHTML = '<div class="error">Error loading computers</div>';
           });
       }
 
@@ -874,18 +1065,19 @@
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            is_available: !currentStatus,
-          }),
+            is_available: !currentStatus
+          })
         })
-          .then(response => response.json())
-          .then(data => {
-            if (data.status === 'success') {
-              const labId = document.getElementById('lab-select').value;
-              fetchComputers(labId);
-            } else {
-              alert('Error updating computer status: ' + data.message);
-            }
-          });
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === 'success') {
+            // Refresh the computer grid
+            const labId = document.getElementById('lab-select').value;
+            fetchComputers(labId);
+          } else {
+            alert('Error updating computer status: ' + data.message);
+          }
+        });
       }
     });
 
@@ -1091,6 +1283,402 @@
       document.getElementById('sortOptions').value = 'date-desc';
       sortReservations();
     };
+
+    // Lab Schedule Modal Functions
+    function openLabScheduleModal(labNumber) {
+      // Set the lab number in the modal title and hidden field
+      document.getElementById('modalLabTitle').textContent = `Schedule Laboratory ${labNumber}`;
+      document.getElementById('scheduleLabNumber').value = labNumber;
+      
+      // Get existing schedule if any
+      const labStatuses = JSON.parse(localStorage.getItem('laboratoryStatuses')) || {};
+      const labStatus = labStatuses[labNumber] || { 
+        available: true, 
+        reason: '', 
+        otherReason: '',
+        startDate: '',
+        endDate: '',
+        notes: ''
+      };
+      
+      // Populate form fields
+      document.getElementById('scheduleStatus').value = labStatus.available ? 'available' : 'unavailable';
+      
+      if (labStatus.reason) {
+        document.getElementById('scheduleReason').value = labStatus.reason;
+        
+        if (labStatus.reason === 'other' && labStatus.otherReason) {
+          document.getElementById('scheduleOtherReason').value = labStatus.otherReason;
+          document.getElementById('otherReasonField').style.display = 'block';
+        } else {
+          document.getElementById('otherReasonField').style.display = 'none';
+        }
+      }
+      
+      if (labStatus.startDate) {
+        document.getElementById('scheduleStartDate').value = formatDateForInput(labStatus.startDate);
+      } else {
+        // Set default start time to current time
+        document.getElementById('scheduleStartDate').value = formatDateForInput(new Date());
+      }
+      
+      if (labStatus.endDate) {
+        document.getElementById('scheduleEndDate').value = formatDateForInput(labStatus.endDate);
+      } else {
+        // Set default end time to 2 hours from now
+        const defaultEnd = new Date();
+        defaultEnd.setHours(defaultEnd.getHours() + 2);
+        document.getElementById('scheduleEndDate').value = formatDateForInput(defaultEnd);
+      }
+      
+      if (labStatus.notes) {
+        document.getElementById('scheduleNotes').value = labStatus.notes;
+      } else {
+        document.getElementById('scheduleNotes').value = '';
+      }
+      
+      // Show/hide unavailable fields based on current status
+      toggleScheduleFields();
+      
+      // Display the modal
+      document.getElementById('labScheduleModal').style.display = 'block';
+    }
+    
+    function closeLabScheduleModal() {
+      document.getElementById('labScheduleModal').style.display = 'none';
+    }
+    
+    function toggleScheduleFields() {
+      const status = document.getElementById('scheduleStatus').value;
+      const unavailableFields = document.getElementById('unavailableFields');
+      
+      if (status === 'unavailable') {
+        unavailableFields.style.display = 'block';
+        
+        // Also check if reason is "other" to show that field
+        const reason = document.getElementById('scheduleReason').value;
+        document.getElementById('otherReasonField').style.display = 
+          reason === 'other' ? 'block' : 'none';
+          
+        // Add event listener for the reason dropdown
+        document.getElementById('scheduleReason').onchange = function() {
+          document.getElementById('otherReasonField').style.display = 
+            this.value === 'other' ? 'block' : 'none';
+        };
+      } else {
+        unavailableFields.style.display = 'none';
+      }
+    }
+    
+    function formatDateForInput(dateString) {
+      const date = new Date(dateString);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
+    
+    function formatDateForDisplay(dateString) {
+      const date = new Date(dateString);
+      const options = { 
+        weekday: 'short',
+        month: 'short', 
+        day: 'numeric', 
+        hour: '2-digit', 
+        minute: '2-digit'
+      };
+      return date.toLocaleDateString('en-US', options);
+    }
+    
+    function saveLabSchedule() {
+      const labNumber = document.getElementById('scheduleLabNumber').value;
+      const status = document.getElementById('scheduleStatus').value;
+      const available = status === 'available';
+      
+      // Create the lab status object
+      const labStatus = {
+        labNumber: labNumber,
+        available: available,
+        lastUpdated: new Date().toISOString()
+      };
+      
+      // If unavailable, add the additional details
+      if (!available) {
+        const reason = document.getElementById('scheduleReason').value;
+        const startDate = document.getElementById('scheduleStartDate').value;
+        const endDate = document.getElementById('scheduleEndDate').value;
+        
+        labStatus.reason = reason;
+        labStatus.startDate = startDate;
+        labStatus.endDate = endDate;
+        labStatus.notes = document.getElementById('scheduleNotes').value;
+        
+        if (reason === 'other') {
+          labStatus.otherReason = document.getElementById('scheduleOtherReason').value;
+        }
+        
+        // Validate dates
+        const startDateTime = new Date(startDate);
+        const endDateTime = new Date(endDate);
+        
+        if (endDateTime <= startDateTime) {
+          alert('End date must be after start date');
+          return;
+        }
+        
+        // Check if we need to set up an automatic re-enable
+        setupAutoReEnable(labNumber, endDateTime);
+      }
+      
+      // Save to localStorage and update UI
+      saveLaboratoryStatus(labStatus);
+      updateLabScheduleDisplay(labStatus);
+      
+      // Close the modal
+      closeLabScheduleModal();
+      
+      // Show notification
+      if (available) {
+        showFlashMessage(`Laboratory ${labNumber} is now available`);
+      } else {
+        showFlashMessage(`Laboratory ${labNumber} schedule updated successfully`);
+      }
+      
+      // Update API endpoint to save status to database
+      fetch('/update_lab_schedule', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(labStatus)
+      })
+      .then(response => response.json())
+      .catch(error => {
+        console.error('Error updating lab schedule:', error);
+      });
+    }
+    
+    function updateLabScheduleDisplay(labStatus) {
+      const { labNumber, available, reason, otherReason, startDate, endDate } = labStatus;
+      
+      // Update status badge
+      const statusElem = document.getElementById(`status-${labNumber}`);
+      if (statusElem) {
+        statusElem.innerHTML = `
+          <span class="status-badge ${available ? 'status-available' : 'status-unavailable'}">
+            ${available ? 'Available' : 'Unavailable'}
+          </span>
+        `;
+      }
+      
+      // Update schedule details
+      const scheduleElem = document.getElementById(`schedule-${labNumber}`);
+      if (scheduleElem) {
+        if (available) {
+          scheduleElem.textContent = 'No active schedule';
+        } else {
+          let reasonText = '';
+          switch (reason) {
+            case 'class':
+              reasonText = 'Class in Session';
+              break;
+            case 'maintenance':
+              reasonText = 'Maintenance';
+              break;
+            case 'event':
+              reasonText = 'Special Event';
+              break;
+            case 'other':
+              reasonText = otherReason || 'Other';
+              break;
+          }
+          
+          const formattedStart = formatDateForDisplay(startDate);
+          const formattedEnd = formatDateForDisplay(endDate);
+          
+          scheduleElem.innerHTML = `
+            <strong>${reasonText}</strong><br>
+            From: ${formattedStart}<br>
+            To: ${formattedEnd}
+          `;
+        }
+      }
+      
+      // Update action button
+      const buttonElem = document.querySelector(`button[onclick="openLabScheduleModal('${labNumber}')"]`);
+      if (buttonElem) {
+        buttonElem.innerHTML = `
+          <i class="fas fa-calendar-alt"></i> ${available ? 'Schedule' : 'Update Schedule'}
+        `;
+      }
+    }
+    
+    function setupAutoReEnable(labNumber, endDateTime) {
+      // Calculate time until end date
+      const now = new Date();
+      const timeDiff = endDateTime.getTime() - now.getTime();
+      
+      if (timeDiff <= 0) return; // End date is in the past
+      
+      // Store the timeout ID in localStorage so we can cancel it if needed
+      const timeouts = JSON.parse(localStorage.getItem('labScheduleTimeouts')) || {};
+      
+      // Clear existing timeout if any
+      if (timeouts[labNumber]) {
+        clearTimeout(timeouts[labNumber]);
+      }
+      
+      // Set up new timeout
+      const timeoutId = setTimeout(() => {
+        // Auto re-enable the lab when the end date is reached
+        const labStatuses = JSON.parse(localStorage.getItem('laboratoryStatuses')) || {};
+        const currentStatus = labStatuses[labNumber];
+        
+        // Only auto-enable if the lab is still unavailable
+        if (currentStatus && !currentStatus.available) {
+          currentStatus.available = true;
+          saveLaboratoryStatus(currentStatus);
+          updateLabScheduleDisplay(currentStatus);
+          
+          // Update API endpoint
+          fetch('/update_lab_schedule', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(currentStatus)
+          })
+          .catch(error => {
+            console.error('Error auto-updating lab schedule:', error);
+          });
+        }
+        
+        // Remove this timeout from storage
+        const updatedTimeouts = JSON.parse(localStorage.getItem('labScheduleTimeouts')) || {};
+        delete updatedTimeouts[labNumber];
+        localStorage.setItem('labScheduleTimeouts', JSON.stringify(updatedTimeouts));
+        
+      }, timeDiff);
+      
+      // Store the timeout ID
+      timeouts[labNumber] = timeoutId;
+      localStorage.setItem('labScheduleTimeouts', JSON.stringify(timeouts));
+    }
+    
+    // Function to load lab schedules from localStorage and update UI
+    function loadLabSchedules() {
+      const labStatuses = JSON.parse(localStorage.getItem('laboratoryStatuses')) || {};
+      
+      // Update UI for each lab with schedule
+      Object.values(labStatuses).forEach(status => {
+        if (status && status.labNumber) {
+          updateLabScheduleDisplay(status);
+          
+          // Re-setup auto-enablement for unavailable labs
+          if (!status.available && status.endDate) {
+            const endDateTime = new Date(status.endDate);
+            if (endDateTime > new Date()) {
+              setupAutoReEnable(status.labNumber, endDateTime);
+            } else {
+              // End date has passed, but status wasn't updated - fix it now
+              status.available = true;
+              saveLaboratoryStatus(status);
+              updateLabScheduleDisplay(status);
+            }
+          }
+        }
+      });
+    }
+
+    // Laboratory dropdown data
+    const labMappingByIndex = {
+        '0': '517', 
+        '1': '524', 
+        '2': '526', 
+        '3': '528', 
+        '4': '530', 
+        '5': '542', 
+        '6': '544',
+        0: '517', 
+        1: '524', 
+        2: '526', 
+        3: '528', 
+        4: '530', 
+        5: '542', 
+        6: '544',
+        '517': '517',
+        '524': '524',
+        '526': '526',
+        '528': '528',
+        '530': '530',
+        '542': '542',
+        '544': '544'
+    };
+    
+    // Reverse mapping for lab ID to number
+    const labNumberToID = {
+        '517': 1,
+        '524': 2,
+        '526': 3,
+        '528': 4,
+        '530': 5,
+        '542': 6,
+        '544': 7
+    };
   </script>
+
+  <!-- Lab Schedule Modal -->
+  <div id="labScheduleModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3><i class="fas fa-calendar-alt"></i> <span id="modalLabTitle">Schedule Laboratory</span></h3>
+        <span class="close-modal" onclick="closeLabScheduleModal()">&times;</span>
+      </div>
+      <div id="scheduleForm">
+        <input type="hidden" id="scheduleLabNumber">
+        <div class="modal-form-group">
+          <label for="scheduleStatus">Status:</label>
+          <select id="scheduleStatus" class="form-control" onchange="toggleScheduleFields()">
+            <option value="available">Available</option>
+            <option value="unavailable">Unavailable</option>
+          </select>
+        </div>
+        <div id="unavailableFields" style="display: none;">
+          <div class="modal-form-group">
+            <label for="scheduleReason">Reason:</label>
+            <select id="scheduleReason" class="form-control">
+              <option value="class">Class in Session</option>
+              <option value="maintenance">Maintenance</option>
+              <option value="event">Special Event</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="modal-form-group" id="otherReasonField" style="display: none;">
+            <label for="scheduleOtherReason">Specify Other Reason:</label>
+            <input type="text" id="scheduleOtherReason" class="form-control" placeholder="Enter reason">
+          </div>
+          <div class="modal-form-group">
+            <label for="scheduleStartDate">Start Date/Time:</label>
+            <input type="datetime-local" id="scheduleStartDate" class="form-control">
+          </div>
+          <div class="modal-form-group">
+            <label for="scheduleEndDate">End Date/Time:</label>
+            <input type="datetime-local" id="scheduleEndDate" class="form-control">
+          </div>
+          <div class="modal-form-group">
+            <label for="scheduleNotes">Additional Notes:</label>
+            <textarea id="scheduleNotes" class="form-control" placeholder="Additional information about this schedule"></textarea>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn" onclick="closeLabScheduleModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveLabSchedule()">Save Schedule</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

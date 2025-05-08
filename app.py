@@ -24,6 +24,19 @@ def allowed_file(filename):
 
 # Create upload folder if it doesn't exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+os.makedirs(app.config['RESOURCE_FOLDER'], exist_ok=True)
+
+# Ensure all resource category folders exist
+resource_categories = [
+    'c_resources', 'java_resources', 'python_resources', 'csharp_resources',
+    'database_resources', 'digilog_resources', 'iot_resources', 
+    'computer_resources', 'pm_resources', 'itrends_resources',
+    'techno_resources', 'capstone_resources', 'lab_manuals'
+]
+
+for category in resource_categories:
+    category_path = os.path.join(app.config['RESOURCE_FOLDER'], category)
+    os.makedirs(category_path, exist_ok=True)
 
 # Initialize the database tables
 def init_db():
@@ -101,6 +114,7 @@ init_db()
 # Initialize database on startup
 dbhelper.initialize_database()
 dbhelper.ensure_lab_points_column()  # Make sure lab_points column exists
+dbhelper.ensure_reservation_logs_table()  # Make sure reservation_logs table exists correctly
 
 # Login required decorator
 def login_required(f):
@@ -848,14 +862,20 @@ def ad_reserve():
 @app.route('/approve_reservation/<int:reservation_id>', methods=['POST'])
 def approve_reservation(reservation_id):
     if 'username' not in session:
-        return jsonify({'error': 'Not authorized'}), 401
+        return jsonify({'success': False, 'error': 'Not authorized'}), 401
     
     # Get reservation details first
     reservation = dbhelper.get_reservation_by_id(reservation_id)
     if not reservation:
-        return jsonify({'error': 'Reservation not found'}), 404
+        return jsonify({'success': False, 'error': 'Reservation not found'}), 404
     
-    success = dbhelper.approve_reservation(reservation_id)
+    # Print debug information
+    print(f"Approving reservation #{reservation_id}")
+    print(f"Reservation details: {reservation}")
+    
+    success, message = dbhelper.approve_reservation(reservation_id)
+    print(f"Approval result: success={success}, message={message}")
+    
     if success:
         # Log the approval action
         dbhelper.log_reservation_action(
@@ -866,8 +886,9 @@ def approve_reservation(reservation_id):
             performed_by=session['username'],
             notes='Reservation approved'
         )
-        return jsonify({'message': 'Reservation approved successfully'})
-    return jsonify({'error': 'Failed to approve reservation'}), 500
+        return jsonify({'success': True, 'message': 'Reservation approved successfully'})
+    
+    return jsonify({'success': False, 'error': message}), 500
 
 @app.route('/reject_reservation/<int:reservation_id>', methods=['POST'])
 def reject_reservation(reservation_id):
@@ -928,11 +949,107 @@ def mark_announcement_read(announcement_id):
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@app.route('/api/computers/<int:lab_id>')
+@app.route('/api/computers/<lab_id>')
+def get_computers(lab_id):
+    try:
+        # Print for debugging
+        print(f"Fetching computers for lab: {lab_id}")
+        
+        # Convert lab_id to int if it's a number as string, otherwise use as is
+        lab_identifier = lab_id
+        if isinstance(lab_id, str) and lab_id.isdigit():
+            lab_identifier = int(lab_id)
+            
+        computers = dbhelper.get_computers_by_lab(lab_identifier)
+        
+        # Print for debugging
+        print(f"Found {len(computers)} computers")
+        print(f"Sample computer data: {computers[0] if computers else 'No computers found'}")
+        
+        return jsonify(computers)
+    except Exception as e:
+        print(f"Error fetching computers: {e}")
+        return jsonify([])
+
+@app.route('/api/create_lab_computers/<lab_id>', methods=['POST'])
+def create_lab_computers(lab_id):
+    try:
+        # Print for debugging
+        print(f"Creating computers for lab: {lab_id}")
+        
+        # Convert lab_id to int if it's a number as string, otherwise use as is
+        lab_identifier = lab_id
+        if isinstance(lab_id, str) and lab_id.isdigit():
+            lab_identifier = int(lab_id)
+        
+        # First get the lab ID from the lab number if it's not a number
+        if not isinstance(lab_identifier, int):
+            # Get the lab ID from the lab number
+            conn = dbhelper.get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT id FROM laboratories WHERE number = ?", (lab_id,))
+            lab = cursor.fetchone()
+            
+            if lab:
+                lab_identifier = lab[0]
+                print(f"Found lab ID {lab_identifier} for lab number {lab_id}")
+            else:
+                print(f"Lab not found for {lab_id}")
+                return jsonify({'status': 'error', 'message': 'Laboratory not found'}), 404
+            
+            conn.close()
+        
+        # Create computers for this lab
+        conn = dbhelper.get_db_connection()
+        cursor = conn.cursor()
+        
+        # Check if there are computers already
+        cursor.execute("SELECT COUNT(*) FROM computers WHERE laboratory_id = ?", (lab_identifier,))
+        count = cursor.fetchone()[0]
+        
+        if count > 0:
+            print(f"Lab {lab_id} already has {count} computers")
+            conn.close()
+            return jsonify({
+                'status': 'success', 
+                'message': f'Lab already has {count} computers',
+                'count': count
+            })
+        
+        # Create 30 computers for this lab
+        print(f"Creating 30 computers for lab {lab_id} (ID: {lab_identifier})")
+        for i in range(1, 31):
+            cursor.execute("""
+                INSERT INTO computers (laboratory_id, computer_no, is_available)
+                VALUES (?, ?, 1)
+            """, (lab_identifier, i))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'status': 'success', 
+            'message': 'Created 30 computers for lab',
+            'count': 30
+        })
+    except Exception as e:
+        print(f"Error creating computers: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/admin/computers/<lab_id>')
 @admin_required
-def get_computers_route(lab_id):
-    computers = dbhelper.get_computers_by_lab(lab_id)
-    return jsonify(computers)
+def get_computers_admin(lab_id):
+    try:
+        # Convert lab_id to int if it's a number as string, otherwise use as is
+        lab_identifier = lab_id
+        if isinstance(lab_id, str) and lab_id.isdigit():
+            lab_identifier = int(lab_id)
+            
+        computers = dbhelper.get_computers_by_lab(lab_identifier)
+        return jsonify(computers)
+    except Exception as e:
+        print(f"Error fetching computers: {e}")
+        return jsonify([])
 
 @app.route('/update_computer_status/<int:computer_id>', methods=['POST'])
 @admin_required
@@ -942,7 +1059,7 @@ def update_computer_status_route(computer_id):
         
     data = request.get_json()
     is_available = data.get('is_available', False)
-    admin_id = session.get('admin_id')
+    admin_id = session.get('username')  # Use the admin username from session
     
     success, message = dbhelper.update_computer_status(computer_id, is_available, admin_id)
     if success:
@@ -966,7 +1083,7 @@ def check_reservation_status():
 def reserve_computer():
     try:
         # Get form data
-        laboratory_id = request.form.get('laboratory_id', type=int)
+        laboratory_id = request.form.get('laboratory_id')
         computer_no = request.form.get('computer_no', type=int)
         purpose = request.form.get('purpose')
         datetime_str = request.form.get('datetime')
@@ -1009,19 +1126,34 @@ def reserve_computer():
 @app.route('/api/laboratories')
 def get_laboratories():
     try:
+        # Print schema for debugging
+        with sqlite3.connect('sitinmonitor.db') as conn:
+            cursor = conn.cursor()
+            cursor.execute("PRAGMA table_info(laboratory_status)")
+            print("Laboratory status table schema:", cursor.fetchall())
+            
+            # Add missing columns if needed
+            for col in ['reason', 'start_date', 'end_date', 'notes', 'other_reason']:
+                try:
+                    cursor.execute(f"ALTER TABLE laboratory_status ADD COLUMN {col} TEXT")
+                    print(f"Added missing column {col} to laboratory_status table")
+                except sqlite3.OperationalError as e:
+                    # Column likely already exists
+                    if "duplicate column name" in str(e):
+                        pass
+                    else:
+                        print(f"Error adding column {col}: {e}")
+            conn.commit()
+            
+        # Get laboratories (will check schedule status against current time)
         laboratories = dbhelper.get_laboratories()
+        
+        # Refresh any active schedules
+        dbhelper.refresh_lab_schedules()
+        
         return jsonify(laboratories)
     except Exception as e:
-        print(f"Error fetching laboratories: {e}")
-        return jsonify([])
-
-@app.route('/api/computers/<int:lab_id>')
-def get_computers(lab_id):
-    try:
-        computers = dbhelper.get_computers_by_lab(lab_id)
-        return jsonify(computers)
-    except Exception as e:
-        print(f"Error fetching computers: {e}")
+        print(f"Error in get_laboratories: {e}")
         return jsonify([])
 
 @app.route('/reset_all_points', methods=['POST'])
@@ -1043,15 +1175,26 @@ def update_lab_status():
     
     try:
         data = request.json
+        lab_number = data.get('labNumber')
+        is_available = data.get('available', False)
+        admin_username = session.get('username')
         
-        # Save lab status in database (you would need to implement this in dbhelper)
-        # dbhelper.update_lab_status(data)
+        if not lab_number:
+            return jsonify({'status': 'error', 'message': 'Lab number is required'}), 400
         
-        # For now, just return success
-        return jsonify({
-            'status': 'success',
-            'message': 'Laboratory status updated'
-        })
+        # Update lab status in the database
+        success, message = dbhelper.update_lab_status(lab_number, is_available, admin_username)
+        
+        if success:
+            return jsonify({
+                'status': 'success',
+                'message': 'Laboratory status updated'
+            })
+        else:
+            return jsonify({
+                'status': 'error',
+                'message': message
+            }), 500
     except Exception as e:
         return jsonify({
             'status': 'error',
@@ -1060,15 +1203,60 @@ def update_lab_status():
 
 @app.route('/api/lab_statuses', methods=['GET'])
 def get_lab_statuses():
+    try:
+        # Refresh any lab schedules first
+        dbhelper.refresh_lab_schedules()
+        
+        # Get lab statuses from database
+        lab_statuses = dbhelper.get_lab_statuses()
+        return jsonify(lab_statuses)
+    except Exception as e:
+        print(f"Error fetching lab statuses: {e}")
+        return jsonify([]), 500
+
+@app.route('/update_lab_schedule', methods=['POST'])
+def update_lab_schedule():
     if 'username' not in session:
         return jsonify({'error': 'Not authorized'}), 401
     
     try:
-        # Get lab statuses from database (you would need to implement this in dbhelper)
-        # lab_statuses = dbhelper.get_lab_statuses()
+        data = request.json
+        lab_number = data.get('labNumber')
+        is_available = data.get('available', True)
+        admin_username = session.get('username')
         
-        # For now, return empty array (statuses will be loaded from localStorage)
-        return jsonify([])
+        # Get additional schedule details
+        reason = data.get('reason', '')
+        start_date = data.get('startDate', '')
+        end_date = data.get('endDate', '')
+        notes = data.get('notes', '')
+        other_reason = data.get('otherReason', '')
+        
+        if not lab_number:
+            return jsonify({'status': 'error', 'message': 'Lab number is required'}), 400
+        
+        # Update lab status in the database with schedule details
+        success, message = dbhelper.update_lab_schedule(
+            lab_number, 
+            is_available, 
+            admin_username,
+            reason,
+            start_date, 
+            end_date, 
+            notes,
+            other_reason
+        )
+        
+        if success:
+            return jsonify({
+                'status': 'success',
+                'message': 'Laboratory schedule updated'
+            })
+        else:
+            return jsonify({
+                'status': 'error',
+                'message': message
+            }), 500
     except Exception as e:
         return jsonify({
             'status': 'error',
@@ -1100,23 +1288,29 @@ def upload_resource():
         category = request.form.get('resource_category')
         description = request.form.get('resource_description', '')
         
-        # Create category folder if it doesn't exist
+        # Ensure category folder exists
         category_folder = os.path.join(app.config['RESOURCE_FOLDER'], category)
         os.makedirs(category_folder, exist_ok=True)
         
-        # Save the file to the category folder
-        file_path = os.path.join(category_folder, original_filename)
+        # Save the file in the category folder
+        file_path = os.path.join(category_folder, unique_filename)
         file.save(file_path)
         
-        # Get relative path from RESOURCE_FOLDER for database storage
-        relative_path = os.path.join(category, original_filename)
+        # For database, store relative path from resource folder
+        relative_path = os.path.join(category, unique_filename)
+        
+        # Print debug info
+        print(f"Uploading resource: {title}")
+        print(f"Category: {category}")
+        print(f"File path: {file_path}")
+        print(f"Relative path: {relative_path}")
         
         # Save metadata to database
         resource_id = dbhelper.add_resource(
             title=title,
             description=description,
             category=category,
-            file_path=relative_path,  # Store the relative path within the resources folder
+            file_path=relative_path,
             original_filename=original_filename,
             file_type=file_extension,
             file_size=os.path.getsize(file_path),
@@ -1146,26 +1340,17 @@ def download_resource(resource_id):
     # Full path to the file
     file_path = os.path.join(app.config['RESOURCE_FOLDER'], resource['file_path'])
     
-    # Debug information
-    print(f"Trying to access file: {file_path}")
-    print(f"Does file exist? {os.path.exists(file_path)}")
-    
     # Check if file exists
     if not os.path.exists(file_path):
         flash('Resource file not found', 'danger')
         return redirect(url_for('labrules'))
     
-    try:
-        # Return the file as an attachment (for download)
-        return send_file(
-            file_path,
-            as_attachment=True,
-            download_name=resource['original_filename']
-        )
-    except Exception as e:
-        print(f"Error sending file: {e}")
-        flash('Error downloading file', 'danger')
-        return redirect(url_for('labrules'))
+    # Return the file as an attachment (for download)
+    return send_file(
+        file_path,
+        as_attachment=True,
+        download_name=resource['original_filename']
+    )
 
 @app.route('/delete_resource/<int:resource_id>', methods=['POST'])
 @admin_required
@@ -1179,13 +1364,8 @@ def delete_resource(resource_id):
         
         # Delete the file
         file_path = os.path.join(app.config['RESOURCE_FOLDER'], resource['file_path'])
-        print(f"Attempting to delete: {file_path}")
-        
         if os.path.exists(file_path):
             os.remove(file_path)
-            print(f"Successfully deleted file: {file_path}")
-        else:
-            print(f"File not found for deletion: {file_path}")
         
         # Delete from database
         success = dbhelper.delete_resource(resource_id)
@@ -1195,7 +1375,6 @@ def delete_resource(resource_id):
         return jsonify({'success': False, 'message': 'Failed to delete from database'})
     
     except Exception as e:
-        print(f"Error deleting resource: {e}")
         return jsonify({'success': False, 'message': str(e)})
 
 @app.route('/download/<category>')

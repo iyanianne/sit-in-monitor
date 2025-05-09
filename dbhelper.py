@@ -180,7 +180,27 @@ def get_student_history(idno):
         """, (idno,))
         
         history = cursor.fetchall()
-        return [dict(row) for row in history]  # Convert rows to dictionaries
+        result = []
+        
+        for row in history:
+            history_entry = dict(row)
+            
+            # Format laboratory name correctly
+            lab = history_entry['laboratory']
+            if lab is None or lab == "":
+                history_entry['laboratory'] = "Laboratory Unknown"
+            elif lab == "517":
+                history_entry['laboratory'] = "Laboratory 517"
+            elif not lab.startswith("Laboratory"):
+                # Add Laboratory prefix if it's just a number
+                if lab.isdigit():
+                    history_entry['laboratory'] = f"Laboratory {lab}"
+                else:
+                    history_entry['laboratory'] = lab
+            
+            result.append(history_entry)
+            
+        return result
 
 def update_student_sessions(idno, remaining_sessions):
     with sqlite3.connect("sitinmonitor.db") as conn:
@@ -304,6 +324,23 @@ def end_sit_in_session(idno):
         current_date = datetime.now().strftime("%Y-%m-%d")
         current_time = datetime.now().strftime("%H:%M:%S")
         
+        print(f"Attempting to end sit-in session for student {idno} on date {current_date}")
+        
+        # First check if there's an active session
+        cursor.execute("""
+            SELECT id, laboratory 
+            FROM SIT_IN_HISTORY 
+            WHERE idno = ? AND date = ? AND time_in = time_out
+        """, (idno, current_date))
+        
+        active_session = cursor.fetchone()
+        if not active_session:
+            print(f"No active sit-in session found for student {idno}")
+            return False
+            
+        session_id, laboratory = active_session
+        print(f"Found active session ID {session_id} in laboratory {laboratory}")
+        
         # Get the laboratory and computer number from the reservation
         cursor.execute("""
             SELECT r.laboratory_id, r.computer_no
@@ -315,6 +352,11 @@ def end_sit_in_session(idno):
         """, (idno,))
         reservation = cursor.fetchone()
         
+        if reservation:
+            print(f"Found reservation - laboratory ID: {reservation[0]}, computer: {reservation[1]}")
+        else:
+            print("No reservation found for this student")
+        
         # Update the session end time
         cursor.execute("""
             UPDATE SIT_IN_HISTORY 
@@ -322,8 +364,11 @@ def end_sit_in_session(idno):
             WHERE idno = ? AND date = ? AND time_in = time_out
         """, (current_time, idno, current_date))
         
+        rows_updated = cursor.rowcount
+        print(f"Updated {rows_updated} rows in SIT_IN_HISTORY")
+        
         # Only decrement if we actually ended a session
-        if cursor.rowcount > 0:
+        if rows_updated > 0:
             # Make the computer available again
             if reservation:
                 cursor.execute("""
@@ -331,16 +376,24 @@ def end_sit_in_session(idno):
                     SET is_available = 1 
                     WHERE laboratory_id = ? AND computer_no = ?
                 """, (reservation[0], reservation[1]))
+                print(f"Made computer {reservation[1]} in laboratory {reservation[0]} available again")
             
             cursor.execute("""
                 UPDATE USERS 
                 SET remaining_sessions = remaining_sessions - 1 
                 WHERE idno = ? AND remaining_sessions > 0
             """, (idno,))
-        
-        conn.commit()
+            print(f"Decremented remaining sessions for student {idno}")
+            
+            conn.commit()
+            return True
+        else:
+            print(f"No session was ended for student {idno}")
+            return False
+            
     except Exception as e:
         print(f"Error ending sit-in session: {e}")
+        return False
     finally:
         conn.close()
 
@@ -447,7 +500,6 @@ def reset_student_sessions(idno):
             WHERE idno = ?
         """, (idno,))
         conn.commit()
-        return True
 
 def get_sit_in_leaderboard():
     """Get students sorted by their sit-in count."""
@@ -715,6 +767,17 @@ def create_reservation(student_id, laboratory_id, computer_no, purpose, datetime
         conn = get_db_connection()
         cursor = conn.cursor()
         
+        # First, check if the student already has a pending reservation request
+        cursor.execute("""
+            SELECT COUNT(*) FROM reservations 
+            WHERE student_id = ? 
+            AND status = 'pending'
+        """, (student_id,))
+        pending_count = cursor.fetchone()[0]
+        
+        if pending_count > 0:
+            return False, "You already have a pending reservation request. Please wait for approval before making another request."
+            
         # Determine if laboratory_id is a lab ID or a lab number 
         # If it's a string that's not a number, it's a lab number
         if isinstance(laboratory_id, str) and not laboratory_id.isdigit():
@@ -816,9 +879,9 @@ def approve_reservation(reservation_id):
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Get reservation details first
+        # Get complete reservation details
         cursor.execute("""
-            SELECT laboratory_id, computer_no, student_id
+            SELECT laboratory_id, computer_no, student_id, purpose, datetime
             FROM reservations
             WHERE id = ?
         """, (reservation_id,))
@@ -830,9 +893,34 @@ def approve_reservation(reservation_id):
         lab_id = reservation[0]
         computer_no = reservation[1]
         student_id = reservation[2]
+        purpose = reservation[3]  # Get the purpose from reservation
+        datetime_reserved = reservation[4]  # Get the datetime from reservation
         
         # Debug info
         print(f"Approving reservation {reservation_id} for lab_id={lab_id}, computer={computer_no}, student={student_id}")
+        print(f"Purpose: {purpose}, Datetime: {datetime_reserved}")
+        
+        # Check for existing active sessions for this student
+        current_date = datetime.now().strftime("%Y-%m-%d")
+        cursor.execute("""
+            SELECT COUNT(*) 
+            FROM SIT_IN_HISTORY 
+            WHERE idno = ? AND date = ? AND time_in = time_out
+        """, (student_id, current_date))
+        
+        active_session_count = cursor.fetchone()[0]
+        if active_session_count > 0:
+            print(f"WARNING: Student {student_id} already has an active sit-in session!")
+            
+            # We'll continue anyway, but log this situation
+            log_reservation_action(
+                student_id, 
+                lab_id, 
+                computer_no, 
+                "duplicate_approval", 
+                "SYSTEM", 
+                f"Warning: Approving reservation while student already has an active session"
+            )
         
         # Check laboratory name
         cursor.execute("SELECT number FROM laboratories WHERE id = ?", (lab_id,))
@@ -867,13 +955,25 @@ def approve_reservation(reservation_id):
             print(f"Warning: Could not verify status of computer {computer_no} in lab {lab_number}")
         
         # Create a sit-in session for the student
-        current_date = datetime.now().strftime("%Y-%m-%d")
         current_time = datetime.now().strftime("%H:%M:%S")
+        
+        # Use the purpose from the original reservation or a default if not available
+        reservation_purpose = purpose if purpose else "Approved Reservation"
         
         cursor.execute("""
             INSERT INTO SIT_IN_HISTORY (idno, date, time_in, time_out, purpose, laboratory)
             VALUES (?, ?, ?, ?, ?, ?)
-        """, (student_id, current_date, current_time, current_time, "Reservation", f"Laboratory {lab_number}"))
+        """, (student_id, current_date, current_time, current_time, reservation_purpose, f"Laboratory {lab_number}"))
+        
+        # Log the approval action
+        log_reservation_action(
+            student_id,
+            lab_id,
+            computer_no,
+            "reservation_approved",
+            "ADMIN",
+            f"Reservation approved for student {student_id} in laboratory {lab_number}, computer {computer_no}"
+        )
         
         conn.commit()
         return True, "Reservation approved successfully"
@@ -1151,6 +1251,66 @@ def update_computer_status(computer_id, is_available, admin_id):
         conn.close()
 
 def check_user_has_pending_reservation(student_id):
+    """Check if a user has any pending reservations."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT COUNT(*) 
+            FROM reservations 
+            WHERE student_id = ? 
+            AND status = 'pending'
+            AND datetime >= date('now')
+        """, (student_id,))
+        
+        count = cursor.fetchone()[0]
+        return count > 0
+    except Exception as e:
+        print(f"Error checking pending reservations: {e}")
+        return False
+    finally:
+        conn.close()
+
+def check_user_has_approved_reservation(student_id):
+    """Check if a user has any approved reservations."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        print(f"Checking if student {student_id} has approved reservations")
+        
+        # Get current datetime for comparison
+        current_date = datetime.now().strftime("%Y-%m-%d")
+        
+        # Find any approved reservations for today or future dates
+        cursor.execute("""
+            SELECT id, laboratory_id, computer_no, datetime, purpose
+            FROM reservations 
+            WHERE student_id = ? 
+            AND status = 'approved'
+            AND datetime >= ?
+        """, (student_id, current_date))
+        
+        rows = cursor.fetchall()
+        has_approved = len(rows) > 0
+        
+        if has_approved:
+            # Print details of approved reservations for debugging
+            print(f"Student {student_id} has {len(rows)} approved reservation(s):")
+            for row in rows:
+                print(f"  - Reservation ID: {row[0]}, Lab: {row[1]}, PC: {row[2]}, Date: {row[3]}, Purpose: {row[4]}")
+        else:
+            print(f"Student {student_id} has no approved reservations")
+            
+        return has_approved
+    except Exception as e:
+        print(f"Error checking approved reservations: {e}")
+        return False
+    finally:
+        conn.close()
+
+def check_user_has_any_active_reservation(student_id):
     """Check if a user has any pending or approved reservations."""
     try:
         conn = get_db_connection()
@@ -1167,7 +1327,7 @@ def check_user_has_pending_reservation(student_id):
         count = cursor.fetchone()[0]
         return count > 0
     except Exception as e:
-        print(f"Error checking user reservations: {e}")
+        print(f"Error checking active reservations: {e}")
         return False
     finally:
         conn.close()
@@ -1179,6 +1339,9 @@ def check_user_has_active_sitin(student_id):
         cursor = conn.cursor()
         current_date = datetime.now().strftime("%Y-%m-%d")
         
+        # Print debug information
+        print(f"Checking active sit-in status for student {student_id} on date {current_date}")
+        
         # Active sit-in is when time_in equals time_out (end time not set)
         cursor.execute("""
             SELECT COUNT(*) 
@@ -1188,7 +1351,26 @@ def check_user_has_active_sitin(student_id):
         
         count = cursor.fetchone()[0]
         result = count > 0
-        print(f"Student {student_id} has active sit-in: {result} (count={count})")
+        
+        # Print more detailed debugging info
+        if result:
+            # Get the details of the active session
+            cursor.execute("""
+                SELECT purpose, laboratory, time_in 
+                FROM SIT_IN_HISTORY 
+                WHERE idno = ? AND date = ? AND time_in = time_out
+            """, (student_id, current_date))
+            
+            session_info = cursor.fetchone()
+            if session_info:
+                purpose, laboratory, time_in = session_info
+                print(f"Student {student_id} has active sit-in: TRUE")
+                print(f"Session details: Purpose: {purpose}, Laboratory: {laboratory}, Time in: {time_in}")
+            else:
+                print(f"Student {student_id} has active sit-in: TRUE (No details found)")
+        else:
+            print(f"Student {student_id} has active sit-in: FALSE")
+        
         return result
     except Exception as e:
         print(f"Error checking active sit-in: {e}")
@@ -1667,8 +1849,13 @@ def get_user_reservations(student_id):
                     r.datetime,
                     r.status,
                     r.created_at,
-                    r.rejection_reason
+                    r.rejection_reason,
+                    h.time_out
                 FROM reservations r
+                LEFT JOIN SIT_IN_HISTORY h ON 
+                    r.student_id = h.idno AND 
+                    r.laboratory_id = h.laboratory AND
+                    r.status = 'approved'
                 WHERE r.student_id = ?
                 ORDER BY r.created_at DESC
             """
@@ -1681,8 +1868,13 @@ def get_user_reservations(student_id):
                     r.purpose,
                     r.datetime,
                     r.status,
-                    r.created_at
+                    r.created_at,
+                    h.time_out
                 FROM reservations r
+                LEFT JOIN SIT_IN_HISTORY h ON 
+                    r.student_id = h.idno AND 
+                    r.laboratory_id = h.laboratory AND
+                    r.status = 'approved'
                 WHERE r.student_id = ?
                 ORDER BY r.created_at DESC
             """
@@ -1704,6 +1896,18 @@ def get_user_reservations(student_id):
             # Add rejection_reason if available
             if 'rejection_reason' in column_names and len(row) > 7:
                 reservation['rejection_reason'] = row[7]
+            
+            # Add time_out (session end time) if available 
+            # For the second query format, time_out is at index 7
+            # For the first query format, time_out is at index 8
+            time_out_index = 8 if 'rejection_reason' in column_names else 7
+            if len(row) > time_out_index and row[time_out_index]:
+                reservation['session_end_time'] = row[time_out_index]
+            else:
+                if reservation['status'] == 'approved':
+                    reservation['session_end_time'] = 'Active Session'
+                else:
+                    reservation['session_end_time'] = '-'
             
             reservations.append(reservation)
         
@@ -2184,6 +2388,107 @@ def refresh_lab_schedules():
     except Exception as e:
         print(f"Error refreshing lab schedules: {e}")
         return False
+    finally:
+        conn.close()
+
+def should_disable_reservation_form(student_id):
+    """
+    Determine if the reservation form should be disabled for a specific user.
+    
+    The form should be disabled if:
+    1. The user has a pending reservation
+    2. The user has an approved reservation
+    3. The user is in an active sit-in session
+    
+    Exception: If the user was logged out by an admin (has completed sessions but no active session),
+    they should be allowed to make a new reservation.
+    
+    Returns a tuple of (should_disable, reason)
+    """
+    try:
+        print(f"Checking reservation form availability for student {student_id}")
+        
+        # Check for pending reservation
+        has_pending = check_user_has_pending_reservation(student_id)
+        if has_pending:
+            print(f"Student {student_id} has pending reservation - disabling form")
+            return True, "You have a pending reservation request. Please wait for approval."
+        
+        # Check for approved reservation
+        has_approved = check_user_has_approved_reservation(student_id)
+        if has_approved:
+            print(f"Student {student_id} has approved reservation - disabling form")
+            return True, "You have an approved reservation. Please complete your session before making a new request."
+        
+        # Check for active sit-in session
+        has_active_session = check_user_has_active_sitin(student_id)
+        if has_active_session:
+            print(f"Student {student_id} has active sit-in session - disabling form")
+            return True, "You are currently in an active sit-in session. Please finish your current session before making a new reservation."
+        
+        # SPECIAL CASE: User was logged out by admin - allow them to make a new reservation
+        status = check_active_sitin_status(student_id)
+        if status['was_logged_out'] and status['completed_sessions'] > 0:
+            print(f"User {student_id} was logged out by admin, enabling reservation form")
+            return False, "Your previous session was ended by an admin. You can make a new reservation."
+        
+        # All checks passed, form should be enabled
+        print(f"Student {student_id} passed all checks - enabling form")
+        return False, None
+    except Exception as e:
+        print(f"Error in should_disable_reservation_form: {e}")
+        # Default to not disabling the form if there's an error
+        return False, None
+
+def check_active_sitin_status(student_id):
+    """
+    Check a user's sit-in status and return detailed information.
+    
+    Returns a dictionary with:
+    - has_active_session: True if the user is currently in an active sit-in session
+    - was_logged_out: True if the user was previously in a session that was ended by an admin 
+    - completed_sessions: Number of completed sit-in sessions
+    """
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        current_date = datetime.now().strftime("%Y-%m-%d")
+        
+        # Check for active session (time_in equals time_out)
+        cursor.execute("""
+            SELECT COUNT(*) 
+            FROM SIT_IN_HISTORY 
+            WHERE idno = ? AND date = ? AND time_in = time_out
+        """, (student_id, current_date))
+        active_count = cursor.fetchone()[0]
+        has_active_session = active_count > 0
+        
+        # Check for completed sessions (time_in != time_out)
+        cursor.execute("""
+            SELECT COUNT(*) 
+            FROM SIT_IN_HISTORY 
+            WHERE idno = ? AND time_in != time_out
+        """, (student_id,))
+        completed_count = cursor.fetchone()[0]
+        
+        # A user was logged out by admin if they have completed sessions but no active session
+        was_logged_out = completed_count > 0 and not has_active_session
+        
+        # Print debug information
+        print(f"Sit-in status for student {student_id}: active={has_active_session}, completed={completed_count}, logged_out={was_logged_out}")
+        
+        return {
+            'has_active_session': has_active_session,
+            'was_logged_out': was_logged_out,
+            'completed_sessions': completed_count
+        }
+    except Exception as e:
+        print(f"Error checking sit-in status: {e}")
+        return {
+            'has_active_session': False,
+            'was_logged_out': False,
+            'completed_sessions': 0
+        }
     finally:
         conn.close()
 

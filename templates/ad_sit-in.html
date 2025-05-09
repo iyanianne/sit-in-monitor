@@ -447,13 +447,34 @@
         btn.disabled = true;
         btn.textContent = "Processing...";
         
+        // Add a timestamp to prevent caching issues
+        const timestamp = new Date().getTime();
+        
         $.ajax({
-          url: '/end_sit_in/' + idno,
+          url: '/end_sit_in/' + idno + '?t=' + timestamp,
           method: 'POST',
           success: function(response) {
             if (response.success) {
-              alert('Sit-in session ended successfully!');
-              location.reload();
+              // Show success flash message
+              const messageDiv = document.createElement('div');
+              messageDiv.className = 'flash-message flash-success';
+              messageDiv.innerHTML = `
+                <span>Sit-in session ended successfully!</span>
+                <button onclick="this.parentElement.remove()" class="close-flash">&times;</button>
+              `;
+              document.body.appendChild(messageDiv);
+              
+              // Replace table row with "Session ended" message or change background color
+              const row = btn.closest('tr');
+              row.style.backgroundColor = '#e8f7e8';
+              row.style.opacity = '0.7';
+              btn.textContent = "Session Ended";
+              btn.disabled = true;
+              
+              // Reload the page after a short delay to update the table
+              setTimeout(() => {
+                location.reload();
+              }, 1500);
             } else {
               btn.disabled = false;
               btn.textContent = originalText;

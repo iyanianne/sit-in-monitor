@@ -926,22 +926,51 @@
     }
 
     function approveReservation(reservationId) {
+      // Get the button element
+      const btn = event.target.closest('.btn-approve');
+      const originalText = btn.innerHTML;
+      
+      // Show loading state
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Approving...';
+      
       fetch(`/approve_reservation/${reservationId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         }
       })
-      .then(response => response.json())
+      .then(response => {
+        // Log the response status for debugging
+        console.log(`Approval response status: ${response.status}`);
+        return response.json().catch(e => {
+          // Handle case where response is not valid JSON
+          console.error('Error parsing JSON:', e);
+          return { success: false, error: 'Invalid server response' };
+        });
+      })
       .then(data => {
-        // Check if the response contains either success=true or a message
-        if (data.success || data.message) {
+        console.log('Approval response data:', data);
+        
+        // Show success message even if data structure varies
+        if (data.success === true || (data.message && !data.error)) {
           showFlashMessage('Reservation approved successfully!');
           
-          // Refresh the current tab
-          const activeTabId = document.querySelector('.tab-content.active').id;
+          // Change the row status immediately without page reload
+          const row = btn.closest('tr');
+          const statusCell = row.querySelector('td:nth-child(7)');
+          if (statusCell) {
+            statusCell.innerHTML = '<span class="status-badge status-approved">Approved</span>';
+          }
           
-          // If computer management tab is active, update the computer status display
+          // Remove the action buttons
+          const actionCell = btn.closest('td');
+          if (actionCell) {
+            actionCell.innerHTML = '';
+          }
+          
+          // Refresh computer status if in that tab
+          const activeTabId = document.querySelector('.tab-content.active').id;
           if (activeTabId === 'computers') {
             const labId = document.getElementById('lab-select').value;
             if (labId) {
@@ -951,18 +980,21 @@
           
           // Update notification count
           updateReservationNotification();
-          
-          // Refresh the page after a short delay to show the message
-          setTimeout(() => {
-            location.reload();
-          }, 1000);
         } else {
-          // Handle error
+          // Reset button
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+          
+          // Show error
           showFlashMessage(data.error || 'Error approving reservation', 'error');
         }
       })
       .catch(error => {
         console.error('Error:', error);
+        // Reset button
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        
         showFlashMessage('Error approving reservation. Please try again.', 'error');
       });
     }
@@ -971,6 +1003,14 @@
       const reason = prompt('Please enter a reason for rejection:');
       if (reason === null) return; // User cancelled
 
+      // Get the button element
+      const btn = event.target.closest('.btn-reject');
+      const originalText = btn.innerHTML;
+      
+      // Show loading state
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Rejecting...';
+
       fetch(`/reject_reservation/${reservationId}`, {
         method: 'POST',
         headers: {
@@ -978,20 +1018,50 @@
         },
         body: JSON.stringify({ reason: reason })
       })
-      .then(response => response.json())
+      .then(response => {
+        console.log(`Rejection response status: ${response.status}`);
+        return response.json().catch(e => {
+          console.error('Error parsing JSON:', e);
+          return { success: false, error: 'Invalid server response' };
+        });
+      })
       .then(data => {
-        if (data.success) {
+        console.log('Rejection response data:', data);
+        
+        if (data.success === true || (!data.error && data.message)) {
           showFlashMessage('Reservation rejected successfully!');
+          
+          // Change the row status immediately without page reload
+          const row = btn.closest('tr');
+          const statusCell = row.querySelector('td:nth-child(7)');
+          if (statusCell) {
+            statusCell.innerHTML = '<span class="status-badge status-rejected">Rejected</span>';
+          }
+          
+          // Remove the action buttons
+          const actionCell = btn.closest('td');
+          if (actionCell) {
+            actionCell.innerHTML = '';
+          }
+          
           // Update notification count
           updateReservationNotification();
-          // Refresh the page or update the UI
-          location.reload();
         } else {
-          showFlashMessage(data.message || 'Error rejecting reservation', 'error');
+          // Reset button
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+          
+          // Show error message
+          showFlashMessage(data.error || 'Error rejecting reservation', 'error');
         }
       })
       .catch(error => {
         console.error('Error:', error);
+        
+        // Reset button
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        
         showFlashMessage('Error rejecting reservation. Please try again.', 'error');
       });
     }

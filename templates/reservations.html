@@ -652,6 +652,7 @@
                                 <th>Purpose</th>
                                 <th>Status</th>
                                 <th>Requested On</th>
+                                <th>Session End Time</th>
                                 <th>Rejection Reason</th>
                             </tr>
                         </thead>
@@ -670,6 +671,19 @@
                                     </td>
                                     <td>{{ reservation.created_at }}</td>
                                     <td>
+                                        {% if reservation.session_end_time %}
+                                            {% if reservation.session_end_time == 'Active Session' %}
+                                                <span class="status-badge" style="background-color: #3498db; color: white;">
+                                                    {{ reservation.session_end_time }}
+                                                </span>
+                                            {% else %}
+                                                {{ reservation.session_end_time }}
+                                            {% endif %}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
                                         {% if reservation.status == 'rejected' %}
                                             {{ reservation.rejection_reason|default('No reason provided', true) }}
                                         {% else %}
@@ -680,7 +694,7 @@
                                 {% endfor %}
                             {% else %}
                                 <tr>
-                                    <td colspan="7" style="text-align: center; padding: 30px;">
+                                    <td colspan="8" style="text-align: center; padding: 30px;">
                                         <i class="fas fa-calendar-times" style="font-size: 48px; color: #ccc; margin-bottom: 10px;"></i>
                                         <p>No reservation history found</p>
                                     </td>
@@ -709,12 +723,12 @@
         }
 
         // Format dates for better readability
-        document.addEventListener('DOMContentLoaded', function() {
+        function formatDates() {
             // Format dates in reservation history table
-            const dateElements = document.querySelectorAll('tbody td:first-child, tbody td:last-child');
+            const dateElements = document.querySelectorAll('tbody td:first-child, tbody td:nth-child(6)');
             dateElements.forEach(element => {
                 const dateString = element.textContent.trim();
-                if (dateString && dateString.includes('-')) {
+                if (dateString && dateString.includes('-') && dateString !== '-') {
                     try {
                         // Parse the date
                         const date = new Date(dateString);
@@ -733,7 +747,25 @@
                     }
                 }
             });
-        });
+            
+            // Format time in the session end time column
+            const timeElements = document.querySelectorAll('tbody td:nth-child(7)');
+            timeElements.forEach(element => {
+                const timeString = element.textContent.trim();
+                if (timeString && timeString.includes(':') && !timeString.includes('Active')) {
+                    try {
+                        // Convert 24-hour format to 12-hour format with AM/PM
+                        const [hours, minutes, seconds] = timeString.split(':');
+                        const hourInt = parseInt(hours, 10);
+                        const ampm = hourInt >= 12 ? 'PM' : 'AM';
+                        const hour12 = hourInt % 12 || 12;
+                        element.textContent = `${hour12}:${minutes} ${ampm}`;
+                    } catch (e) {
+                        console.log('Error formatting time:', e);
+                    }
+                }
+            });
+        }
 
         // Initialize date picker
         flatpickr("#reservationDate", {
@@ -892,20 +924,20 @@
         function renderGeneratedComputers(computerCount, containerElement) {
             containerElement.innerHTML = '';
             for (let i = 1; i <= computerCount; i++) {
-                const div = document.createElement('div');
-                div.className = 'computer-item';
-                div.innerHTML = `
-                    <label class="computer-checkbox-label">
-                <input type="checkbox" 
-                    class="computer-checkbox" 
-                    name="computers" 
-                    value="PC ${i}" 
-                    data-computer-id="gen_${i}"
-                    data-generated="true"
-                    onchange="updateSelectedComputers(this)">
-                    <span class="computer-name">PC ${i}</span>
-                </label>
-            `;
+                        const div = document.createElement('div');
+                        div.className = 'computer-item';
+                        div.innerHTML = `
+                            <label class="computer-checkbox-label">
+                        <input type="checkbox" 
+                            class="computer-checkbox" 
+                            name="computers" 
+                            value="PC ${i}" 
+                            data-computer-id="gen_${i}"
+                            data-generated="true"
+                            onchange="updateSelectedComputers(this)">
+                                <span class="computer-name">PC ${i}</span>
+                            </label>
+                        `;
                 containerElement.appendChild(div);
             }
             
@@ -1013,11 +1045,70 @@
             const purpose = document.getElementById('purpose').value;
             const reservationDate = document.getElementById('reservationDate').value;
             const timeIn = document.getElementById('timeIn').value;
+            const idno = document.getElementById('idno').value;
 
             if (!laboratory || !purpose || !reservationDate || !timeIn) {
                 alert('Please fill in all required fields');
                 return;
             }
+
+            // First check explicitly if the user has an active sit-in session
+            fetch(`/api/check_active_session/${idno}`)
+                .then(response => response.json())
+                .then(sessionData => {
+                    if (sessionData.is_active) {
+                        const details = sessionData.session_details || {};
+                        alert(`You have an active sit-in session in ${details.laboratory || 'a lab'} that started at ${details.time_in || 'earlier today'}. Please complete your current session before making a new reservation.`);
+                        // Refresh the page to show the updated UI
+                        window.location.reload();
+                        return;
+                    }
+                    
+                    // Perform additional client-side checks to prevent duplicate reservations
+                    
+                    // Check pending reservations in the history table
+                    if (hasPendingReservationInHistory()) {
+                        alert('You already have a pending reservation request in your reservation history. Please wait for approval before making another request.');
+                        return;
+                    }
+                    
+                    // Check if there are any active sessions in the sit-in history
+                    const activeSessionsTable = document.getElementById('studentSitInTable');
+                    if (activeSessionsTable) {
+                        const rows = activeSessionsTable.querySelectorAll('tbody tr');
+                        for (const row of rows) {
+                            const durationCell = row.querySelector('td:nth-child(7)');
+                            if (durationCell && durationCell.textContent.includes('Active Session')) {
+                                alert('You currently have an active sit-in session. Please finish your current session before making a new reservation.');
+                                return;
+                            }
+                        }
+                    }
+
+                    // Now make a server-side check
+                    console.log('Checking reservation status before submission...');
+                    fetch('/check_reservation_status')
+                        .then(response => response.json())
+                        .then(data => {
+                            console.log('Pre-submission status check:', data);
+                            
+                            // Check for any conditions that would prevent making a reservation
+                            if (data.has_pending_reservation) {
+                                alert('You already have a pending reservation request. Please wait for approval before making another request.');
+                                return;
+                            }
+                            
+                            if (data.has_approved_reservation) {
+                                alert('You already have an approved reservation. Please complete your current session before making a new request.');
+                                return;
+                            }
+                            
+                            if (data.in_active_session) {
+                                alert('You are currently in an active sit-in session. Please finish your current session before making a new reservation.');
+                                return;
+                            }
+                            
+                            // If all checks pass, proceed with the reservation
 
             // Create datetime string by combining date and time
             const datetime = `${reservationDate} ${timeIn}:00`;
@@ -1047,7 +1138,7 @@
                 return;
             }
             
-            // Use laboraory value as is - it's the lab number (e.g., "526")
+                            // Use laboratory value as is - it's the lab number (e.g., "526")
             const labId = laboratory;
             
             // Debug information
@@ -1088,7 +1179,8 @@
                 
                 if (data.status === 'success') {
                     alert('Reservation request submitted successfully!');
-                    window.location.href = '/reservations';
+                                    // After successful submission, reload to show the new reservation
+                                    window.location.reload();
                 } else {
                     alert(data.message || 'Error submitting reservation. Please try again.');
                 }
@@ -1098,6 +1190,16 @@
                 submitBtn.disabled = false;
                 submitBtn.textContent = originalBtnText;
                 alert('Error submitting reservation. Please try again.');
+                            });
+                        })
+                        .catch(error => {
+                            console.error('Error checking reservation status:', error);
+                            alert('Could not verify your current reservation status. Please try again.');
+                        });
+                })
+                .catch(error => {
+                    console.error('Error checking active session:', error);
+                    alert('Could not verify your active session status. Please try again.');
             });
         });
 
@@ -1108,6 +1210,9 @@
             // Check reservation status on page load
             checkReservationStatus();
             
+            // Check if user has an active session
+            checkCurrentActiveSession();
+            
             // Load laboratories
             loadLaboratories();
             
@@ -1117,8 +1222,32 @@
             // Set up interval to check for lab availability changes
             setInterval(refreshLabAvailability, 60000); // Check every minute
             
+            // Set up interval to check for reservation history updates
+            setInterval(refreshReservationHistory, 30000); // Check every 30 seconds
+            
+            // Set up interval to periodically check for active sessions
+            setInterval(checkCurrentActiveSession, 20000); // Check every 20 seconds
+            
             // Save reservation history to localStorage when it's loaded from server
             saveReservationHistoryToLocalStorage();
+            
+            // Add debug button in a corner of the page for admin use
+            const debugContainer = document.createElement('div');
+            debugContainer.style.position = 'fixed';
+            debugContainer.style.bottom = '10px';
+            debugContainer.style.right = '10px';
+            debugContainer.style.zIndex = '9999';
+            
+            const debugButton = document.createElement('button');
+            debugButton.className = 'btn btn-secondary btn-sm';
+            debugButton.innerHTML = '<i class="fas fa-bug"></i> Debug Form';
+            debugButton.onclick = function() {
+                // Force enable the form
+                forceEnableForm();
+            };
+            
+            debugContainer.appendChild(debugButton);
+            document.body.appendChild(debugContainer);
         });
 
         // Function to forcibly enable the reservation form for debugging
@@ -1129,257 +1258,488 @@
             submitBtn.disabled = false;
             showMessage('Form has been manually enabled for testing. You can now make a reservation.', 'info');
             console.log('Form manually enabled');
+            
+            // Add a debug button
+            const debugButton = document.createElement('button');
+            debugButton.type = 'button';
+            debugButton.className = 'btn btn-secondary btn-sm';
+            debugButton.style.marginTop = '10px';
+            debugButton.style.marginLeft = '10px';
+            debugButton.textContent = 'Debug Status';
+            debugButton.onclick = showReservationFormStatus;
+            
+            // Add after the submit button
+            submitBtn.parentNode.appendChild(debugButton);
         }
 
         function checkReservationStatus() {
+            console.log('Checking reservation status...');
+            // First disable the form as a precaution while we check status
+                    const form = document.getElementById('reservationForm');
+                    const submitBtn = document.querySelector('button[type="submit"]');
+                    
+            // Add loading state without disabling
+            if (submitBtn) {
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking status...';
+            }
+            
+            fetch('/check_reservation_status')
+                .then(response => {
+                    console.log('Got response:', response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Detailed reservation status:', data);
+                    
+                    // Clear any previous warning messages
+                    const existingAlerts = document.querySelectorAll('.alert:not(#remainingSessions)');
+                    existingAlerts.forEach(alert => alert.remove());
+                    
+                    // Initialize variables
+                    let shouldEnable = data.can_reserve === true;
+                    let message = data.message || '';
+                    let messageType = 'warning';
+                    
+                    // Process status in priority order - only show the most important message
+                    
+                    // 1. ACTIVE SESSION: Most high priority restriction
+                    if (data.in_active_session) {
+                        console.log('Form disabled: User is in an active sit-in session');
+                        shouldEnable = false;
+                        message = 'You are currently in an active sit-in session. Please finish your current session before making a new reservation.';
+                        messageType = 'danger';  // Make it more prominent
+                    }
+                    // 2. APPROVED RESERVATION: User already has an approved reservation
+                    else if (data.has_approved_reservation) {
+                        console.log('Form disabled: User has an approved reservation');
+                        shouldEnable = false;
+                        message = 'You have an approved reservation. Please complete your current session before making a new request.';
+                        messageType = 'warning';
+                    }
+                    // 3. PENDING RESERVATION: User is waiting for approval
+                    else if (data.has_pending_reservation) {
+                        console.log('Form disabled: User has a pending reservation');
+                        shouldEnable = false;
+                        message = 'You have a pending reservation request. Please wait for approval.';
+                        messageType = 'info';
+                        
+                        // Show the warning message prominently
+                        const warningDiv = document.createElement('div');
+                        warningDiv.className = 'alert alert-warning';
+                        warningDiv.style.marginBottom = '15px';
+                        warningDiv.style.fontWeight = 'bold';
+                        warningDiv.textContent = message;
+                        
+                        // Insert at the top of the form
+                        const formContainer = document.querySelector('.reservation-card');
+                        formContainer.insertBefore(warningDiv, formContainer.firstChild);
+                    } 
+                    // SPECIAL CASE: If the user was logged out by an admin, allow them to make reservations
+                    else if (data.was_logged_out && data.completed_sessions > 0) {
+                        console.log('User was logged out by admin - form should be enabled');
+                        shouldEnable = true;
+                        messageType = 'success';
+                        message = 'Your previous session was ended by an admin. You can make a new reservation.';
+                    }
+                    // DEFAULT: No restrictions
+                    else {
+                        console.log('Form should be enabled: No restrictions found');
+                        shouldEnable = true;
+                        messageType = 'info';
+                        message = 'You can now make a reservation.'; // Positive message
+                    }
+                    
+                    // Always log the complete data for debugging
+                    console.log('Complete status data:', {
+                        can_reserve: data.can_reserve,
+                        has_pending_reservation: data.has_pending_reservation,
+                        has_approved_reservation: data.has_approved_reservation,
+                        in_active_session: data.in_active_session,
+                        was_logged_out: data.was_logged_out,
+                        completed_sessions: data.completed_sessions,
+                        shouldEnable: shouldEnable,
+                        message: message
+                    });
+                    
+                    // Apply the decision - explicitly set all form elements
+                    if (shouldEnable) {
+                        if (form) {
+                            form.classList.remove('disabled');
+                            // Enable all input fields, selects, and the submit button
+                            form.querySelectorAll('input, select, button[type="submit"]').forEach(elem => {
+                                elem.disabled = false;
+                            });
+                        }
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = 'Submit Reservation';
+                        }
+                        console.log('Form enabled');
+                } else {
+                        if (form) {
+                            form.classList.add('disabled');
+                            // Disable all input fields, selects, and the submit button
+                            form.querySelectorAll('input, select, button[type="submit"]').forEach(elem => {
+                                elem.disabled = true;
+                            });
+                        }
+                        if (submitBtn) {
+                            submitBtn.disabled = true;
+                            submitBtn.innerHTML = 'Submit Reservation';
+                        }
+                        console.log('Form disabled with reason: ' + message);
+                        
+                        // For active sessions and approved reservations, show an extra notice
+                        if (data.in_active_session || data.has_approved_reservation) {
+                            const statusBadge = document.createElement('div');
+                            statusBadge.className = `badge ${data.in_active_session ? 'bg-danger' : 'bg-warning'} mb-2`;
+                            statusBadge.style.fontSize = '1rem';
+                            statusBadge.style.padding = '8px';
+                            statusBadge.style.marginBottom = '15px';
+                            statusBadge.style.display = 'block';
+                            statusBadge.textContent = data.in_active_session ? 
+                                'You have an active sit-in session' : 
+                                'You have an approved reservation';
+                            
+                            // Insert at the top of the form
+                            if (form && form.firstChild) {
+                                form.insertBefore(statusBadge, form.firstChild);
+                            }
+                        }
+                    }
+                    
+                    // Show message if we have one
+                    if (message) {
+                        showMessage(message, messageType);
+                    }
+                    
+                    // Add a debug help button if the form is unexpectedly disabled
+                    if (data.can_reserve === true && !shouldEnable) {
+                        console.error('Form state inconsistency detected: can_reserve is true but form is disabled');
+                        const debugBtn = document.createElement('button');
+                        debugBtn.type = 'button';
+                        debugBtn.className = 'btn btn-warning';
+                        debugBtn.innerHTML = '<i class="fas fa-bug"></i> Debug Form';
+                        debugBtn.style.marginTop = '10px';
+                        debugBtn.onclick = forceEnableForm;
+                        
+                        if (form) {
+                            form.appendChild(debugBtn);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking reservation status:', error);
+                    // If there's an error, don't disable the form (allow users to try)
+                    if (form) form.classList.remove('disabled');
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = 'Submit Reservation';
+                    }
+                    showMessage('Error checking reservation status. The form has been enabled, but you may not be able to make a reservation if you have an active session.', 'warning', 10000);
+                });
+        }
+
+        // Helper function to show messages
+        function showMessage(message, type = 'warning', duration = 0) {
+            // Remove any existing message with same content
+            const existingMessages = document.querySelectorAll('.alert-message');
+            for (const existingMsg of existingMessages) {
+                if (existingMsg.textContent === message) {
+                    existingMsg.remove();
+                }
+            }
+            
+            // Create new message element
+            const msgElement = document.createElement('div');
+            msgElement.className = `alert alert-${type} alert-message`;
+            msgElement.textContent = message;
+            
+            // Add to the form
+            const form = document.getElementById('reservationForm');
+            const submitBtn = form.querySelector('button[type="submit"]');
+            form.insertBefore(msgElement, submitBtn);
+            
+            // Optional auto-remove after duration
+            if (duration > 0) {
+                setTimeout(() => {
+                    msgElement.remove();
+                }, duration);
+            }
+        }
+        
+        // Enable form if the form is disabled but the server says it should be enabled
+        function checkAndAutoEnableForm() {
             fetch('/check_reservation_status')
                 .then(response => response.json())
                 .then(data => {
                     const form = document.getElementById('reservationForm');
                     const submitBtn = document.querySelector('button[type="submit"]');
                     
-                    // Add debug output to console to help diagnose issues
-                    console.log('Detailed reservation status:', data);
-                    
-                    if (data.has_pending_reservation) {
-                        // Disable form if there's a pending reservation
-                        form.classList.add('disabled');
-                        submitBtn.disabled = true;
-                        showMessage('You have a pending reservation request. Please wait for approval.', 'warning');
-                    } else if (data.in_active_session) {
-                        // Disable form if user is in an active sit-in session
-                        form.classList.add('disabled');
-                        submitBtn.disabled = true;
-                        showMessage('You are currently in an active sit-in session. You cannot make a reservation while in an active session.', 'warning');
-                    } else {
-                        // User can reserve normally - this covers both cases:
-                        // 1. Never had a sit-in session
-                        // 2. Had a session that was ended by admin (was_logged_out=true)
-                        form.classList.remove('disabled');
-                        submitBtn.disabled = false;
+                    // If backend says user can reserve but form is disabled
+                    if (data.can_reserve === true && 
+                        (form.classList.contains('disabled') || submitBtn.disabled)) {
                         
-                        // Show informational message if they were previously logged out
-                        if (data.was_logged_out && data.completed_sessions > 0) {
-                            showMessage('Your previous session was ended. You can now make a new reservation.', 'info');
+                        console.log('Auto-fixing form state discrepancy');
+                        form.classList.remove('disabled');
+                        
+                        // Enable all input fields, selects, and the submit button
+                        form.querySelectorAll('input, select, button[type="submit"]').forEach(elem => {
+                            elem.disabled = false;
+                        });
+                        
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = 'Submit Reservation';
                         }
+                        
+                        showMessage('Form state was corrected automatically. You can now make a reservation.', 'info');
                     }
                 })
                 .catch(error => {
-                    console.error('Error checking reservation status:', error);
-                    // If there's an error, default to enabling the form
-                    const form = document.getElementById('reservationForm');
-                    const submitBtn = document.querySelector('button[type="submit"]');
-                    form.classList.remove('disabled');
-                    submitBtn.disabled = false;
+                    console.error('Error in auto-enable check:', error);
                 });
         }
 
-        function showMessage(message, type = 'info') {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `alert alert-${type}`;
-            messageDiv.textContent = message;
-            
-            const container = document.querySelector('.container');
-            container.insertBefore(messageDiv, container.firstChild);
-            
-            setTimeout(() => messageDiv.remove(), 5000);
+        // Function to check reservation history for pending reservations
+        function hasPendingReservationInHistory() {
+            const tableRows = document.querySelectorAll('#reservationHistoryTable tr');
+            for (const row of tableRows) {
+                const statusCell = row.querySelector('td:nth-child(5) .status-badge');
+                if (statusCell && statusCell.classList.contains('status-pending')) {
+                    return true;
+                }
+            }
+            return false;
         }
+        
+        // Run the auto-fix every 10 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initial check for form status
+            setTimeout(checkAndAutoEnableForm, 5000);
+            
+            // Check reservation history for pending reservations
+            if (hasPendingReservationInHistory()) {
+                console.log('Found pending reservation in history table - showing warning');
+                const warningDiv = document.createElement('div');
+                warningDiv.className = 'alert alert-warning';
+                warningDiv.style.marginBottom = '15px';
+                warningDiv.style.fontWeight = 'bold';
+                warningDiv.textContent = 'You have a pending reservation request. Please wait for approval before making another request.';
+                
+                // Insert at the top of the form
+                const formContainer = document.querySelector('.reservation-card');
+                formContainer.insertBefore(warningDiv, formContainer.firstChild);
+            }
+            
+            // Set up recurring check
+            setInterval(checkAndAutoEnableForm, 10000);
+        });
 
-        // Function to refresh lab availability from server
-        function refreshLabAvailability() {
-            // Get updated lab statuses from server
-            fetch('/api/lab_statuses')
+        // Function to check if the current user is in an active sit-in session
+        function checkCurrentActiveSession() {
+            // Get the student ID from the form
+            const idno = document.getElementById('idno').value;
+            if (!idno) return; // No student ID available
+            
+            console.log(`Checking if student ${idno} has an active sit-in session...`);
+            
+            // Call the API endpoint
+            fetch(`/api/check_active_session/${idno}`)
                 .then(response => response.json())
                 .then(data => {
-                    // Store the statuses for other parts of the application
-                    if (Array.isArray(data)) {
-                        let labStatuses = {};
-                        data.forEach(status => {
-                            labStatuses[status.labNumber] = status;
-                        });
-                        localStorage.setItem('laboratoryStatuses', JSON.stringify(labStatuses));
+                    console.log('Active session check result:', data);
+                    
+                    // Remove any existing active session alert
+                    const existingAlert = document.getElementById('active-session-alert');
+                    if (existingAlert) {
+                        existingAlert.remove();
                     }
                     
-                    // Reload laboratories with new status data
-                    loadLaboratories();
-                })
-                .catch(error => {
-                    console.log('Error fetching lab statuses:', error);
-                    // Still reload laboratories with available data
-                    loadLaboratories();
-                });
-        }
-
-        function searchReservationHistory() {
-            const input = document.getElementById('searchReservation');
-            const filter = input.value.toUpperCase();
-            const table = document.getElementById('reservationHistoryTable');
-            const tr = table.getElementsByTagName('tr');
-
-            for (let i = 0; i < tr.length; i++) {
-                // Skip placeholder row when no history
-                if (tr[i].getElementsByTagName('td').length === 1 && tr[i].getElementsByTagName('td')[0].colSpan === 7) {
-                    continue;
-                }
-
-                let txtValue = '';
-                const td = tr[i].getElementsByTagName('td');
-                for (let j = 0; j < td.length; j++) {
-                    txtValue += td[j].textContent || td[j].innerText;
-                }
-                
-                if (txtValue.toUpperCase().indexOf(filter) > -1) {
-                    tr[i].style.display = '';
-                } else {
-                    tr[i].style.display = 'none';
-                }
-            }
-            
-            // Save the current state to localStorage if not already saved
-            if (filter === '') {
-                saveReservationHistoryToLocalStorage();
-            }
-        }
-
-        function refreshReservationHistory() {
-            // Show loading indicator
-            const table = document.getElementById('reservationHistoryTable');
-            table.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 30px;"><i class="fas fa-spinner fa-spin" style="font-size: 24px; color: #3498db;"></i><p>Refreshing reservation history...</p></td></tr>';
-            
-            // First try to refresh from the server
-            fetch(window.location.href)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    // Refresh the page to get the latest data
-                    window.location.href = '/reservations';
-                })
-                .catch(error => {
-                    console.error('Error fetching from server:', error);
-                    // If server fetch fails, try to load from localStorage
-                    loadReservationHistoryFromLocalStorage();
-                });
-        }
-
-        // Function to load reservation history from localStorage
-        function loadReservationHistoryFromLocalStorage() {
-            const studentId = document.getElementById('idno')?.value;
-            if (!studentId) return;
-            
-            const storedData = localStorage.getItem(`reservation_history_${studentId}`);
-            if (!storedData) {
-                // If no stored data, show empty message
-                const table = document.getElementById('reservationHistoryTable');
-                table.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 30px;"><i class="fas fa-calendar-times" style="font-size: 48px; color: #ccc; margin-bottom: 10px;"></i><p>No reservation history found</p></td></tr>';
-                return;
-            }
-            
-            try {
-                const reservations = JSON.parse(storedData);
-                const table = document.getElementById('reservationHistoryTable');
-                let html = '';
-                
-                reservations.forEach(reservation => {
-                    html += `
-                        <tr>
-                            <td>${reservation.datetime}</td>
-                            <td>${reservation.laboratory}</td>
-                            <td>PC ${reservation.computer_no}</td>
-                            <td>${reservation.purpose}</td>
-                            <td>
-                                <span class="status-badge status-${reservation.status.toLowerCase()}">
-                                    ${reservation.status}
-                                </span>
-                            </td>
-                            <td>${reservation.created_at}</td>
-                            <td>
-                                ${reservation.status.toLowerCase() === 'rejected' ? 
-                                    (reservation.rejection_reason || 'No reason provided') : '-'}
-                            </td>
-                        </tr>
-                    `;
-                });
-                
-                if (html) {
-                    table.innerHTML = html;
-                    formatDates(); // Format the dates after loading
-                } else {
-                    table.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 30px;"><i class="fas fa-calendar-times" style="font-size: 48px; color: #ccc; margin-bottom: 10px;"></i><p>No reservation history found</p></td></tr>';
-                }
-            } catch (e) {
-                console.error('Error parsing reservation history:', e);
-                // Show error message
-                const table = document.getElementById('reservationHistoryTable');
-                table.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 30px;"><i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #e74c3c; margin-bottom: 10px;"></i><p>Error loading reservation history</p></td></tr>';
-            }
-        }
-
-        // Extract date formatting to a separate function for reuse
-        function formatDates() {
-            // Format dates in reservation history table
-            const dateElements = document.querySelectorAll('tbody td:first-child, tbody td:nth-child(6)');
-            dateElements.forEach(element => {
-                const dateString = element.textContent.trim();
-                if (dateString && dateString.includes('-')) {
-                    try {
-                        // Parse the date
-                        const date = new Date(dateString);
-                        if (!isNaN(date)) {
-                            // Format as more readable date
-                            element.textContent = date.toLocaleString('en-US', {
-                                year: 'numeric', 
-                                month: 'short', 
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                            });
+                    if (data.is_active) {
+                        // Get the form element
+                        const form = document.getElementById('reservationForm');
+                        if (!form) return;
+                        
+                        // Create a prominent alert
+                        const alertEl = document.createElement('div');
+                        alertEl.id = 'active-session-alert';
+                        alertEl.className = 'alert alert-danger';
+                        alertEl.style.padding = '15px';
+                        alertEl.style.marginBottom = '20px';
+                        alertEl.style.border = '2px solid #dc3545';
+                        alertEl.style.borderRadius = '5px';
+                        alertEl.style.backgroundColor = '#f8d7da';
+                        alertEl.style.position = 'relative';
+                        
+                        // Create alert content with session details
+                        const sessionDetails = data.session_details || {};
+                        const lab = sessionDetails.laboratory || 'Unknown laboratory';
+                        const timeIn = sessionDetails.time_in || 'Unknown time';
+                        const purpose = sessionDetails.purpose || 'Unknown purpose';
+                        
+                        alertEl.innerHTML = `
+                            <h4 style="color: #721c24; margin-bottom: 10px;"><i class="fas fa-exclamation-triangle"></i> Active Session Detected</h4>
+                            <p style="margin-bottom: 8px; color: #721c24;">
+                                You currently have an <strong>active sit-in session</strong> and cannot make a new reservation until this session is completed.
+                            </p>
+                            <div style="margin-top: 10px; padding: 10px; background-color: rgba(255,255,255,0.5); border-radius: 4px;">
+                                <p style="margin-bottom: 5px; font-weight: bold;">Active Session Details:</p>
+                                <ul style="margin-bottom: 0; padding-left: 20px;">
+                                    <li><strong>Laboratory:</strong> ${lab}</li>
+                                    <li><strong>Time In:</strong> ${timeIn}</li>
+                                    <li><strong>Purpose:</strong> ${purpose}</li>
+                                </ul>
+                            </div>
+                            <p style="margin-top: 15px; font-style: italic; color: #721c24;">
+                                Please complete your current session before making a new reservation request.
+                            </p>
+                        `;
+                        
+                        // Insert at the top of the form
+                        const formContainer = document.querySelector('.reservation-card');
+                        if (formContainer) {
+                            formContainer.insertBefore(alertEl, formContainer.firstChild);
                         }
-                    } catch (e) {
-                        console.log('Error formatting date:', e);
+                        
+                        // Disable the form
+                        form.classList.add('disabled');
+                        form.querySelectorAll('input, select, button[type="submit"]').forEach(elem => {
+                            elem.disabled = true;
+                        });
                     }
-                }
-            });
+                })
+                .catch(error => {
+                    console.error('Error checking active session:', error);
+                });
         }
 
-        // Function to save reservation history to localStorage
-        function saveReservationHistoryToLocalStorage() {
-            const studentId = document.getElementById('idno')?.value;
-            if (!studentId) return;
+        // Function to refresh the reservation history
+        function refreshReservationHistory() {
+            console.log("Checking for reservation history updates...");
             
-            // Get the reservation history table rows (skip header row)
-            const table = document.getElementById('reservationHistoryTable');
-            const rows = table.getElementsByTagName('tr');
-            
-            // Check if we have no data (placeholder message) - in this case don't save to localStorage
-            if (rows.length === 1 && rows[0].getElementsByTagName('td')[0]?.colSpan === 7) {
-                return;
-            }
-            
-            // Parse the reservation data from the table rows
-            const reservations = [];
-            for (let i = 0; i < rows.length; i++) {
-                const cells = rows[i].getElementsByTagName('td');
-                if (cells.length >= 7) {
-                    const statusElement = cells[4].querySelector('.status-badge');
-                    const status = statusElement ? statusElement.textContent.trim() : '';
+            // Check for active session status first
+            fetch('/api/check_active_session/' + document.getElementById('idno').value)
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Active session check:", data);
                     
-                    reservations.push({
-                        datetime: cells[0].textContent.trim(),
-                        laboratory: cells[1].textContent.trim(),
-                        computer_no: cells[2].textContent.trim().replace('PC ', ''),
-                        purpose: cells[3].textContent.trim(),
-                        status: status,
-                        created_at: cells[5].textContent.trim(),
-                        rejection_reason: cells[6].textContent.trim() === '-' ? '' : cells[6].textContent.trim()
-                    });
-                }
-            }
-            
-            // Save to localStorage
-            if (reservations.length > 0) {
-                localStorage.setItem(`reservation_history_${studentId}`, JSON.stringify(reservations));
-            }
+                    // If we got updated reservation history data directly from the API
+                    if (data && data.updated_reservation_history) {
+                        console.log("Got updated reservation history directly from API");
+                        
+                        // Create a table structure from the history data
+                        const historyTable = document.getElementById('reservationHistoryTable');
+                        if (historyTable && data.updated_reservation_history.length > 0) {
+                            // Build the HTML for the table rows
+                            let tableHtml = '';
+                            data.updated_reservation_history.forEach(res => {
+                                tableHtml += `
+                                <tr>
+                                    <td>${res.datetime}</td>
+                                    <td>${res.laboratory}</td>
+                                    <td>PC ${res.computer_no}</td>
+                                    <td>${res.purpose}</td>
+                                    <td>
+                                        <span class="status-badge status-${res.status}">
+                                            ${res.status}
+                                        </span>
+                                    </td>
+                                    <td>${res.created_at}</td>
+                                    <td>
+                                        ${res.session_end_time === 'Active Session' 
+                                            ? `<span class="status-badge" style="background-color: #3498db; color: white;">${res.session_end_time}</span>` 
+                                            : res.session_end_time}
+                                    </td>
+                                    <td>
+                                        ${res.status === 'rejected' 
+                                            ? (res.rejection_reason || 'No reason provided')
+                                            : '-'}
+                                    </td>
+                                </tr>`;
+                            });
+                            
+                            // Update the table
+                            historyTable.innerHTML = tableHtml;
+                            
+                            // Re-format dates in the updated table
+                            formatDates();
+                            
+                            // If the session also ended, show a notification
+                            if (data.session_ended) {
+                                const notification = document.createElement('div');
+                                notification.className = 'alert alert-info';
+                                notification.style.position = 'fixed';
+                                notification.style.top = '20px';
+                                notification.style.right = '20px';
+                                notification.style.zIndex = '1000';
+                                notification.style.padding = '15px 20px';
+                                notification.style.borderRadius = '5px';
+                                notification.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+                                notification.innerHTML = '<i class="fas fa-info-circle"></i> Your session has been ended by an administrator. Table has been updated.';
+                                document.body.appendChild(notification);
+                                
+                                // Remove notification after 5 seconds
+                                setTimeout(() => {
+                                    notification.remove();
+                                }, 5000);
+                            }
+                            
+                            return; // Skip the full page refresh
+                        }
+                    }
+                    
+                    // If session status has changed, we need to immediately refresh
+                    if (data && data.session_ended) {
+                        console.log("Session has ended, refreshing page...");
+                        
+                        // Show a notification that session was ended
+                        const notification = document.createElement('div');
+                        notification.className = 'alert alert-info';
+                        notification.style.position = 'fixed';
+                        notification.style.top = '20px';
+                        notification.style.right = '20px';
+                        notification.style.zIndex = '1000';
+                        notification.style.padding = '15px 20px';
+                        notification.style.borderRadius = '5px';
+                        notification.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+                        notification.innerHTML = '<i class="fas fa-info-circle"></i> Your session has been ended by an administrator. Refreshing page...';
+                        document.body.appendChild(notification);
+                        
+                        // Hard reload to ensure everything is updated
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                        return;
+                    }
+                    
+                    // Otherwise continue with the normal reservation history refresh
+                    return fetch(window.location.href);
+                })
+                .then(response => {
+                    if (response) return response.text();
+                })
+                .then(html => {
+                    if (!html) return; // This could be undefined if we reloaded the page
+                    
+                    // Create a temporary DOM element to parse the HTML
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = html;
+                    
+                    // Extract the updated reservation history table content
+                    const newTableContent = tempDiv.querySelector('#reservationHistoryTable').innerHTML;
+                    
+                    // Update the current table with new content
+                    document.getElementById('reservationHistoryTable').innerHTML = newTableContent;
+                    
+                    // Re-format dates in the updated table
+                    formatDates();
+                    
+                    console.log("Reservation history refreshed");
+                })
+                .catch(error => {
+                    console.error("Error refreshing reservation history:", error);
+                });
         }
     </script>
 </body>

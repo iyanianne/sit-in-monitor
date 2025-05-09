@@ -3,10 +3,11 @@ import sqlite3
 import os
 from werkzeug.utils import secure_filename
 import dbhelper
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import wraps
 import uuid
 import shutil
+import time
 
 app = Flask(__name__)
 app.secret_key = "database1234!"
@@ -500,10 +501,45 @@ def end_sit_in(idno):
         return jsonify({"error": "Not authorized"}), 401
 
     try:
+        # Convert ID to string for database operations
+        id_str = str(idno)
+        
+        # First check if the student has an active sit-in
+        has_active_sitin = dbhelper.check_user_has_active_sitin(id_str)
+        
+        if not has_active_sitin:
+            print(f"No active sit-in found for student {id_str}")
+            return jsonify({"success": False, "message": "No active sit-in session found"}), 404
+        
         # Update the sit-in record with end time
-        dbhelper.end_sit_in_session(idno)
-        return jsonify({"success": True})
+        success = dbhelper.end_sit_in_session(id_str)
+        
+        # Log the action
+        admin_username = session.get('username', 'Unknown admin')
+        if success:
+            print(f"Admin {admin_username} successfully ended sit-in session for student {id_str}")
+        else:
+            print(f"Admin {admin_username} attempted to end sit-in session for student {id_str}, but the operation returned failure")
+            return jsonify({"success": False, "message": "Failed to end sit-in session"}), 500
+        
+        # Add a small delay to ensure DB has updated before checking
+        time.sleep(0.5)
+        
+        # Double-check that the session was properly ended
+        still_active = dbhelper.check_user_has_active_sitin(id_str)
+        if still_active:
+            print(f"WARNING: Sit-in session for student {id_str} is still active after end_sit_in_session")
+            return jsonify({"success": False, "message": "Failed to end sit-in session"}), 500
+        
+        # Success message indicates that the student can now make reservations
+        return jsonify({
+            "success": True, 
+            "message": "Sit-in session ended successfully. Student can now make new reservations."
+        })
     except Exception as e:
+        print(f"Error ending sit-in session: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 # Sit-In form route
@@ -639,6 +675,23 @@ def process_sit_in():
             return jsonify({"error": "Missing required fields"}), 400
 
         idno = str(idno).strip()
+
+        # Get detailed sit-in status
+        sit_in_status = dbhelper.check_active_sitin_status(idno)
+        
+        # Check if the student already has an active sit-in session
+        if sit_in_status['has_active_session']:
+            print(f"Student {idno} already has an active sit-in session. Rejecting duplicate request.")
+            return jsonify({"error": "Student already has an active sit-in session. Please complete the current session first."}), 400
+            
+        # Check if the student has any pending or approved reservations
+        if dbhelper.check_user_has_pending_reservation(idno):
+            print(f"Student {idno} has a pending reservation. Cannot start sit-in session.")
+            return jsonify({"error": "You have a pending reservation request. Please wait for approval before starting a sit-in session."}), 400
+            
+        if dbhelper.check_user_has_approved_reservation(idno):
+            print(f"Student {idno} has an approved reservation. Cannot start sit-in session.")
+            return jsonify({"error": "You have an approved reservation. Please wait for your scheduled time."}), 400
 
         dbhelper.initialize_student_sessions(idno)
         
@@ -1072,44 +1125,33 @@ def update_computer_status_route(computer_id):
 def check_reservation_status():
     student_id = session.get('idno')
     
-    # Check for pending reservations
-    has_pending = dbhelper.check_user_has_pending_reservation(student_id)
+    # Get the user's sit-in status using our helper function
+    sit_in_status = dbhelper.check_active_sitin_status(student_id)
     
-    # Check for active sit-in directly using the helper function
-    active_sitin = dbhelper.check_user_has_active_sitin(student_id)
+    # Get more detailed status info for the frontend
+    has_pending = dbhelper.check_user_has_pending_reservation(student_id)
+    has_approved = dbhelper.check_user_has_approved_reservation(student_id)
+    
+    # Use the helper function to determine if form should be disabled
+    should_disable, reason = dbhelper.should_disable_reservation_form(student_id)
     
     # Debug output
     print(f"Checking reservation status for student {student_id}")
+    print(f"Sit-in status: {sit_in_status}")
     print(f"Has pending reservation: {has_pending}")
-    print(f"In active sit-in session: {active_sitin}")
-    
-    # Check for any completed sessions
-    conn = sqlite3.connect('sitinmonitor.db')
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT COUNT(*) FROM SIT_IN_HISTORY 
-        WHERE idno = ? AND time_in != time_out
-    """, (student_id,))
-    completed_session_count = cursor.fetchone()[0]
-    was_logged_out = completed_session_count > 0 and not active_sitin
-    
-    # Debug output
-    print(f"Completed session count: {completed_session_count}")
-    print(f"Was logged out by admin: {was_logged_out}")
-    
-    conn.close()
-    
-    # User can reserve if they don't have pending reservations and aren't in an active sit-in
-    can_reserve = not has_pending and not active_sitin
+    print(f"Has approved reservation: {has_approved}")
+    print(f"Should disable form: {should_disable}")
+    if reason:
+        print(f"Reason: {reason}")
     
     return jsonify({
-        'can_reserve': can_reserve,
+        'can_reserve': not should_disable,
         'has_pending_reservation': has_pending,
-        'in_active_session': active_sitin,
-        'was_logged_out': was_logged_out,
-        'completed_sessions': completed_session_count,
-        'message': 'You already have a pending or approved reservation' if has_pending else
-                  'You are currently in an active sit-in session' if active_sitin else None
+        'has_approved_reservation': has_approved,
+        'in_active_session': sit_in_status['has_active_session'],
+        'was_logged_out': sit_in_status['was_logged_out'],
+        'completed_sessions': sit_in_status['completed_sessions'],
+        'message': reason
     })
 
 # Student Reservation Routes
@@ -1443,6 +1485,102 @@ def download_category_resources(category):
 
 # Make sure the resource directory exists
 os.makedirs(app.config['RESOURCE_FOLDER'], exist_ok=True)
+
+@app.route('/api/check_active_session/<string:student_id>')
+@login_required
+def check_active_session(student_id):
+    """
+    Check if a student ID is in the list of current sit-in students.
+    
+    This endpoint helps the frontend validate if a user is already in an active session
+    before allowing them to make a reservation.
+    
+    It also checks if the user had a recently ended session to help refresh the reservation history.
+    """
+    try:
+        # Get all currently active sit-in students
+        active_students = dbhelper.get_current_sit_in_students()
+        
+        # Check if the given student ID is in the active students list
+        is_active = any(student['idno'] == student_id for student in active_students)
+        
+        # If active, get the session details
+        active_session_details = None
+        if is_active:
+            for student in active_students:
+                if student['idno'] == student_id:
+                    active_session_details = {
+                        'laboratory': student['laboratory'],
+                        'time_in': student['time_in'],
+                        'purpose': student['purpose']
+                    }
+                    break
+        
+        # Check if student had a recently ended session in the last 5 minutes
+        conn = dbhelper.get_db_connection()
+        cursor = conn.cursor()
+        current_date = datetime.now().strftime("%Y-%m-%d")
+        
+        # Check for sessions that ended in the last 5 minutes
+        five_mins_ago = (datetime.now() - timedelta(minutes=5)).strftime("%H:%M:%S")
+        current_time = datetime.now().strftime("%H:%M:%S")
+        
+        cursor.execute("""
+            SELECT COUNT(*) 
+            FROM SIT_IN_HISTORY 
+            WHERE idno = ? 
+            AND date = ? 
+            AND time_out != time_in 
+            AND time_out BETWEEN ? AND ?
+        """, (student_id, current_date, five_mins_ago, current_time))
+        
+        recently_ended_count = cursor.fetchone()[0]
+        session_ended = recently_ended_count > 0
+        
+        # If a session has recently ended, also fetch the updated reservation history
+        updated_reservation_history = None
+        if session_ended:
+            print(f"Student {student_id} had a session end recently. Fetching updated reservation history.")
+            updated_reservation_history = dbhelper.get_user_reservations(student_id)
+            
+            # Convert the full objects to a simpler format for JSON serialization
+            if updated_reservation_history:
+                simplified_history = []
+                for res in updated_reservation_history:
+                    simplified_history.append({
+                        'id': res.get('id'),
+                        'laboratory': res.get('laboratory'),
+                        'computer_no': res.get('computer_no'),
+                        'purpose': res.get('purpose'),
+                        'datetime': res.get('datetime'),
+                        'status': res.get('status'),
+                        'created_at': res.get('created_at'),
+                        'session_end_time': res.get('session_end_time', '-'),
+                        'rejection_reason': res.get('rejection_reason', '-')
+                    })
+                updated_reservation_history = simplified_history
+        
+        conn.close()
+        
+        # Return the result as JSON
+        return jsonify({
+            'is_active': is_active,
+            'session_details': active_session_details,
+            'student_id': student_id,
+            'session_ended': session_ended,
+            'recently_ended_count': recently_ended_count,
+            'updated_reservation_history': updated_reservation_history
+        })
+    except Exception as e:
+        print(f"Error checking active session for student {student_id}: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'is_active': False,
+            'error': str(e),
+            'student_id': student_id,
+            'session_ended': False
+        })
 
 if __name__ == "__main__":
     app.run(debug=True)

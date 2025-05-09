@@ -752,17 +752,37 @@
             const timeElements = document.querySelectorAll('tbody td:nth-child(7)');
             timeElements.forEach(element => {
                 const timeString = element.textContent.trim();
-                if (timeString && timeString.includes(':') && !timeString.includes('Active')) {
-                    try {
-                        // Convert 24-hour format to 12-hour format with AM/PM
+                
+                // Skip if it's "Active Session" or "-"
+                if (timeString === 'Active Session' || timeString === '-') {
+                    return;
+                }
+                
+                try {
+                    // Check if the time string is a full datetime format (contains date and time)
+                    if (timeString.includes('-') && timeString.includes(':')) {
+                        // If it's a full datetime format, parse and format it
+                        const date = new Date(timeString);
+                        if (!isNaN(date)) {
+                            element.textContent = date.toLocaleString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            });
+                        }
+                    } 
+                    // If it's just a time format (HH:MM:SS)
+                    else if (timeString.includes(':')) {
+                        // Parse the time components
                         const [hours, minutes, seconds] = timeString.split(':');
                         const hourInt = parseInt(hours, 10);
                         const ampm = hourInt >= 12 ? 'PM' : 'AM';
                         const hour12 = hourInt % 12 || 12;
                         element.textContent = `${hour12}:${minutes} ${ampm}`;
-                    } catch (e) {
-                        console.log('Error formatting time:', e);
                     }
+                } catch (e) {
+                    console.log('Error formatting session end time:', e, 'for value:', timeString);
                 }
             });
         }
@@ -1228,6 +1248,30 @@
             // Set up interval to periodically check for active sessions
             setInterval(checkCurrentActiveSession, 20000); // Check every 20 seconds
             
+            // Double-check session status 5 seconds after page load
+            // This helps handle edge cases where the form might stay disabled incorrectly
+            setTimeout(() => {
+                // If there's no active session alert, make sure the form is enabled
+                if (!document.getElementById('active-session-alert')) {
+                    fetch('/api/check_active_session/' + document.getElementById('idno').value)
+                        .then(response => response.json())
+                        .then(data => {
+                            console.log("Extra session check result:", data);
+                            if (!data.is_active) {
+                                // Check if the form is still disabled for some reason
+                                const form = document.getElementById('reservationForm');
+                                if (form && form.classList.contains('disabled')) {
+                                    console.log("Form was still disabled after 5s but no active session - enabling");
+                                    enableReservationForm();
+                                }
+                            }
+                        })
+                        .catch(error => {
+                            console.error("Error in extra session check:", error);
+                        });
+                }
+            }, 5000);
+            
             // Save reservation history to localStorage when it's loaded from server
             saveReservationHistoryToLocalStorage();
             
@@ -1250,34 +1294,85 @@
             document.body.appendChild(debugContainer);
         });
 
-        // Function to forcibly enable the reservation form for debugging
+        // Force enable function - for emergency use if the form gets stuck disabled
         function forceEnableForm() {
-            const form = document.getElementById('reservationForm');
-            const submitBtn = document.querySelector('button[type="submit"]');
-            form.classList.remove('disabled');
-            submitBtn.disabled = false;
-            showMessage('Form has been manually enabled for testing. You can now make a reservation.', 'info');
-            console.log('Form manually enabled');
+            console.log("FORCE ENABLING FORM - Emergency override");
             
-            // Add a debug button
-            const debugButton = document.createElement('button');
-            debugButton.type = 'button';
-            debugButton.className = 'btn btn-secondary btn-sm';
-            debugButton.style.marginTop = '10px';
-            debugButton.style.marginLeft = '10px';
-            debugButton.textContent = 'Debug Status';
-            debugButton.onclick = showReservationFormStatus;
-            
-            // Add after the submit button
-            submitBtn.parentNode.appendChild(debugButton);
+            // Check one more time if there really is no active session
+            fetch('/api/check_active_session/' + document.getElementById('idno').value)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.is_active) {
+                        console.log("Cannot force enable - user really has an active session");
+                        showMessage("Cannot enable form - you have an active session. Please complete your current session first.", "danger");
+                        return;
+                    }
+                    
+                    // If no active session, force enable the form
+                    const form = document.getElementById('reservationForm');
+                    if (!form) {
+                        console.error("Form element not found");
+                        return;
+                    }
+                    
+                    // Remove disabled class
+                    form.classList.remove('disabled');
+                    
+                    // Enable all form elements
+                    form.querySelectorAll('input, select, button[type="submit"]').forEach(elem => {
+                        elem.disabled = false;
+                    });
+                    
+                    // Update submit button
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = 'Submit Reservation';
+                    }
+                    
+                    // Remove any warning messages
+                    const warningMessages = form.querySelectorAll('.alert-warning');
+                    warningMessages.forEach(msg => msg.remove());
+                    
+                    // Add a success message
+                    const successMsg = document.createElement('div');
+                    successMsg.className = 'alert alert-success';
+                    successMsg.innerHTML = '<i class="fas fa-check-circle"></i> Form has been forcibly enabled. You can now make a reservation.';
+                    
+                    // Add the message before the submit button
+                    if (submitBtn && submitBtn.parentNode) {
+                        submitBtn.parentNode.insertBefore(successMsg, submitBtn);
+                        
+                        // Auto-remove after 10 seconds
+                        setTimeout(() => {
+                            successMsg.remove();
+                        }, 10000);
+                    }
+                    
+                    showMessage("Form has been forcibly enabled. You can now make a reservation.", "success");
+                })
+                .catch(error => {
+                    console.error("Error in force enable check:", error);
+                    
+                    // If we get an error, enable anyway as a last resort
+                    const form = document.getElementById('reservationForm');
+                    if (form) {
+                        form.classList.remove('disabled');
+                        form.querySelectorAll('input, select, button[type="submit"]').forEach(elem => {
+                            elem.disabled = false;
+                        });
+                        
+                        showMessage("Form has been forcibly enabled due to an error. You can try making a reservation now.", "warning");
+                    }
+                });
         }
 
         function checkReservationStatus() {
             console.log('Checking reservation status...');
             // First disable the form as a precaution while we check status
-                    const form = document.getElementById('reservationForm');
-                    const submitBtn = document.querySelector('button[type="submit"]');
-                    
+            const form = document.getElementById('reservationForm');
+            const submitBtn = document.querySelector('button[type="submit"]');
+            
             // Add loading state without disabling
             if (submitBtn) {
                 submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking status...';
@@ -1300,24 +1395,37 @@
                     let message = data.message || '';
                     let messageType = 'warning';
                     
+                    // SPECIAL CASE: If the session was recently completed, always enable the form
+                    if (data.recent_completion === true) {
+                        console.log('User had a recently completed session - explicitly enabling form');
+                        shouldEnable = true;
+                        messageType = 'success';
+                        message = 'Your session was recently ended. You can now make a new reservation.';
+                    }
+                    // SPECIAL CASE: If the user was logged out by an admin, always enable the form
+                    else if (data.was_logged_out && data.completed_sessions > 0) {
+                        console.log('User was logged out by admin - explicitly enabling form');
+                        shouldEnable = true;
+                        messageType = 'success';
+                        message = 'Your previous session was ended by an admin. You can make a new reservation.';
+                    }
                     // Process status in priority order - only show the most important message
-                    
-                    // 1. ACTIVE SESSION: Most high priority restriction
-                    if (data.in_active_session) {
+                    else if (data.in_active_session) {
+                        // 1. ACTIVE SESSION: Most high priority restriction
                         console.log('Form disabled: User is in an active sit-in session');
                         shouldEnable = false;
                         message = 'You are currently in an active sit-in session. Please finish your current session before making a new reservation.';
                         messageType = 'danger';  // Make it more prominent
                     }
-                    // 2. APPROVED RESERVATION: User already has an approved reservation
                     else if (data.has_approved_reservation) {
+                        // 2. APPROVED RESERVATION: User already has an approved reservation
                         console.log('Form disabled: User has an approved reservation');
                         shouldEnable = false;
                         message = 'You have an approved reservation. Please complete your current session before making a new request.';
                         messageType = 'warning';
                     }
-                    // 3. PENDING RESERVATION: User is waiting for approval
                     else if (data.has_pending_reservation) {
+                        // 3. PENDING RESERVATION: User is waiting for approval
                         console.log('Form disabled: User has a pending reservation');
                         shouldEnable = false;
                         message = 'You have a pending reservation request. Please wait for approval.';
@@ -1333,16 +1441,9 @@
                         // Insert at the top of the form
                         const formContainer = document.querySelector('.reservation-card');
                         formContainer.insertBefore(warningDiv, formContainer.firstChild);
-                    } 
-                    // SPECIAL CASE: If the user was logged out by an admin, allow them to make reservations
-                    else if (data.was_logged_out && data.completed_sessions > 0) {
-                        console.log('User was logged out by admin - form should be enabled');
-                        shouldEnable = true;
-                        messageType = 'success';
-                        message = 'Your previous session was ended by an admin. You can make a new reservation.';
                     }
-                    // DEFAULT: No restrictions
                     else {
+                        // DEFAULT: No restrictions
                         console.log('Form should be enabled: No restrictions found');
                         shouldEnable = true;
                         messageType = 'info';
@@ -1357,6 +1458,7 @@
                         in_active_session: data.in_active_session,
                         was_logged_out: data.was_logged_out,
                         completed_sessions: data.completed_sessions,
+                        recent_completion: data.recent_completion,
                         shouldEnable: shouldEnable,
                         message: message
                     });
@@ -1375,7 +1477,7 @@
                             submitBtn.innerHTML = 'Submit Reservation';
                         }
                         console.log('Form enabled');
-                } else {
+                    } else {
                         if (form) {
                             form.classList.add('disabled');
                             // Disable all input fields, selects, and the submit button
@@ -1441,29 +1543,29 @@
         }
 
         // Helper function to show messages
-        function showMessage(message, type = 'warning', duration = 0) {
-            // Remove any existing message with same content
-            const existingMessages = document.querySelectorAll('.alert-message');
-            for (const existingMsg of existingMessages) {
-                if (existingMsg.textContent === message) {
-                    existingMsg.remove();
+        function showMessage(message, type = 'info', duration = 5000) {
+            const messageContainer = document.createElement('div');
+            messageContainer.className = `alert alert-${type} message-alert`;
+            messageContainer.style.marginBottom = '15px';
+            messageContainer.innerHTML = message;
+            
+            // Look for the right place to insert the message
+            const form = document.getElementById('reservationForm');
+            if (form) {
+                // Insert at the top of the form
+                form.insertBefore(messageContainer, form.firstChild);
+            } else {
+                // Fallback - insert before the main content
+                const mainContent = document.querySelector('.container');
+                if (mainContent) {
+                    mainContent.insertBefore(messageContainer, mainContent.firstChild);
                 }
             }
             
-            // Create new message element
-            const msgElement = document.createElement('div');
-            msgElement.className = `alert alert-${type} alert-message`;
-            msgElement.textContent = message;
-            
-            // Add to the form
-            const form = document.getElementById('reservationForm');
-            const submitBtn = form.querySelector('button[type="submit"]');
-            form.insertBefore(msgElement, submitBtn);
-            
-            // Optional auto-remove after duration
+            // Auto-remove after specified duration
             if (duration > 0) {
                 setTimeout(() => {
-                    msgElement.remove();
+                    messageContainer.remove();
                 }, duration);
             }
         }
@@ -1542,6 +1644,9 @@
             const idno = document.getElementById('idno').value;
             if (!idno) return; // No student ID available
             
+            // Keep track of previous active state
+            const wasActiveBeforeCheck = document.getElementById('active-session-alert') !== null;
+            
             console.log(`Checking if student ${idno} has an active sit-in session...`);
             
             // Call the API endpoint
@@ -1607,140 +1712,177 @@
                         form.querySelectorAll('input, select, button[type="submit"]').forEach(elem => {
                             elem.disabled = true;
                         });
-                    }
-                })
-                .catch(error => {
-                    console.error('Error checking active session:', error);
-                });
-        }
-
-        // Function to refresh the reservation history
-        function refreshReservationHistory() {
-            console.log("Checking for reservation history updates...");
-            
-            // Check for active session status first
-            fetch('/api/check_active_session/' + document.getElementById('idno').value)
-                .then(response => response.json())
-                .then(data => {
-                    console.log("Active session check:", data);
-                    
-                    // If we got updated reservation history data directly from the API
-                    if (data && data.updated_reservation_history) {
-                        console.log("Got updated reservation history directly from API");
-                        
-                        // Create a table structure from the history data
-                        const historyTable = document.getElementById('reservationHistoryTable');
-                        if (historyTable && data.updated_reservation_history.length > 0) {
-                            // Build the HTML for the table rows
-                            let tableHtml = '';
-                            data.updated_reservation_history.forEach(res => {
-                                tableHtml += `
-                                <tr>
-                                    <td>${res.datetime}</td>
-                                    <td>${res.laboratory}</td>
-                                    <td>PC ${res.computer_no}</td>
-                                    <td>${res.purpose}</td>
-                                    <td>
-                                        <span class="status-badge status-${res.status}">
-                                            ${res.status}
-                                        </span>
-                                    </td>
-                                    <td>${res.created_at}</td>
-                                    <td>
-                                        ${res.session_end_time === 'Active Session' 
-                                            ? `<span class="status-badge" style="background-color: #3498db; color: white;">${res.session_end_time}</span>` 
-                                            : res.session_end_time}
-                                    </td>
-                                    <td>
-                                        ${res.status === 'rejected' 
-                                            ? (res.rejection_reason || 'No reason provided')
-                                            : '-'}
-                                    </td>
-                                </tr>`;
-                            });
-                            
-                            // Update the table
-                            historyTable.innerHTML = tableHtml;
-                            
-                            // Re-format dates in the updated table
-                            formatDates();
-                            
-                            // If the session also ended, show a notification
-                            if (data.session_ended) {
-                                const notification = document.createElement('div');
-                                notification.className = 'alert alert-info';
-                                notification.style.position = 'fixed';
-                                notification.style.top = '20px';
-                                notification.style.right = '20px';
-                                notification.style.zIndex = '1000';
-                                notification.style.padding = '15px 20px';
-                                notification.style.borderRadius = '5px';
-                                notification.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
-                                notification.innerHTML = '<i class="fas fa-info-circle"></i> Your session has been ended by an administrator. Table has been updated.';
-                                document.body.appendChild(notification);
-                                
-                                // Remove notification after 5 seconds
-                                setTimeout(() => {
-                                    notification.remove();
-                                }, 5000);
-                            }
-                            
-                            return; // Skip the full page refresh
+                    } else {
+                        // If session was active before but is not active now, enable the form
+                        if (wasActiveBeforeCheck) {
+                            console.log("Session was active but is now ended - enabling form");
+                            // Enable the form
+                            enableReservationForm();
                         }
                     }
+            
+            // If session ended recently, update the reservation history
+            if (data.session_ended) {
+                console.log("Session ended recently - refreshing reservation history");
+                refreshReservationHistory();
+            }
+        })
+        .catch(error => {
+            console.error('Error checking active session:', error);
+        });
+    }
+
+    // Function to refresh the reservation history
+    function refreshReservationHistory() {
+        console.log("Checking for reservation history updates...");
+        
+        // Check for active session status first
+        fetch('/api/check_active_session/' + document.getElementById('idno').value)
+            .then(response => response.json())
+            .then(data => {
+                console.log("Active session check:", data);
+                
+                // If a session was ended by an admin, enable the form immediately
+                if (data && data.session_ended) {
+                    console.log("Session has ended - enabling reservation form");
+                    enableReservationForm();
                     
-                    // If session status has changed, we need to immediately refresh
-                    if (data && data.session_ended) {
-                        console.log("Session has ended, refreshing page...");
+                    // Show a notification that session was ended
+                    const notification = document.createElement('div');
+                    notification.className = 'alert alert-info';
+                    notification.style.position = 'fixed';
+                    notification.style.top = '20px';
+                    notification.style.right = '20px';
+                    notification.style.zIndex = '1000';
+                    notification.style.padding = '15px 20px';
+                    notification.style.borderRadius = '5px';
+                    notification.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+                    notification.innerHTML = '<i class="fas fa-info-circle"></i> Your session has been ended by an administrator. You can now make a new reservation.';
+                    document.body.appendChild(notification);
+                    
+                    // Remove notification after 5 seconds
+                    setTimeout(() => {
+                        notification.remove();
+                    }, 5000);
+                }
+                
+                // If we got updated reservation history data directly from the API
+                if (data && data.updated_reservation_history) {
+                    console.log("Got updated reservation history directly from API");
+                    
+                    // Create a table structure from the history data
+                    const historyTable = document.getElementById('reservationHistoryTable');
+                    if (historyTable && data.updated_reservation_history.length > 0) {
+                        // Build the HTML for the table rows
+                        let tableHtml = '';
+                        data.updated_reservation_history.forEach(res => {
+                            tableHtml += `
+                            <tr>
+                                <td>${res.datetime}</td>
+                                <td>${res.laboratory}</td>
+                                <td>PC ${res.computer_no}</td>
+                                <td>${res.purpose}</td>
+                                <td>
+                                    <span class="status-badge status-${res.status}">
+                                        ${res.status}
+                                    </span>
+                                </td>
+                                <td>${res.created_at}</td>
+                                <td>
+                                    ${res.session_end_time === 'Active Session' 
+                                        ? `<span class="status-badge" style="background-color: #3498db; color: white;">${res.session_end_time}</span>` 
+                                        : res.session_end_time}
+                                </td>
+                                <td>
+                                    ${res.status === 'rejected' 
+                                        ? (res.rejection_reason || 'No reason provided')
+                                        : '-'}
+                                </td>
+                            </tr>`;
+                        });
                         
-                        // Show a notification that session was ended
-                        const notification = document.createElement('div');
-                        notification.className = 'alert alert-info';
-                        notification.style.position = 'fixed';
-                        notification.style.top = '20px';
-                        notification.style.right = '20px';
-                        notification.style.zIndex = '1000';
-                        notification.style.padding = '15px 20px';
-                        notification.style.borderRadius = '5px';
-                        notification.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
-                        notification.innerHTML = '<i class="fas fa-info-circle"></i> Your session has been ended by an administrator. Refreshing page...';
-                        document.body.appendChild(notification);
+                        // Update the table
+                        historyTable.innerHTML = tableHtml;
                         
-                        // Hard reload to ensure everything is updated
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 2000);
-                        return;
+                        // Re-format dates in the updated table
+                        formatDates();
+                        
+                        return; // Skip the full page refresh
                     }
-                    
-                    // Otherwise continue with the normal reservation history refresh
-                    return fetch(window.location.href);
-                })
-                .then(response => {
-                    if (response) return response.text();
-                })
-                .then(html => {
-                    if (!html) return; // This could be undefined if we reloaded the page
-                    
-                    // Create a temporary DOM element to parse the HTML
-                    const tempDiv = document.createElement('div');
-                    tempDiv.innerHTML = html;
-                    
-                    // Extract the updated reservation history table content
-                    const newTableContent = tempDiv.querySelector('#reservationHistoryTable').innerHTML;
-                    
-                    // Update the current table with new content
-                    document.getElementById('reservationHistoryTable').innerHTML = newTableContent;
-                    
-                    // Re-format dates in the updated table
-                    formatDates();
-                    
-                    console.log("Reservation history refreshed");
-                })
-                .catch(error => {
-                    console.error("Error refreshing reservation history:", error);
-                });
+                }
+                
+                // Otherwise continue with the normal reservation history refresh
+                return fetch(window.location.href);
+            })
+            .then(response => {
+                if (response) return response.text();
+            })
+            .then(html => {
+                if (!html) return; // This could be undefined if we reloaded the page
+                
+                // Create a temporary DOM element to parse the HTML
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = html;
+                
+                // Extract the updated reservation history table content
+                const newTableContent = tempDiv.querySelector('#reservationHistoryTable').innerHTML;
+                
+                // Update the current table with new content
+                document.getElementById('reservationHistoryTable').innerHTML = newTableContent;
+                
+                // Re-format dates in the updated table
+                formatDates();
+                
+                console.log("Reservation history refreshed");
+            })
+            .catch(error => {
+                console.error("Error refreshing reservation history:", error);
+            });
+    }
+
+    // Function to enable the reservation form
+    function enableReservationForm() {
+        console.log("Enabling reservation form");
+        const form = document.getElementById('reservationForm');
+        if (!form) {
+            console.error("Form element not found");
+            return;
         }
+        
+        // Remove disabled class
+        form.classList.remove('disabled');
+        
+        // Enable all form elements
+        form.querySelectorAll('input, select, button[type="submit"]').forEach(elem => {
+            elem.disabled = false;
+        });
+        
+        // Update submit button
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Submit Reservation';
+        }
+        
+        // Remove any warning messages
+        const warningMessages = form.querySelectorAll('.alert-warning');
+        warningMessages.forEach(msg => msg.remove());
+        
+        // Add a success message
+        const successMsg = document.createElement('div');
+        successMsg.className = 'alert alert-success';
+        successMsg.innerHTML = '<i class="fas fa-check-circle"></i> Your previous session has ended. You can now make a new reservation.';
+        
+        // Add the message before the submit button
+        if (submitBtn && submitBtn.parentNode) {
+            submitBtn.parentNode.insertBefore(successMsg, submitBtn);
+            
+            // Auto-remove after 10 seconds
+            setTimeout(() => {
+                successMsg.remove();
+            }, 10000);
+        }
+    }
     </script>
 </body>
 </html>

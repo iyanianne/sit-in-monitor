@@ -1151,6 +1151,7 @@ def check_reservation_status():
         'in_active_session': sit_in_status['has_active_session'],
         'was_logged_out': sit_in_status['was_logged_out'],
         'completed_sessions': sit_in_status['completed_sessions'],
+        'recent_completion': sit_in_status['recent_completion'],
         'message': reason
     })
 
@@ -1490,52 +1491,54 @@ os.makedirs(app.config['RESOURCE_FOLDER'], exist_ok=True)
 @login_required
 def check_active_session(student_id):
     """
-    Check if a student ID is in the list of current sit-in students.
+    Check if a student has an active sit-in session.
     
-    This endpoint helps the frontend validate if a user is already in an active session
-    before allowing them to make a reservation.
+    This endpoint also checks if a session was recently ended (within the last 5 minutes),
+    which would indicate that an admin manually ended the session.
     
-    It also checks if the user had a recently ended session to help refresh the reservation history.
+    Returns:
+        is_active: True if the user has an active sit-in session
+        session_details: Details of the active session if applicable
+        session_ended: True if the user had a session that was recently ended by an admin
+        updated_reservation_history: Complete reservation history if a session was ended
+        recent_completion: True if a session was completed within the last 5 minutes
     """
     try:
-        # Get all currently active sit-in students
-        active_students = dbhelper.get_current_sit_in_students()
-        
-        # Check if the given student ID is in the active students list
-        is_active = any(student['idno'] == student_id for student in active_students)
-        
-        # If active, get the session details
-        active_session_details = None
-        if is_active:
-            for student in active_students:
-                if student['idno'] == student_id:
-                    active_session_details = {
-                        'laboratory': student['laboratory'],
-                        'time_in': student['time_in'],
-                        'purpose': student['purpose']
-                    }
-                    break
-        
-        # Check if student had a recently ended session in the last 5 minutes
         conn = dbhelper.get_db_connection()
         cursor = conn.cursor()
         current_date = datetime.now().strftime("%Y-%m-%d")
-        
-        # Check for sessions that ended in the last 5 minutes
-        five_mins_ago = (datetime.now() - timedelta(minutes=5)).strftime("%H:%M:%S")
         current_time = datetime.now().strftime("%H:%M:%S")
         
-        cursor.execute("""
-            SELECT COUNT(*) 
-            FROM SIT_IN_HISTORY 
-            WHERE idno = ? 
-            AND date = ? 
-            AND time_out != time_in 
-            AND time_out BETWEEN ? AND ?
-        """, (student_id, current_date, five_mins_ago, current_time))
+        # Calculate time 5 minutes ago to check for recently ended sessions
+        five_mins_ago_datetime = datetime.now() - timedelta(minutes=5)
+        five_mins_ago = five_mins_ago_datetime.strftime("%H:%M:%S")
         
-        recently_ended_count = cursor.fetchone()[0]
-        session_ended = recently_ended_count > 0
+        # Use the improved status check function
+        status = dbhelper.check_active_sitin_status(student_id)
+        has_active_session = status['has_active_session']
+        session_ended = status['recent_completion']
+        was_logged_out = status['was_logged_out']
+        completed_sessions = status['completed_sessions']
+        
+        # Get session details if active
+        session_details = None
+        if has_active_session:
+            cursor.execute("""
+                SELECT purpose, laboratory, time_in 
+                FROM SIT_IN_HISTORY 
+                WHERE idno = ? AND date = ? AND time_in = time_out
+                ORDER BY id DESC
+                LIMIT 1
+            """, (student_id, current_date))
+            
+            session_result = cursor.fetchone()
+            if session_result:
+                purpose, laboratory, time_in = session_result
+                session_details = {
+                    'purpose': purpose,
+                    'laboratory': laboratory,
+                    'time_in': time_in
+                }
         
         # If a session has recently ended, also fetch the updated reservation history
         updated_reservation_history = None
@@ -1560,26 +1563,31 @@ def check_active_session(student_id):
                     })
                 updated_reservation_history = simplified_history
         
-        conn.close()
-        
-        # Return the result as JSON
-        return jsonify({
-            'is_active': is_active,
-            'session_details': active_session_details,
-            'student_id': student_id,
+        # Prepare and return the response
+        response = {
+            'is_active': has_active_session,
             'session_ended': session_ended,
-            'recently_ended_count': recently_ended_count,
-            'updated_reservation_history': updated_reservation_history
-        })
+            'was_logged_out': was_logged_out,
+            'completed_sessions': completed_sessions,
+            'recent_completion': status['recent_completion']
+        }
+        
+        if session_details:
+            response['session_details'] = session_details
+            
+        if updated_reservation_history:
+            response['updated_reservation_history'] = updated_reservation_history
+            
+        conn.close()
+        return jsonify(response)
+        
     except Exception as e:
-        print(f"Error checking active session for student {student_id}: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"Error checking active session: {e}")
         return jsonify({
             'is_active': False,
-            'error': str(e),
-            'student_id': student_id,
-            'session_ended': False
+            'session_ended': False,
+            'error': 'An error occurred checking session status',
+            'recent_completion': False
         })
 
 if __name__ == "__main__":

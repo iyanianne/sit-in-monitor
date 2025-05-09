@@ -1293,15 +1293,40 @@ def check_user_has_approved_reservation(student_id):
         """, (student_id, current_date))
         
         rows = cursor.fetchall()
-        has_approved = len(rows) > 0
+        valid_approved_reservations = []
+        
+        # For each approved reservation, check if it has already been used (has a sit-in entry)
+        for row in rows:
+            reservation_id = row[0]
+            lab_id = row[1]
+            computer_no = row[2]
+            res_datetime = row[3]
+            
+            # Check if this reservation has a corresponding sit-in history entry
+            # that has been completed (time_in != time_out)
+            cursor.execute("""
+                SELECT COUNT(*) FROM SIT_IN_HISTORY
+                WHERE idno = ?
+                AND laboratory = ?
+                AND date = ?
+                AND time_in != time_out
+            """, (student_id, lab_id, current_date))
+            
+            completed_sessions_count = cursor.fetchone()[0]
+            
+            if completed_sessions_count == 0:
+                # If no completed session found for this reservation, it's still valid
+                valid_approved_reservations.append(row)
+                print(f"  - Valid reservation ID: {row[0]}, Lab: {row[1]}, PC: {row[2]}, Date: {row[3]}, Purpose: {row[4]}")
+            else:
+                print(f"  - IGNORING reservation ID: {row[0]} - has associated completed sit-in session")
+        
+        has_approved = len(valid_approved_reservations) > 0
         
         if has_approved:
-            # Print details of approved reservations for debugging
-            print(f"Student {student_id} has {len(rows)} approved reservation(s):")
-            for row in rows:
-                print(f"  - Reservation ID: {row[0]}, Lab: {row[1]}, PC: {row[2]}, Date: {row[3]}, Purpose: {row[4]}")
+            print(f"Student {student_id} has {len(valid_approved_reservations)} valid approved reservation(s)")
         else:
-            print(f"Student {student_id} has no approved reservations")
+            print(f"Student {student_id} has no valid approved reservations")
             
         return has_approved
     except Exception as e:
@@ -1850,12 +1875,14 @@ def get_user_reservations(student_id):
                     r.status,
                     r.created_at,
                     r.rejection_reason,
-                    h.time_out
+                    h.time_out,
+                    h.date
                 FROM reservations r
                 LEFT JOIN SIT_IN_HISTORY h ON 
                     r.student_id = h.idno AND 
                     r.laboratory_id = h.laboratory AND
-                    r.status = 'approved'
+                    r.status = 'approved' AND
+                    h.time_in != h.time_out
                 WHERE r.student_id = ?
                 ORDER BY r.created_at DESC
             """
@@ -1869,12 +1896,14 @@ def get_user_reservations(student_id):
                     r.datetime,
                     r.status,
                     r.created_at,
-                    h.time_out
+                    h.time_out,
+                    h.date
                 FROM reservations r
                 LEFT JOIN SIT_IN_HISTORY h ON 
                     r.student_id = h.idno AND 
                     r.laboratory_id = h.laboratory AND
-                    r.status = 'approved'
+                    r.status = 'approved' AND
+                    h.time_in != h.time_out
                 WHERE r.student_id = ?
                 ORDER BY r.created_at DESC
             """
@@ -1898,11 +1927,18 @@ def get_user_reservations(student_id):
                 reservation['rejection_reason'] = row[7]
             
             # Add time_out (session end time) if available 
-            # For the second query format, time_out is at index 7
-            # For the first query format, time_out is at index 8
+            # For the second query format, time_out is at index 7, date at index 8
+            # For the first query format, time_out is at index 8, date at index 9
             time_out_index = 8 if 'rejection_reason' in column_names else 7
-            if len(row) > time_out_index and row[time_out_index]:
-                reservation['session_end_time'] = row[time_out_index]
+            date_index = 9 if 'rejection_reason' in column_names else 8
+            
+            if len(row) > time_out_index and row[time_out_index] and row[time_out_index] != row[3]:
+                # If we have date and time_out, combine them for a proper timestamp
+                if len(row) > date_index and row[date_index]:
+                    # Format as "YYYY-MM-DD HH:MM:SS"
+                    reservation['session_end_time'] = f"{row[date_index]} {row[time_out_index]}"
+                else:
+                    reservation['session_end_time'] = row[time_out_index]
             else:
                 if reservation['status'] == 'approved':
                     reservation['session_end_time'] = 'Active Session'
@@ -2393,12 +2429,12 @@ def refresh_lab_schedules():
 
 def should_disable_reservation_form(student_id):
     """
-    Determine if the reservation form should be disabled for a specific user.
+    Determine if the reservation form should be disabled based on student status.
     
-    The form should be disabled if:
-    1. The user has a pending reservation
-    2. The user has an approved reservation
-    3. The user is in an active sit-in session
+    Checks:
+    1. If student has pending reservation 
+    2. If student has an approved reservation
+    3. If student is in an active session
     
     Exception: If the user was logged out by an admin (has completed sessions but no active session),
     they should be allowed to make a new reservation.
@@ -2407,6 +2443,25 @@ def should_disable_reservation_form(student_id):
     """
     try:
         print(f"Checking reservation form availability for student {student_id}")
+        
+        # Get the user's sit-in status
+        status = check_active_sitin_status(student_id)
+        
+        # SPECIAL CASE: If session was recently completed (within 5 minutes),
+        # always allow the user to make a new reservation
+        if status['recent_completion'] and not status['has_active_session']:
+            print(f"Student {student_id} had a recently completed session - enabling form")
+            return False, "Your session has been ended. You can now make a new reservation."
+        
+        # SPECIAL CASE: User was logged out by admin - allow them to make a new reservation
+        if status['was_logged_out'] and status['completed_sessions'] > 0 and not status['has_active_session']:
+            print(f"User {student_id} was logged out by admin, enabling reservation form")
+            return False, "Your previous session was ended by an admin. You can make a new reservation."
+        
+        # Check for active sit-in session
+        if status['has_active_session']:
+            print(f"Student {student_id} has active sit-in session - disabling form")
+            return True, "You are currently in an active sit-in session. Please finish your current session before making a new reservation."
         
         # Check for pending reservation
         has_pending = check_user_has_pending_reservation(student_id)
@@ -2419,18 +2474,6 @@ def should_disable_reservation_form(student_id):
         if has_approved:
             print(f"Student {student_id} has approved reservation - disabling form")
             return True, "You have an approved reservation. Please complete your session before making a new request."
-        
-        # Check for active sit-in session
-        has_active_session = check_user_has_active_sitin(student_id)
-        if has_active_session:
-            print(f"Student {student_id} has active sit-in session - disabling form")
-            return True, "You are currently in an active sit-in session. Please finish your current session before making a new reservation."
-        
-        # SPECIAL CASE: User was logged out by admin - allow them to make a new reservation
-        status = check_active_sitin_status(student_id)
-        if status['was_logged_out'] and status['completed_sessions'] > 0:
-            print(f"User {student_id} was logged out by admin, enabling reservation form")
-            return False, "Your previous session was ended by an admin. You can make a new reservation."
         
         # All checks passed, form should be enabled
         print(f"Student {student_id} passed all checks - enabling form")
@@ -2448,6 +2491,7 @@ def check_active_sitin_status(student_id):
     - has_active_session: True if the user is currently in an active sit-in session
     - was_logged_out: True if the user was previously in a session that was ended by an admin 
     - completed_sessions: Number of completed sit-in sessions
+    - recent_completion: True if a session was completed within the last 5 minutes
     """
     try:
         conn = get_db_connection()
@@ -2465,29 +2509,56 @@ def check_active_sitin_status(student_id):
         
         # Check for completed sessions (time_in != time_out)
         cursor.execute("""
-            SELECT COUNT(*) 
+            SELECT COUNT(*), MAX(time_out) 
             FROM SIT_IN_HISTORY 
             WHERE idno = ? AND time_in != time_out
         """, (student_id,))
-        completed_count = cursor.fetchone()[0]
+        result = cursor.fetchone()
+        completed_count = result[0]
+        last_completion_time = result[1] if result[1] else None
         
         # A user was logged out by admin if they have completed sessions but no active session
         was_logged_out = completed_count > 0 and not has_active_session
         
-        # Print debug information
-        print(f"Sit-in status for student {student_id}: active={has_active_session}, completed={completed_count}, logged_out={was_logged_out}")
+        # Check if a session was completed within the last 5 minutes
+        recent_completion = False
+        if last_completion_time:
+            try:
+                # Get current time
+                current_time = datetime.now().time()
+                
+                # Parse the last completion time
+                last_time = datetime.strptime(last_completion_time, "%H:%M:%S").time()
+                
+                # Convert both to total seconds for comparison
+                current_seconds = current_time.hour * 3600 + current_time.minute * 60 + current_time.second
+                last_seconds = last_time.hour * 3600 + last_time.minute * 60 + last_time.second
+                
+                # Check if the difference is less than 5 minutes (300 seconds)
+                # Handle case where last time is from yesterday (would have greater seconds)
+                time_diff = abs(current_seconds - last_seconds)
+                if time_diff <= 300 or (86400 - time_diff <= 300):  # 86400 seconds in a day
+                    recent_completion = True
+                    print(f"Student {student_id} had a recently completed session (within last 5 minutes)")
+            except Exception as e:
+                print(f"Error parsing time: {e}")
+        
+        print(f"Student {student_id} status: active={has_active_session}, logged_out={was_logged_out}, " + 
+              f"completed={completed_count}, recent_completion={recent_completion}")
         
         return {
             'has_active_session': has_active_session,
             'was_logged_out': was_logged_out,
-            'completed_sessions': completed_count
+            'completed_sessions': completed_count,
+            'recent_completion': recent_completion
         }
     except Exception as e:
-        print(f"Error checking sit-in status: {e}")
+        print(f"Error checking active status: {e}")
         return {
             'has_active_session': False,
             'was_logged_out': False,
-            'completed_sessions': 0
+            'completed_sessions': 0,
+            'recent_completion': False
         }
     finally:
         conn.close()
